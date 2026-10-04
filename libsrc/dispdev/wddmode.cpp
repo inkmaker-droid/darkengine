@@ -1034,30 +1034,17 @@ void cOffVideoDDModeOps::DoFlushRect(int x0Source, int y0Source, int x1Source, i
         }
         else
         {
-            const int xScale = (m_PrimaryDesc.dwWidth / m_SecondaryDesc.dwWidth) - 1;
-            const int yScale = (m_PrimaryDesc.dwHeight / m_SecondaryDesc.dwHeight) - 1;
-
-            if (xScale < 0)
-            {
-                destRect.left >>= -xScale;
-                destRect.right >>= -xScale;
-            }
-            else
-            {
-                destRect.left <<= xScale;
-                destRect.right <<= xScale;
-            }
-
-            if (yScale < 0)
-            {
-                destRect.top >>= -yScale;
-                destRect.bottom >>= -yScale;
-            }
-            else
-            {
-                destRect.top <<= yScale;
-                destRect.bottom <<= yScale;
-            }
+            // The original code approximated this using bit shifts, which
+            // only works for exact power-of-two size changes. Modern modes
+            // commonly need ratios such as 640x480 -> 1920x1080.
+            destRect.left = MulDiv(sourceRect.left, m_PrimaryDesc.dwWidth,
+                                   m_SecondaryDesc.dwWidth);
+            destRect.top = MulDiv(sourceRect.top, m_PrimaryDesc.dwHeight,
+                                  m_SecondaryDesc.dwHeight);
+            destRect.right = MulDiv(sourceRect.right, m_PrimaryDesc.dwWidth,
+                                    m_SecondaryDesc.dwWidth);
+            destRect.bottom = MulDiv(sourceRect.bottom, m_PrimaryDesc.dwHeight,
+                                     m_SecondaryDesc.dwHeight);
         }
 
         // Now blit!
@@ -1083,6 +1070,43 @@ void cOffVideoDDModeOps::DoFlushRect(int x0Source, int y0Source, int x1Source, i
         {
             RestoreSurfaces();
             result = m_pPrimarySurface->Blt(&destRect, m_pSecondarySurface, &sourceRect, DDBLT_WAIT, NULL);
+        }
+        if (result != DD_OK)
+        {
+            // DirectDraw emulation on current Windows versions does not
+            // implement a combined 16-to-32-bit conversion and stretch.
+            // GDI can present the same surfaces and performs both operations.
+            HDC sourceDC = NULL;
+            HDC destDC = NULL;
+            HRESULT sourceResult = m_pSecondarySurface->GetDC(&sourceDC);
+            HRESULT destResult = m_pPrimarySurface->GetDC(&destDC);
+
+            if (sourceResult == DD_OK && destResult == DD_OK)
+            {
+                SetStretchBltMode(destDC, COLORONCOLOR);
+                if (StretchBlt(destDC,
+                               destRect.left, destRect.top,
+                               destRect.right - destRect.left,
+                               destRect.bottom - destRect.top,
+                               sourceDC,
+                               sourceRect.left, sourceRect.top,
+                               sourceRect.right - sourceRect.left,
+                               sourceRect.bottom - sourceRect.top,
+                               SRCCOPY))
+                    result = DD_OK;
+            }
+
+            if (destDC)
+                m_pPrimarySurface->ReleaseDC(destDC);
+            if (sourceDC)
+                m_pSecondarySurface->ReleaseDC(sourceDC);
+        }
+        if (result != DD_OK)
+        {
+            char message[160];
+            wsprintfA(message, "Thief 2 - display blit failed: 0x%08lX (%s)",
+                      result, WhatDDError(result));
+            SetWindowTextA(m_pOuter->GetMainWnd(), message);
         }
         m_pDisplayDevice->RestoreLock(iLock);
 
