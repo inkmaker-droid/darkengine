@@ -18,6 +18,7 @@
 #include <command.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <ctype.h>
 
 #include <contain.h>
@@ -422,6 +423,7 @@ void cycle_weapon_command(int dir)
    // if there's no item frob going on, wield the weapon
    if (gItemStartTime == NO_START_TIME)
       pInventory->Wield(kCurrentWeapon);
+
 }
 
 void next_weapon_command( int count )
@@ -492,6 +494,7 @@ void cycle_item_command(int dir)
       FrobAbort(kFrobLocNone,&gItemStartFrob);
       gItemStartTime = NO_START_TIME;
    }
+
 }
 
 void next_item_command( int count )

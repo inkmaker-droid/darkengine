@@ -194,7 +194,7 @@ value of the inner Voyager function which is whether the input has been "claimed
 not be passed on to further ones. */
 
 #pragma off(unreferenced)
-bool LGadKeyHandler(uiEvent *e, Region *r, void *data)
+BOOL LGadKeyHandler(uiEvent *e, Region *r, void *data)
 {
    bool retval = FALSE;
    LGadBox *vb = (LGadBox *)data;
@@ -214,7 +214,7 @@ bool LGadKeyHandler(uiEvent *e, Region *r, void *data)
    return(retval);
 }
 
-bool LGadMouseHandler(uiEvent *e, Region *r, void *data)
+BOOL LGadMouseHandler(uiEvent *e, Region *r, void *data)
 {
    LGadBox *vb = (LGadBox *)data;
    LGadMouseCallback cb;
@@ -226,7 +226,7 @@ bool LGadMouseHandler(uiEvent *e, Region *r, void *data)
    return(FALSE);
 }
 
-bool LGadMotionHandler(uiEvent *e, Region *r, void *data)
+BOOL LGadMotionHandler(uiEvent *e, Region *r, void *data)
 {
    LGadBox *vb = (LGadBox *)data;
    LGadMotionCallback cb;
@@ -1001,7 +1001,7 @@ void ButtonDraw(void *data, LGadBox *vb)
 }
 
 
-static bool button_signal_handler(uiEvent* uiev, Region* reg, void* data)
+static BOOL button_signal_handler(uiEvent* uiev, Region* reg, void* data)
 {
    LGadButton* butt = (LGadButton*)reg;
    GadgEvent* ev = (GadgEvent*)uiev;

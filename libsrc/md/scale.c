@@ -21,7 +21,7 @@
 #ifndef SHIP
    #define TEST_VERSION(fname,model)   \
    do { \
-      if (model->ver!=MD_CUR_VER) { \
+      if (model->ver < MD_COMPATIBLE_VER || model->ver > MD_CUR_VER) { \
          char safename[10]; \
          strncpy(safename,model->name,8); \
          safename[8]='\0'; \
@@ -214,6 +214,9 @@ mds_model *md_scale_model(mds_model *dst,mds_model *src,mxs_vector *s,bool light
       next += 2*pgon->num*sizeof(ushort);
       if ( ((pgon->type)&MD_PGON_PRIM_MASK)==MD_PGON_PRIM_TMAP) {
          next += pgon->num * sizeof(ushort);
+      }
+      if (dst->ver > 3) {
+         next += sizeof(mds_pgon_aux);
       }
       pgon = (mds_pgon *)next;
    }

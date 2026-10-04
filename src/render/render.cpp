@@ -263,6 +263,15 @@ void RendererReset()
 void RendererPalChange()
 {
    init_color_tables();
+#ifdef SOFTWARE_RGB
+   // init_color_tables builds light_pal/light_ipal.  Rebuild the 16-bit
+   // palette tables afterwards so their extended software-RGB rows use the
+   // initialized lighting palette rather than the startup zeroes.
+   if (!g_lgd3d && grd_bpp >= 15) {
+      palmgr_update_pal_slot(0);
+      palmgr_recompute_all();
+   }
+#endif
 }
 ////////////////////////////////////////////////////////////
 // THIS STUFF HERE WAS CUT OUT OF EDITGEOM

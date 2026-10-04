@@ -92,7 +92,7 @@ void md_prn_light(mds_light *l)
 
 // Prints the current one and advances
 // the counter to the next one
-mds_pgon *md_prn_pgon(mds_pgon *p)
+mds_pgon *md_prn_pgon(mds_pgon *p, mds_model *m)
 {
    uchar *next = (uchar*)p;
    int i;
@@ -132,6 +132,9 @@ mds_pgon *md_prn_pgon(mds_pgon *p)
          printf("%d ",p->verts[i]);
       }
    }
+
+   if (m->ver > 3)
+      next += sizeof(mds_pgon_aux);
 
    printf("\n");
 
@@ -316,7 +319,7 @@ void md_prn_model(mds_model *m)
    printf("\nPolygons:\n");
    while(i<m->pgons) {
       printf("Pgon %d: ",(int)p - (int)pgons);
-      p = md_prn_pgon(p);
+      p = md_prn_pgon(p, m);
       i++;
    }
 

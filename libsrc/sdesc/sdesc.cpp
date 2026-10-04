@@ -184,7 +184,11 @@ void parse_enum(const sFieldDesc* desc, void* val, const char* in)
 	{
 		parse_int(desc, val, in);
 
-		i = std::clamp(static_cast<int>(sd_cast_to_long(val, desc->size, 1)), desc->min, desc->max);
+		i = static_cast<int>(sd_cast_to_long(val, desc->size, 1));
+		if (i < desc->min)
+			i = desc->min;
+		else if (i > desc->max)
+			i = desc->max;
 	}
 
 	sd_stuff_from_long(val, i, desc->size);
@@ -193,7 +197,11 @@ void parse_enum(const sFieldDesc* desc, void* val, const char* in)
 void unparse_enum(const sFieldDesc* desc, const void* val, char* out)
 {
 	auto ival = sd_cast_to_long(val, desc->size, (desc->flags & 0x20) == 0);
-	auto i = std::clamp(static_cast<int>(ival), desc->min, desc->max);
+	auto i = static_cast<int>(ival);
+	if (i < desc->min)
+		i = desc->min;
+	else if (i > desc->max)
+		i = desc->max;
 
 	if (i - desc->min <= desc->datasize)
 		strcpy(out, *((const char**)desc->data + i - desc->min));

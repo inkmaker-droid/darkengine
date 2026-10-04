@@ -12,6 +12,7 @@
 
 
 #include <windows.h>    // for DebugBreak
+#include <stdio.h>
 #include <filespec.h>
 #include <scrptman.h>
 #include <scrptsrv.h>
@@ -41,6 +42,46 @@ cScrStr NULL_STRING;
 ///////////////////////////////////////////////////////////////////////////////
 
 cScriptMan * g_pScriptMan;
+
+static BOOL g_ScriptDebugEnabled = FALSE;
+static FILE* g_ScriptDebugFile = NULL;
+
+void ScriptDebugSetEnabled(BOOL enabled)
+{
+   if (enabled && !g_ScriptDebugEnabled)
+   {
+      g_ScriptDebugFile = fopen("script-debug.log", "w");
+      if (!g_ScriptDebugFile)
+         return;
+      fprintf(g_ScriptDebugFile,
+              "time\tfrom\tto\tscript\tmessage\n");
+      fflush(g_ScriptDebugFile);
+      g_ScriptDebugEnabled = TRUE;
+   }
+   else if (!enabled && g_ScriptDebugEnabled)
+   {
+      fclose(g_ScriptDebugFile);
+      g_ScriptDebugFile = NULL;
+      g_ScriptDebugEnabled = FALSE;
+   }
+}
+
+BOOL ScriptDebugIsEnabled(void)
+{
+   return g_ScriptDebugEnabled;
+}
+
+void ScriptDebugLogDispatch(IScript* script, const sScrMsg* message)
+{
+   if (!g_ScriptDebugEnabled || !g_ScriptDebugFile || !script || !message)
+      return;
+
+   fprintf(g_ScriptDebugFile, "%lu\t%d\t%d\t%s\t%s\n",
+           message->time, message->from, message->to,
+           script->GetClassName() ? script->GetClassName() : "(unknown)",
+           message->message ? message->message : "(none)");
+   fflush(g_ScriptDebugFile);
+}
 
 ///////////////////////////////////////
 
@@ -103,6 +144,7 @@ cScriptMan::cScriptMan(IUnknown * pOuter, tScrTimeFunc pfnTime,
 
 cScriptMan::~cScriptMan()
 {
+   ScriptDebugSetEnabled(FALSE);
 }
 
 ///////////////////////////////////////

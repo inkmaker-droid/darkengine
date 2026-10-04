@@ -7,6 +7,7 @@
 
 //dark binds processing
 #include <stdlib.h>
+#include <stdio.h>
 #include <comtools.h>
 #include <appagg.h>
 

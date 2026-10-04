@@ -67,7 +67,7 @@ void InstallIBHandler (ulong context, ulong events, BOOL poll)
    uiSlab* slabptr;
    uiGetCurrentSlab(&slabptr);
    g_root = slabptr->creg;
-   
+
    uiInstallRegionHandler (g_root, events, reinterpret_cast<uiHandlerProc>(inpbnd_handler), NULL, &g_cookie);
    g_pInputBinder->SetContext (context,poll);
    // we need to poll here because SetContext can early exit with polling
@@ -1101,7 +1101,8 @@ void InitIBVars ()
    char gamebnd_path[256];
    Verify (find_file_in_config_path (gamebnd_path, gamebnd, "include_path")); 
    char def_path[256];
-   Verify (find_file_in_config_path (def_path, "default.bnd", "include_path"));
+   if (!find_file_in_config_path (def_path, "default.bnd", "include_path"))
+      strcpy(def_path, gamebnd_path);
    
    //creates the needed contexts
 #ifdef EDITOR
@@ -1141,6 +1142,21 @@ void InitIBVars ()
 #endif //EDITOR
    
    g_pInputBinder->SetMasterProcessCallback (GenericBind);
+
+#ifdef THIEF2_GAME
+   // Keep user customizations authoritative. Backslash is free in the stock
+   // binding sets; slash is the fallback for layouts that report it instead.
+   char console_binding[128] = "";
+   g_pInputBinder->QueryBind("\\", console_binding, sizeof(console_binding));
+   if (!console_binding[0])
+      g_pInputBinder->Bind("\\", "edit_command");
+   else
+   {
+      g_pInputBinder->QueryBind("/", console_binding, sizeof(console_binding));
+      if (!console_binding[0])
+         g_pInputBinder->Bind("/", "edit_command");
+   }
+#endif
 
    SetCountryKeyboard();
 

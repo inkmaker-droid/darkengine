@@ -204,6 +204,9 @@ mds_model *md_shear_model(mds_model *dst,mds_model *src,int ax_src,int ax_targ,m
       if ( ((pgon->type)&MD_PGON_PRIM_MASK)==MD_PGON_PRIM_TMAP) {
          next += pgon->num * sizeof(ushort);
       }
+      if (dst->ver > 3) {
+         next += sizeof(mds_pgon_aux);
+      }
       pgon = (mds_pgon *)next;
    }
 

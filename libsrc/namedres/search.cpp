@@ -153,7 +153,7 @@ void cSearchPath::SetVariants(ISearchPath* pVariants)
 		m_pVariants = nullptr;
 	}
 
-	if (m_pVariants)
+	if (pVariants)
 	{
 		m_pVariants = pVariants;
 		m_pVariants->AddRef();
@@ -592,8 +592,11 @@ void cSearchPath::DoAddPath(const char* pPath, int fRecurse)
 			return;
 		}
 
-		strncpy(buff, p, pdelim - p);
-		buff[pdelim - p] = '\0';
-		DoAddStore(buff, fRecurse);
+		if (pdelim != p)
+		{
+			strncpy(buff, p, pdelim - p);
+			buff[pdelim - p] = '\0';
+			DoAddStore(buff, fRecurse);
+		}
 	}
 }

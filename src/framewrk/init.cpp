@@ -7,6 +7,10 @@
 
 #include <float.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <comtools.h>
 #include <recapi.h>
 #include <gshelapi.h>
@@ -422,6 +426,29 @@ tResult LGAPI CoreEngineAppInit()
       HeapCheckActivate(VK_F9);
 
    tm_init();
+
+#ifdef THIEF2_GAME
+   // Respect an explicit user setting. Otherwise start at the native size of
+   // the display under the pointer, which is the best available "current"
+   // display before the game creates its window.
+   if (!config_is_defined("screen_size") ||
+       !config_is_defined("game_screen_size"))
+   {
+      POINT point = { 0, 0 };
+      MONITORINFO info = { sizeof(info) };
+      int dimensions[2];
+
+      GetCursorPos(&point);
+      GetMonitorInfo(MonitorFromPoint(point, MONITOR_DEFAULTTOPRIMARY), &info);
+      dimensions[0] = info.rcMonitor.right - info.rcMonitor.left;
+      dimensions[1] = info.rcMonitor.bottom - info.rcMonitor.top;
+
+      if (!config_is_defined("screen_size"))
+         config_set_value("screen_size", CONFIG_INT_TYPE, dimensions, 2);
+      if (!config_is_defined("game_screen_size"))
+         config_set_value("game_screen_size", CONFIG_INT_TYPE, dimensions, 2);
+   }
+#endif
 
    // set default screen mode
    sScrnMode mode = { 0 }; 

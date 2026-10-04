@@ -172,7 +172,11 @@ static int get_extra_rows()
    if (!init)
    {
 #if defined(SOFTWARE_MODELS_ONLY)
-      fHardwareOnlyTerrain = TRUE;
+      // The retail game normally used hardware terrain, but a software
+      // framebuffer still needs the extended RGB lighting rows consumed by
+      // portsurf.c.  Omitting them makes the surface cache index past the
+      // end of every 8-to-16 lighting table.
+      fHardwareOnlyTerrain = g_lgd3d;
 #else
       fHardwareOnlyTerrain = FALSE;
 #endif

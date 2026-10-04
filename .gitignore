@@ -44,5 +44,21 @@ Release
 *.tlog
 *.pdb
 *.rsp
+*.map
+*.zip
+*.dmp
+*.stackdump
+screen*.pcx
+ReleaseGame/
+src/win32/
+
+# Local game state and diagnostics. Retail Thief 2 data is never part of this
+# repository.
+cam.cfg
+user.bnd
+user2.bnd
+loc_hist.hst
+thief-console.log
+script-debug.log
 
 redist

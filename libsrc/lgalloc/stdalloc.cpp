@@ -8,6 +8,8 @@
 #ifdef _WIN32
 
 #include <windows.h>
+#include <stdlib.h>
+#include <malloc.h>
 #include <stdalloc.h>
 
 #pragma code_seg("lgalloc")
@@ -36,49 +38,77 @@ cStdAlloc::~cStdAlloc()
 
 void cStdAlloc::Init()
 {
+#ifdef DARKENGINE_MODERN_CRT_ALLOCATOR
+    m_hHeap = 0;
+#else
     m_hHeap = HeapCreate(HEAP_NO_SERIALIZE, 0x40000, 0);
+#endif
 }
 
 ///////////////////////////////////////
 
 STDMETHODIMP_(void *) cStdAlloc::Alloc(ULONG cb)
 {
+#ifdef DARKENGINE_MODERN_CRT_ALLOCATOR
+    return malloc(cb);
+#else
     return HeapAlloc(m_hHeap, 0, cb);
+#endif
 }
 
 ///////////////////////////////////////
 
 STDMETHODIMP_(void *) cStdAlloc::Realloc(void * pv, ULONG cb)
 {
+#ifdef DARKENGINE_MODERN_CRT_ALLOCATOR
+    return realloc(pv, cb);
+#else
     return HeapReAlloc(m_hHeap, 0, pv, cb);
+#endif
 }
 
 ///////////////////////////////////////
 
 STDMETHODIMP_(void) cStdAlloc::Free(void * pv)
 {
+#ifdef DARKENGINE_MODERN_CRT_ALLOCATOR
+    free(pv);
+#else
     HeapFree(m_hHeap, 0, pv);
+#endif
 }
 
 ///////////////////////////////////////
 
 STDMETHODIMP_(ULONG) cStdAlloc::GetSize(void * pv)
 {
+#ifdef DARKENGINE_MODERN_CRT_ALLOCATOR
+    return pv ? (ULONG)_msize(pv) : 0;
+#else
     return HeapSize(m_hHeap, 0, pv);
+#endif
 }
 
 ///////////////////////////////////////
 
 STDMETHODIMP_(void) cStdAlloc::HeapMinimize()
 {
+#ifdef DARKENGINE_MODERN_CRT_ALLOCATOR
+    _heapmin();
+#else
     HeapCompact(m_hHeap, 0);
+#endif
 }
 
 ///////////////////////////////////////
 #ifndef SHIP
 STDMETHODIMP cStdAlloc::VerifyHeap()
 {
+#ifdef DARKENGINE_MODERN_CRT_ALLOCATOR
+    return (_heapchk() == _HEAPOK) ? S_OK : E_FAIL;
+#else
     return (HeapValidate(m_hHeap, 0, 0)) ? S_OK : E_FAIL;
+#endif
 }
 #endif
 ///////////////////////////////////////////////////////////////////////////////

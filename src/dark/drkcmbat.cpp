@@ -63,6 +63,7 @@
 #include <linkbase.h>
 #include <matrix.h>
 #include <drkcmbat.h>
+#include <drkgame.h>
 #include <drkstats.h>
 #include <drkwswd.h>
 #include <culpable.h>
@@ -361,6 +362,13 @@ static eDamageResult LGAPI damage_filter(ObjID victim, ObjID culprit, sDamage* d
 {
    eDamageResult dmgRes=kDamageNoOpinion;
    BOOL held=FALSE;
+
+   if (victim == PlayerObject() && damage->amount > 0 && DarkConsoleIsImmune())
+   {
+      damage->amount = 0;
+      return kDamageStatusQuo;
+   }
+
    // Thieves get double damage for backstabbing :)
    sAIAlertness* alert = AIGetAlertness(victim);
    if (alert && alert->level < kAIAL_Moderate && damage->amount > 0 &&

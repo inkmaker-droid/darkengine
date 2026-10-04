@@ -564,7 +564,11 @@ const char* cIBVariableManager::AddChannel(const char* const* control)
 {
 	int cur_token = 1;
 
-	bool active_toggle = control[0][1] == '+' || control[0][1] == '-';
+	// control[0] is the physical control name; control[1] is the bound
+	// variable command.  The recovered implementation tested the second
+	// character of the control name, so active bindings such as "w +walk"
+	// never registered a channel for the expanded "forward" variable.
+	bool active_toggle = control[1][0] == '+' || control[1][0] == '-';
 
 	int num_tokens = 0;
 	auto* tokens = Tokenize(&control[1][active_toggle ? 1 : 0], &num_tokens, 0);

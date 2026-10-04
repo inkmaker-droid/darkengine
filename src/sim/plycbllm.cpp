@@ -24,9 +24,12 @@
 #include <ctagset.h>
 #include <camera.h>
 #include <command.h>
+#include <config.h>
+#include <stdio.h>
 #include <matrixs.h>
 #include <fix.h>
 #include <rendprop.h>
+#include <mnumprop.h>
 #include <dmgmodel.h>
 
 #include <dbmem.h> // must be last header
@@ -172,6 +175,7 @@ void cPlayerCerebellum::MakeBody()
       m_pMCoord->SetMotor(pMotor);
       pMotor->SetMotFrameOfReference(MFRT_ARM);  // was kMFRT_Global - MTR 8/31
    }
+
 }
 
 ////////////////////////////////////////////////////////////////

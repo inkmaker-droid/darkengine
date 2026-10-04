@@ -44,7 +44,8 @@ class cSndSource : public ISndSource
 	DECLARE_UNAGGREGATABLE();
 
 public:
-   cSndSource();
+   cSndSource( uint32 maxLabels = SNDSRC_DEFAULT_MAX_LABELS,
+               uint32 maxGates = SNDSRC_DEFAULT_MAX_GATES );
 	virtual ~cSndSource();
 
    STDMETHOD_( uint32, GetSerialNumber ) ( void );
@@ -96,8 +97,6 @@ private:
    uint32               mStartOffset;
    SndSourceEndCallback mfEndCB;
    void                 *mpEndCBData;
-   uint32               mGateValue;
-
    sSndAttribs          mAttribs;
 
    uint32               mSegBytesLeft;
@@ -120,7 +119,10 @@ private:
    char                 *mpTmpBuffer;
    uint32               mTmpBufferBytes;
 
-   SndPlaylistElement   *mpLabels[SNDSRC_DEFAULT_MAX_LABELS];
-   uint32               mGates[SNDSRC_DEFAULT_MAX_GATES];
+   uint32               mMaxLabels;
+   uint32               mMaxGates;
+   SndPlaylistElement   **mpLabels;
+   uint32               *mGates;
+   uint32               mLastLabelPassed;
 };
 

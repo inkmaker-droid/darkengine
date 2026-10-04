@@ -684,6 +684,23 @@ bool draw_surface(PortalPolygonCore *poly, PortalPolygonRenderInfo *render,
          --desired_mip;
          ++texture;
       }
+
+      // The software surface cache can only hold a 240x240 lit surface.
+      // Returning the raw texture when a lightmap is too large makes that
+      // polygon fullbright and causes lighting to pop as the selected mip
+      // changes with camera distance.  Prefer a coarser available mip whose
+      // generated surface fits the cache.
+      if (!g_lgd3d && !not_light) {
+         int pixels_per_lm = 64 >> (mip_level + 2);
+         while (pixels_per_lm > 0
+             && (((lt->w - 1) * pixels_per_lm > 256 - 16)
+              || ((lt->h - 1) * pixels_per_lm > 256 - 16))
+             && texture[1].w != 0) {
+            ++mip_level;
+            ++texture;
+            pixels_per_lm = 64 >> (mip_level + 2);
+         }
+      }
       sc = 64 >> mip_level; // texture->w;
    }
 

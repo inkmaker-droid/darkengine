@@ -1824,7 +1824,7 @@ void ParticleGroupUpdateMode(ObjID obj)
 
 void particle_group_update(ObjID obj)
 {
-   int start_len;
+   int start_len = 0;
    ParticleGroup *pg = ObjGetParticleGroup(obj);
 
    free_lists(pg);

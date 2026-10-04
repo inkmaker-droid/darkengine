@@ -42,12 +42,18 @@ void scale_ushell(int x, int y, int w, int h, g2s_poly_params *p)
       g2d_tmap_info.dsrc[1] = fix_int(p->dux);
    }
 
-   r.p = p->p + y * p->canvas_row;
+   if (p->flags&PPF_MUNGE)
+      r.p = p->p + y * p->canvas_row;
+   else
+      r.y = p->y + y * p->dy;
    goto uloop_start;
 
    do {
       r.v  += p->dvy;
-      r.p  += p->canvas_row;
+      if (p->flags&PPF_MUNGE)
+         r.p += p->canvas_row;
+      else
+         r.y += p->dy;
 uloop_start:
       p->inner_loop (&r, p);
    } while (--h);
@@ -108,12 +114,18 @@ int scale_cshell(int x, int y, int w, int h, g2s_poly_params *p)
       return CLIP_ALL;
 
    r.x = x;
-   r.p = p->p + y*p->canvas_row;
+   if (p->flags&PPF_MUNGE)
+      r.p = p->p + y*p->canvas_row;
+   else
+      r.y = p->y + y*p->dy;
    goto loop_start;
 
    do {
       r.v += p->dvy;
-      r.p += p->canvas_row;
+      if (p->flags&PPF_MUNGE)
+         r.p += p->canvas_row;
+      else
+         r.y += p->dy;
 loop_start:
       p->inner_loop (&r, p);
    } while (--h);

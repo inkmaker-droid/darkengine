@@ -17,6 +17,8 @@
 #include <drkldout.h>
 #include <drkdebrf.h>
 #include <scrnmode.h>
+#include <scrnloop.h>
+#include <gamescrn.h>
 #include <dbasemsg.h>
 #include <simstate.h>
 #include <simbase.h>
@@ -608,6 +610,7 @@ const char* cMissionLoopClient::LoadEndMovie(int mission)
 
 static tLoopClientID* Clients[] =
 {
+   &LOOPID_ScrnMan,
    &LOOPID_Mission,
 }; 
 
@@ -660,8 +663,15 @@ void SetNextMission(int m)
 #endif
 }
 
+static ScrnManContext mission_scrndata =
+{
+   { NULL, NULL, NULL },
+   NULL,
+};
+
 static sLoopModeInitParm parm_list[] = 
 {
+   { &LOOPID_ScrnMan, (tLoopClientData)&mission_scrndata },
    { NULL} // terminator
 };
 
@@ -675,6 +685,7 @@ static sLoopInstantiator switch_me =
 
 sLoopInstantiator* DescribeMissionLoopMode()
 {
+   mission_scrndata.mode_params.preferred = (sScrnMode*)GetGameScreenMode();
    return &switch_me; 
 }
 

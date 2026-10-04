@@ -8,6 +8,10 @@
 
 #include <string.h>
 #include <math.h>
+#include <ctype.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include <2d.h>
 #include <mprintf.h>
@@ -123,6 +127,7 @@
 #include <culpable.h>
 
 #include <questapi.h>
+#include <campaign.h>
 #include <drkgoalt.h>
 
 // Goofy alpha hack
@@ -211,6 +216,24 @@ void dark_rend_update_frame(void)
       greek_letter->Unlock(); 
    }
 #endif //   
+
+#ifdef THIEF2_GAME
+   if (DarkConsoleReticleEnabled())
+   {
+      int old_color = gr_get_fcolor();
+      int x = grd_canvas->bm.w / 2;
+      int y = grd_canvas->bm.h / 2;
+
+      ScrnLockDrawCanvas();
+      gr_set_fcolor(guiStyleGetColor(NULL, StyleColorFG));
+      gr_hline(x - 5, y, x - 2);
+      gr_hline(x + 2, y, x + 5);
+      gr_vline(x, y - 5, y - 2);
+      gr_vline(x, y + 2, y + 5);
+      gr_set_fcolor(old_color);
+      ScrnUnlockDrawCanvas();
+   }
+#endif
 
    DarkMessageUpdateFrame(); 
 }
@@ -387,6 +410,306 @@ static void win_mission()
   AutoAppIPtr(QuestData);
   pQuestData->Set(MISSION_COMPLETE_VAR,1);
   UnwindToMissionLoop();
+}
+
+#ifdef THIEF2_GAME
+
+struct sConsoleMission
+{
+   int number;
+   const char* short_name;
+   const char* title;
+};
+
+static const sConsoleMission gConsoleMissions[] =
+{
+   { 0,  "training",     "Training" },
+   { 1,  "interference", "Running Interference" },
+   { 2,  "shipping",     "Shipping... and Receiving" },
+   { 4,  "framed",       "Framed" },
+   { 5,  "ambush",       "Ambush!" },
+   { 6,  "eavesdropping", "Eavesdropping" },
+   { 7,  "bank",         "First City Bank and Trust" },
+   { 8,  "blackmail",    "Blackmail" },
+   { 9,  "courier",      "Trace the Courier" },
+   { 10, "trail",        "Trail of Blood" },
+   { 11, "party",        "Life of the Party" },
+   { 12, "cargo",        "Precious Cargo" },
+   { 13, "kidnap",       "Kidnap" },
+   { 14, "casing",       "Casing the Joint" },
+   { 15, "masks",        "Masks" },
+   { 16, "soulforge",    "Sabotage at Soulforge" },
+};
+
+static BOOL gConsoleImmune = FALSE;
+static BOOL gConsoleFlying = FALSE;
+static BOOL gConsoleInvisible = FALSE;
+static BOOL gConsoleReticle = FALSE;
+
+static void console_message(const char* format, ...)
+{
+   char message[256];
+   va_list args;
+
+   va_start(args, format);
+   _vsnprintf(message, sizeof(message) - 1, format, args);
+   va_end(args);
+   message[sizeof(message) - 1] = '\0';
+
+   DarkMessage(message);
+   mprintf("%s\n", message);
+}
+
+static int console_on_off(const char* value, BOOL current)
+{
+   while (value && isspace((unsigned char)*value))
+      ++value;
+
+   if (!value || !*value)
+      return current;
+   if (!_stricmp(value, "on") || !_stricmp(value, "1") || !_stricmp(value, "true"))
+      return TRUE;
+   if (!_stricmp(value, "off") || !_stricmp(value, "0") || !_stricmp(value, "false"))
+      return FALSE;
+   return -1;
+}
+
+static const sConsoleMission* console_find_mission(const char* value)
+{
+   char normalized[64];
+   int output = 0;
+   int i;
+
+   if (!value)
+      return NULL;
+   while (*value && isspace((unsigned char)*value))
+      ++value;
+
+   if (isdigit((unsigned char)*value))
+   {
+      int number = atoi(value);
+      for (i = 0; i < (int)(sizeof(gConsoleMissions) / sizeof(gConsoleMissions[0])); ++i)
+         if (gConsoleMissions[i].number == number)
+            return &gConsoleMissions[i];
+      return NULL;
+   }
+
+   while (*value && output < (int)sizeof(normalized) - 1)
+   {
+      if (isalnum((unsigned char)*value))
+         normalized[output++] = (char)tolower((unsigned char)*value);
+      ++value;
+   }
+   normalized[output] = '\0';
+
+   for (i = 0; i < (int)(sizeof(gConsoleMissions) / sizeof(gConsoleMissions[0])); ++i)
+      if (!_stricmp(normalized, gConsoleMissions[i].short_name))
+         return &gConsoleMissions[i];
+   return NULL;
+}
+
+static void console_open_mission(char* value)
+{
+   const sConsoleMission* mission = console_find_mission(value);
+   if (!mission)
+   {
+      console_message("Unknown mission. Use listmissions for valid numbers and short names.");
+      return;
+   }
+
+   AutoAppIPtr(Campaign);
+   pCampaign->New();
+
+   AutoAppIPtr(QuestData);
+   pQuestData->Create(DIFF_QVAR, 0, kQuestDataCampaign);
+
+   SetNextMission(mission->number);
+   MissionLoopReset(kMissLoopStartLoop);
+   UnwindToMissionLoop();
+}
+
+static void console_list_missions(void)
+{
+   FILE* log = fopen("thief-console.log", "a");
+   int available = 0;
+   int i;
+
+   if (log)
+      fprintf(log, "\nAvailable missions:\n");
+
+   for (i = 0; i < (int)(sizeof(gConsoleMissions) / sizeof(gConsoleMissions[0])); ++i)
+   {
+      char filename[32];
+      FILE* mission_file;
+      _snprintf(filename, sizeof(filename), "miss%d.mis", gConsoleMissions[i].number);
+      mission_file = fopen(filename, "rb");
+      if (!mission_file)
+         continue;
+      fclose(mission_file);
+      ++available;
+
+      mprintf("%2d %-14s %s\n", gConsoleMissions[i].number,
+              gConsoleMissions[i].short_name, gConsoleMissions[i].title);
+      if (log)
+         fprintf(log, "%2d %-14s %s\n", gConsoleMissions[i].number,
+                 gConsoleMissions[i].short_name, gConsoleMissions[i].title);
+   }
+
+   if (log)
+      fclose(log);
+   console_message("Listed %d installed missions in thief-console.log.", available);
+}
+
+static void console_immunity(char* value)
+{
+   int state = console_on_off(value, gConsoleImmune);
+   if (state < 0)
+   {
+      console_message("Usage: immunity [on/off]");
+      return;
+   }
+   gConsoleImmune = state;
+   console_message("Immunity %s.", state ? "on" : "off");
+}
+
+static void console_flying(char* value)
+{
+   int state = console_on_off(value, gConsoleFlying);
+   if (state < 0)
+   {
+      console_message("Usage: flying [on/off]");
+      return;
+   }
+
+   gConsoleFlying = state;
+   if (PlayerObjectExists())
+   {
+      PhysSetGravity(PlayerObject(), state ? 0.0f : 1.0f);
+      PhysSetBaseFriction(PlayerObject(), state ? 320.0f : 0.0f);
+      if (!state)
+         PhysStopAxisControlVelocity(PlayerObject(), 2);
+   }
+   console_message("Flying %s.", state ? "on" : "off");
+}
+
+static void console_invisible(char* value)
+{
+   int state = console_on_off(value, gConsoleInvisible);
+   if (state < 0)
+   {
+      console_message("Usage: invisible [on/off]");
+      return;
+   }
+
+   gConsoleInvisible = state;
+   if (PlayerObjectExists() && g_pIsInvisibleProperty)
+      g_pIsInvisibleProperty->Set(PlayerObject(), state ? 0 : -1);
+   console_message("Invisibility %s.", state ? "on" : "off");
+}
+
+static void console_reticle(char* value)
+{
+   int state = console_on_off(value, gConsoleReticle);
+   if (state < 0)
+   {
+      console_message("Usage: reticle [on/off]");
+      return;
+   }
+   gConsoleReticle = state;
+   console_message("Reticle %s.", state ? "on" : "off");
+}
+
+static void console_retinfo(void)
+{
+   char model[64] = "(none)";
+   const char* name;
+
+   if (g_PickCurrentObj == OBJ_NULL)
+   {
+      console_message("Reticle target: none");
+      return;
+   }
+
+   AutoAppIPtr_(ObjectSystem, pObjectSystem);
+   name = pObjectSystem->GetName(g_PickCurrentObj);
+   ObjGetModelName(g_PickCurrentObj, model);
+   console_message("Target %d: %s, model %s", g_PickCurrentObj,
+                   name && *name ? name : "(unnamed)", model);
+}
+
+static void console_list_scripts(void)
+{
+   FILE* log = fopen("thief-console.log", "a");
+   int count = 0;
+   tScrIter iterator;
+   const sScrClassDesc* script;
+
+   AutoAppIPtr(ScriptMan);
+   script = pScriptMan->GetFirstClass(&iterator);
+   if (log)
+      fprintf(log, "\nLoaded script classes:\n");
+
+   while (script)
+   {
+      mprintf("%s (%s)\n", script->pszClass,
+              script->pszModule ? script->pszModule : "unknown module");
+      if (log)
+         fprintf(log, "%s (%s)\n", script->pszClass,
+                 script->pszModule ? script->pszModule : "unknown module");
+      ++count;
+      script = pScriptMan->GetNextClass(&iterator);
+   }
+   pScriptMan->EndClassIter(&iterator);
+
+   if (log)
+      fclose(log);
+   console_message("Listed %d scripts in thief-console.log.", count);
+}
+
+static void console_debug_scripts(char* value)
+{
+   int state = console_on_off(value, ScriptDebugIsEnabled());
+   if (state < 0)
+   {
+      console_message("Usage: debugscripts [on/off]");
+      return;
+   }
+   ScriptDebugSetEnabled(state);
+   console_message("Script logging %s%s", state ? "on: " : "off.",
+                   state ? "script-debug.log" : "");
+}
+
+static Command thief_console_commands[] =
+{
+   { "openmission",  FUNC_STRING, console_open_mission,  "openmission [number/shortname]" },
+   { "listmissions", FUNC_VOID,   console_list_missions, "list installed missions" },
+   { "immunity",     FUNC_STRING, console_immunity,      "immunity [on/off]" },
+   { "flying",       FUNC_STRING, console_flying,        "flying [on/off]" },
+   { "invisible",    FUNC_STRING, console_invisible,     "invisible [on/off]" },
+   { "reticle",      FUNC_STRING, console_reticle,       "reticle [on/off]" },
+   { "retinfo",      FUNC_VOID,   console_retinfo,       "describe the object under the reticle" },
+   { "listscripts",  FUNC_VOID,   console_list_scripts,  "list loaded script classes" },
+   { "debugscripts", FUNC_STRING, console_debug_scripts, "debugscripts [on/off]" },
+};
+
+#endif // THIEF2_GAME
+
+BOOL DarkConsoleIsImmune(void)
+{
+#ifdef THIEF2_GAME
+   return gConsoleImmune;
+#else
+   return FALSE;
+#endif
+}
+
+BOOL DarkConsoleReticleEnabled(void)
+{
+#ifdef THIEF2_GAME
+   return gConsoleReticle;
+#else
+   return FALSE;
+#endif
 }
 
 static Command drk_ui_keys[] =
@@ -663,6 +986,9 @@ void DarkToolsInit(void)
 void dark_init_game(void)
 {
    COMMANDS(drk_ui_keys,HK_GAME_MODE);
+#ifdef THIEF2_GAME
+   COMMANDS(thief_console_commands,HK_GAME_MODE);
+#endif
    DebugKeys();
 
    config_get_int("drkgame_overlay",&master_overlay);

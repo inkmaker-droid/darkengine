@@ -66,7 +66,7 @@ STDMETHODIMP_(void *) cPrimaryMalloc::Alloc(ULONG size)
     do
     {
         // Page memory if over limit
-        if (totalAlloc > allocCap)
+        if (m_pfnPage && totalAlloc > allocCap)
             fMoreToPage = ((*m_pfnPage)(size, this) != 0);
 
         // Allocate our block
@@ -217,7 +217,7 @@ STDMETHODIMP_(void *) cPrimaryMalloc::AllocEx(ULONG size, const char * pszFile, 
     do
     {
         // Page memory if over limit
-        if (totalAlloc > allocCap)
+        if (m_pfnPage && totalAlloc > allocCap)
             fMoreToPage = ((*m_pfnPage)(size, this) != 0);
 
         // Allocate our block

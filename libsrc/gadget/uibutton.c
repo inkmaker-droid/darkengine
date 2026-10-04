@@ -86,7 +86,6 @@ bool buttongadg_process_mouse(ButtonGadg* bg, Rect* rect, uiMouseEvent* ev)
    signal.signaller = BUTTONGADG_SIGNALLER;
    signal.action = 0;
 
-
    // If the mouse is outside the button rectangle, pop it up.
    region_abs_rect(reg,rect,&abs_r);
    if (!RECT_TEST_PT(&abs_r,ev->pos))
@@ -223,7 +222,7 @@ bool buttongadg_process_mouse(ButtonGadg* bg, Rect* rect, uiMouseEvent* ev)
 // the mouse handler
 
 #pragma off(unreferenced)
-bool buttongadg_mouse_handler(uiEvent* ev, Region* reg, void* data)
+BOOL buttongadg_mouse_handler(uiEvent* ev, Region* reg, void* data)
 {
    ButtonGadg* bg = (ButtonGadg*)reg;
    ConfigSpew("uibutton",("Got a mouse event with mask %x\n",ev->subtype));
@@ -266,7 +265,7 @@ errtype ButtonGadgDestroy(ButtonGadg* bg)
 //
 
 
-bool toggle_event_handler(GadgEvent* ev, Region* reg, void* data)
+BOOL toggle_event_handler(GadgEvent* ev, Region* reg, void* data)
 {
    ButtonToggle* bt = (ButtonToggle*)reg;
    int newstate = *bt->statevar;
@@ -440,7 +439,7 @@ void new_key_button(ButtonList* list, int button)
       
 }
 
-bool buttonlist_keyboard_handler(uiEvent* _ev, Region* reg, void* data)
+BOOL buttonlist_keyboard_handler(uiEvent* _ev, Region* reg, void* data)
 {
    bool retval = FALSE;
    uiCookedKeyEvent* ev = (uiCookedKeyEvent*)_ev;
@@ -509,7 +508,7 @@ static void send_to_button(ButtonList* list, uiMouseEvent* ev)
    list->statevec[butt] |= list->gadg.state;
 }
 
-bool buttonlist_mouse_handler(uiEvent* _ev, Region* reg, void* data)
+BOOL buttonlist_mouse_handler(uiEvent* _ev, Region* reg, void* data)
 {
    bool retval = FALSE;
    ButtonList* list = (ButtonList*)reg;

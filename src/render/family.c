@@ -60,7 +60,14 @@ static char *_fam_dir_names[2][2]=
 };
 
 #define get_water_base() _fam_dir_names[kDirWater][cur_render_type]
+#ifdef THIEF2_GAME
+// Thief 2 ships its mission sky sets only in fam\skyhw.  The PCX data is
+// still usable by the software mapper, so keep loading that canonical set
+// when the legacy D3D path is unavailable on a modern system.
+#define get_sky_base()   _fam_dir_names[kDirSky][kDirHW]
+#else
 #define get_sky_base()   _fam_dir_names[kDirSky][cur_render_type]
+#endif
 
 /////////////////////////
 // utility functions

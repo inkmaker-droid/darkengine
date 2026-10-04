@@ -26,7 +26,7 @@ public:
 	friend cStringResIndexHash;
 
 	cStringResEntry(const char* pName, int nIndex)
-		: m_pName{ nullptr }, m_nIndex{ 0 }
+		: m_pName{ nullptr }, m_nIndex{ nIndex }
 	{
 		if (!pName)
 		{
@@ -233,6 +233,7 @@ char* cStringResource::StringLock(const char* pStrName)
 		return &pTable->pStringData[pEntry->m_nIndex];
 
 	Unlock();
+	return nullptr;
 }
 
 void cStringResource::StringUnlock(const char* pStrName)
@@ -242,7 +243,7 @@ void cStringResource::StringUnlock(const char* pStrName)
 	Unlock();
 }
 
-int cStringResource::StringExtract(char* pStrName, char* pBuf, int nSize)
+BOOL cStringResource::StringExtract(const char* pStrName, char* pBuf, int nSize)
 {
 	cAutoResThreadLock lock{};
 
@@ -273,58 +274,50 @@ int cStringResource::SkipLine(IStoreStream* pStream)
 
 int cStringResource::SkipWhitespace(IStoreStream* pStream)
 {
-	for (auto c = pStream->Getc(); c == ' ' || c == 0x9 || c == '\n' || c == '\r' || c == '/'; c = pStream->Getc())
+	while (true)
 	{
+		const auto c = pStream->Getc();
 		if (c == -1)
 			return false;
 
-		if (c == 47)
+		if (c == ' ' || c == '\t' || c == '\n' || c == '\r')
+			continue;
+
+		if (c != '/')
 		{
-			auto cia = pStream->Getc();
-			if (cia == -1)
-				return 0;
-
-			if ((char)cia == 47)
-			{
-				while (c != 10)
-				{
-					auto cib = pStream->Getc();
-					if (cib == -1)
-						return 0;
-					c = cib;
-				}
-			}
-			else
-			{
-				if ((char)cia != 42)
-				{
-					pStream->SetPos(pStream->GetPos() - 2);
-					return true;
-				}
-				auto cie = cia;
-				while (cie != 47)
-				{
-					auto cic = pStream->Getc();
-					if (cic == -1)
-						return 0;
-
-					int16 cid;
-					for (auto ca = cic; ca != 42; ca = cid)
-					{
-						cid = pStream->Getc();
-						if (cid == -1)
-							return 0;
-					}
-					cie = pStream->Getc();
-					if (cie == -1)
-						return 0;
-				}
-			}
+			pStream->SetPos(pStream->GetPos() - 1);
+			return true;
 		}
-	}
 
-	pStream->SetPos(pStream->GetPos() - 1);
-	return true;
+		const auto next = pStream->Getc();
+		if (next == -1)
+			return false;
+
+		if (next == '/')
+		{
+			if (!SkipLine(pStream))
+				return false;
+			continue;
+		}
+
+		if (next == '*')
+		{
+			int previous = 0;
+			while (true)
+			{
+				const auto current = pStream->Getc();
+				if (current == -1)
+					return false;
+				if (previous == '*' && current == '/')
+					break;
+				previous = current;
+			}
+			continue;
+		}
+
+		pStream->SetPos(pStream->GetPos() - 2);
+		return true;
+	}
 }
 
 int cStringResource::GetStrName(IStoreStream* pStream, char* pBuf)

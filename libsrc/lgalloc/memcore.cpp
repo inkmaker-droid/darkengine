@@ -141,6 +141,14 @@ public:
         CoreMutexInit();
         IAllocator * pNext = NULL;
 
+        #ifdef DARKENGINE_MODERN_CRT_ALLOCATOR
+        // The legacy MSVC build replaced the CRT allocation entry points with
+        // allocovr.h. Modern UCRT does not expose those hooks, so keep the
+        // allocator handed to OSM modules on the same CRT heap used by the
+        // rest of the executable.
+        m_StdAlloc.Init();
+        pNext = &m_StdAlloc;
+        #else
         if (GetPrivateProfileInt("Allocator", "UseExternal", FALSE, "lg.ini"))
         {
             // First, load the primal allocator from lgalloc.dll...
@@ -200,8 +208,10 @@ public:
             m_MultiPool.Init();
             pNext = &m_MultiPool;
         }
+        #endif
 
 #ifndef SHIP
+        #ifndef DARKENGINE_MODERN_CRT_ALLOCATOR
         if (GetPrivateProfileInt("Allocator", "Timings", FALSE, "lg.ini"))
         {
             m_MemAllocTimer.SetNext(pNext);
@@ -226,6 +236,7 @@ public:
             m_HeapDebug.SetNext(pNext);
             pNext = g_pHeapDebug = &m_HeapDebug;
         }
+        #endif
 
         g_pAllocLimits = &m_PrimaryMalloc;
 

@@ -3,6 +3,7 @@
 #include <storeapi.h>
 #include <resthred.h>
 #include <mprintf.h>
+#include <dbg.h>
 
 void cResMan::InstallResourceType(const char* pExt, IResType* pType)
 {
@@ -130,7 +131,9 @@ cResourceTypeData* cResMan::GetResourceTypeData(IRes* pRes)
 
 		if (manData == NO_RES_APP_DATA) // TODO: nullptr
 		{
+			#ifdef WARN_ON
 			DbgReportWarning("Resource without any Manager Data!\n");
+			#endif
 			return nullptr;
 		}
 

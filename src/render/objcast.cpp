@@ -71,7 +71,12 @@ static BOOL MDDetect()
    g_ObjCastMDHit.b = &EndObjRel;
 
    mds_model *pModel = (mds_model *) objmodelGetModel(g_iModelIdx);
-   md_segment_hit_detect(pModel, &g_ObjCastMDHit);
+   // A model-number property can outlive a model that failed to bind.  The
+   // retail code assumes a resident model here; treat a missing resource as
+   // a ray miss instead of dereferencing it in md_segment_hit_detect().
+   g_ObjCastMDHit.hit = FALSE;
+   if (pModel != NULL)
+      md_segment_hit_detect(pModel, &g_ObjCastMDHit);
 
    if (g_ObjCastMDHit.hit && g_ObjCastMDHit.r < g_fEarliestTime) {
       g_fEarliestTime = g_ObjCastMDHit.r;

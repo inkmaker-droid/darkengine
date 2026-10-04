@@ -370,7 +370,7 @@ static short special_keys[] =
 
 
 #pragma off(unreferenced)
-bool textgadg_process_keybd(uiCookedKeyEvent* ev, Region* reg, TextGadg* gadg)
+BOOL textgadg_process_keybd(uiCookedKeyEvent* ev, Region* reg, TextGadg* gadg)
 {
    bool retval = FALSE, update = FALSE, send_signal = FALSE;
    TextGadgEvent signal = *(TextGadgEvent*)ev;
@@ -436,7 +436,7 @@ bool textgadg_process_keybd(uiCookedKeyEvent* ev, Region* reg, TextGadg* gadg)
 
 
 
-bool textgadg_button_handler(uiEvent* ev, Region* reg, void* data)
+BOOL textgadg_button_handler(uiEvent* ev, Region* reg, void* data)
 {
    TextGadg* gadg = (TextGadg*)reg;
    GadgEvent* bge = (GadgEvent*)ev;

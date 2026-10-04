@@ -109,7 +109,6 @@ public:
 
    
 protected:
-
    void OnButtonList(ushort action, int button)
    {
       if (!(action & BUTTONGADG_LCLICK))

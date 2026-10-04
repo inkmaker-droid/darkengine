@@ -1318,7 +1318,11 @@ static void FinishAsynchOps(void)
    int i, start_time=tm_get_millisec_unrecorded();
    
    AutoAppIPtr(AsyncReadQueue);
-   pAsyncReadQueue->FulfillAll();
+   // The reconstructed ARQ component is currently a synchronous stub and
+   // does not publish IAsyncReadQueue. Resource loading already falls back
+   // to synchronous reads, so there is no queue to drain in that case.
+   if (!!pAsyncReadQueue)
+      pAsyncReadQueue->FulfillAll();
    
    for (i=0; i<SFX_MAX_COUNT; i++)
       if (fxlist[i].type!=SFX_NONE)

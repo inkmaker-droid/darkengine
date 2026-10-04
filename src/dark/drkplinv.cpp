@@ -40,6 +40,7 @@
 #include <iobjsys.h>
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <gen_bind.h>
 #include <command.h>
 
@@ -64,6 +65,10 @@ protected:
 public:
    cInventory(IUnknown* pOuter)
    {
+      mInHand = kCurrentWeapon;
+      mInSim = FALSE;
+      for (int i = 0; i < kNumItemSels; ++i)
+         mCurSel[i].obj = OBJ_NULL;
       MI_INIT_AGGREGATION_1(pOuter,IInventory,kPriorityNormal,gConstraints);
    }
 
@@ -188,7 +193,14 @@ public:
       if (!mpContainSys->Contains(PlayerObject(),obj))
          return E_FAIL;
 
-      eWhichInvObj which = type_to_slot[GetType(obj)];
+      const int type = GetType(obj);
+      if (type < kInvTypeJunk || type > kInvTypeWeapon)
+      {
+         Warning(("Inventory object %d has invalid type %d\n", obj, type));
+         return E_FAIL;
+      }
+
+      eWhichInvObj which = type_to_slot[type];
 
       if (obj == mCurSel[which].obj)
          return S_FALSE;
@@ -196,7 +208,7 @@ public:
       if (WieldingJunk())
          return E_FAIL;
 
-      old_obj = mCurSel[kCurrentItem].obj;
+      old_obj = mCurSel[which].obj;
 
       if (which == mInHand)
          Unfocus();
@@ -301,6 +313,11 @@ public:
 
          // skip past the wrong type
          int itemtype = GetType(item);
+         if (itemtype < kInvTypeJunk || itemtype > kInvTypeWeapon)
+         {
+            Warning(("Inventory object %d has invalid type %d\n", item, itemtype));
+            continue;
+         }
          if (type_to_slot[itemtype] != which)
             continue;
 
@@ -345,12 +362,12 @@ public:
       if (which == mInHand)
          return S_FALSE;
 
-      ObjID wielded = mCurSel[mInHand].obj;
       if (WieldingJunk())
          return E_FAIL;
       Unfocus();
       mInHand = which;
       Focus();
+
       return S_OK;
    }
 
@@ -438,7 +455,6 @@ public:
 
             mInSim = TRUE;
 
-
          }
          break;
          default:
@@ -508,6 +524,7 @@ STDMETHODIMP cInventory::DatabaseNotify(ulong msg, ITagFile* file)
       case kDatabaseReset:
       {
          mInHand = kCurrentWeapon;
+         mInSim = FALSE;
          for (int i = 0; i < kNumItemSels; i++)
             mCurSel[i].obj = OBJ_NULL;
       }

@@ -445,7 +445,7 @@ bool gadget_tng_vga_expose(Region *reg, Rect *r)
    return(OK);
 }
 
-bool gadget_tng_mouse_handler(uiEvent *e, Region *r, void *state)
+BOOL gadget_tng_mouse_handler(uiEvent *e, Region *r, void *state)
 {
    Gadget *g;
    uiMouseEvent *mickey;
@@ -460,7 +460,7 @@ bool gadget_tng_mouse_handler(uiEvent *e, Region *r, void *state)
    return(g->tng_data->mousebutt(g->tng_data, mickey->action, rel));
 }
 
-bool gadget_tng_mouse_move_handler(uiEvent *e, Region *r, void *state)
+BOOL gadget_tng_mouse_move_handler(uiEvent *e, Region *r, void *state)
 {
    Gadget *g;
    uiMouseEvent *mickey;
@@ -475,7 +475,7 @@ bool gadget_tng_mouse_move_handler(uiEvent *e, Region *r, void *state)
    return(g->tng_data->mousemove(g->tng_data, rel));
 }
 
-bool gadget_tng_keyboard_handler(uiEvent *e, Region *r, void *state)
+BOOL gadget_tng_keyboard_handler(uiEvent *e, Region *r, void *state)
 {
    Gadget *g;
    uiCookedKeyEvent *cke;

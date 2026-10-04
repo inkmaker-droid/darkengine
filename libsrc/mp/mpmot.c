@@ -206,7 +206,13 @@ void mp_setup_motion(multiped * mp, mps_motion_node *m, ulong flags)
 		}
 	
    	// Set motion's start position & orient
-      if(mp->frame_of_reference==MFRT_GLOBAL)
+      // Player-arm virtual motions (camSynch/bowFlex) already return an
+      // absolute camera-relative world position.  Giving a newly-started
+      // virtual motion the arm's current position as a relative base adds the
+      // camera position again at every maneuver transition and sends the
+      // viewmodel progressively away from the player.
+      if(mp->frame_of_reference==MFRT_GLOBAL ||
+         (mp->frame_of_reference==MFRT_ARM && motion->info.type==MT_VIRTUAL))
       {
          mx_zero_vec(&m->base_pos);
          quat_identity(&m->base_orient);

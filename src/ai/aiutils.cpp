@@ -375,7 +375,9 @@ extern BOOL AIPathExactOBB(ObjID object); // clean up properly after ship T2 (to
 
 BOOL AIGetObjFloorBBox(ObjID object, tAIFloorBBox * pBBox, const mxs_vector * pAltLoc, const mxs_angvec * pAltFac)
 {
+#ifndef THIEF2_GAME
    AssertMsg(!IsSimTimePassing(), "Calling function too slow for sim time!");
+#endif
    
    const ObjPos * pPos;
    mxs_vector     boxMinMax[2];

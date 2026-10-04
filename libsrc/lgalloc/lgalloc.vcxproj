@@ -150,6 +150,11 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(BuildThief2)'=='true'">
+    <ClCompile>
+      <PreprocessorDefinitions>DARKENGINE_MODERN_CRT_ALLOCATOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="allcguid.cpp" />
     <ClCompile Include="dbgalloc.cpp" />

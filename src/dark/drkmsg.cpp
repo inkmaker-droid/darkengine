@@ -17,6 +17,7 @@
 #include <2d.h>
 
 #include <command.h>
+#include <stdio.h>
 #include <memall.h>
 #include <dbmem.h>   // must be last header! 
 
@@ -73,6 +74,10 @@ void DarkMessageTerm(void)
 
 void DarkMessageParams(const char* msg, ulong timeout, int color)
 {
+#ifdef PLAYTEST
+   if (config_is_defined("message_spew"))
+      fprintf(stderr, "DarkMessage: %s\n", msg ? msg : "(null)");
+#endif
    if (color == kDefaultMsgColor)
       color = uiRGB(gTextRGB[0],gTextRGB[1],gTextRGB[2]);
    ulong time = gpGameShell->GetTimerTick();  

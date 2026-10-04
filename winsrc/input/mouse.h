@@ -123,7 +123,7 @@ typedef void (*mouse_callfunc)(lgMouseEvent* e,void* data);
     (1 << b)
 
 #define MouseMakeButtons(l, c, r) \
-    (((!!l) << MOUSE_LBUTTON) | ((!!c) << MOUSE_CBUTTON) | ((!!r) << MOUSE_CBUTTON))
+    (((!!l) << MOUSE_LBUTTON) | ((!!c) << MOUSE_CBUTTON) | ((!!r) << MOUSE_RBUTTON))
 
 #define MouseIsButtonDown(buttons, which) \
     ((buttons >> which) & 0x01)

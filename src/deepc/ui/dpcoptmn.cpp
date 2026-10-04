@@ -602,10 +602,10 @@ protected:
       }
       InitDrawElem(&mButtDrawElem[SLIDER_BMPRES]); 
       mButtDrawElem[SLIDER_BMPRES].draw_data = (void *)mButtBmpRes[SLIDER_BMPRES];
-      mButtDrawElem[SLIDER_BMPRES].draw_type = DRAWTYPE_RESOFFSET;
+      mButtDrawElem[SLIDER_BMPRES].draw_type = DRAWTYPE_IRESOFFSET;
 
       InitDrawElem(&mSliderBaseBmp); 
-      mSliderBaseBmp.draw_type = DRAWTYPE_RES;
+      mSliderBaseBmp.draw_type = DRAWTYPE_IRES;
       mSliderBaseBmp.draw_data = (void *)pResMan->Bind ("slidbase", RESTYPE_IMAGE, NULL, mResPath);
 
       for (i = 0; i < kNumSubPanelSlides; i++)
@@ -1515,7 +1515,7 @@ protected:
 
       InitDrawElem(draw_elem); 
       draw_elem->draw_data = (void *)butt_res;
-      draw_elem->draw_type = DRAWTYPE_RESOFFSET;
+      draw_elem->draw_type = DRAWTYPE_IRESOFFSET;
    }
 
    //////////////////////////////////////////////////////

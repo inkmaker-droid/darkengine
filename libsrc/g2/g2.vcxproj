@@ -281,8 +281,6 @@
     <ClCompile Include="genf16s.c" />
     <ClCompile Include="genfl8l.c" />
     <ClCompile Include="genfl8s.c" />
-    <ClCompile Include="genil.c" />
-    <ClCompile Include="genlil.c" />
     <ClCompile Include="genline.c" />
     <ClCompile Include="genllmf.c" />
     <ClCompile Include="genlm.c" />

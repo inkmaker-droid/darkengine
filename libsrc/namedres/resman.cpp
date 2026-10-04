@@ -626,7 +626,7 @@ void* cResMan::FindResource(IRes* pResource, long* pSize)
 		CriticalMsg("FindResource -- no private resource data!");
 
 	if ((pData->m_nUserLockCount || pData->m_nInternalLockCount)
-		&& pData->m_Freshed >= (int)m_ResTable.m_ResizeThreshold)
+		&& pData->m_Freshed >= m_FreshStamp)
 	{
 		if (pSize)
 			*pSize = pData->m_nSize;
@@ -990,7 +990,10 @@ BOOL cResMan::DropResourceData(cResourceTypeData* pData)
 void cResMan::CacheAdd(cResourceTypeData* pData)
 {
 	if (m_bPagingEnabled)
-		m_pCache->Add(reinterpret_cast<tCacheItemID>(pData->m_pData), pData->m_pRes, pData->m_nSize);
+		// The cache callback receives itemId and passes it to FreeData as the
+		// resource metadata object.  Keying this by m_pData instead makes the
+		// callback interpret the resource bytes as cResourceTypeData.
+		m_pCache->Add(reinterpret_cast<tCacheItemID>(pData), pData->m_pRes, pData->m_nSize);
 }
 
 ///////////////////////////////////////
@@ -1000,7 +1003,7 @@ BOOL cResMan::CacheRemove(cResourceTypeData* pData)
 	if (m_bPagingEnabled)
 	{
 		void* pDummy;
-		if (m_pCache->Remove(reinterpret_cast<tCacheItemID>(pData->m_pData), &pDummy) == S_OK)
+		if (m_pCache->Remove(reinterpret_cast<tCacheItemID>(pData), &pDummy) == S_OK)
 			return TRUE;
 
 		Warning(("Tried to remove an item expected but not in the cache (%s)\n", pData->GetName()));

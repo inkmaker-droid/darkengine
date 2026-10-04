@@ -8,6 +8,7 @@
 
 #include <lgd3d.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <math.h>
 
@@ -25,6 +26,7 @@
 #include <objpos.h>
 
 #include <mnumprop.h>
+#include <mnamprop.h>
 #include <partprop.h>
 #include <prjctile.h>
 

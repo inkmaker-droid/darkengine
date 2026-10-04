@@ -43,7 +43,8 @@ sUiAnimElem::sUiAnimElem(IStringRes *pStr,const char *pName,const char *pResPath
       if (mFlags&kAnimLock) pFrame->Lock();
       mFrames.Append(pFrame);
    }
-   mBlit();      
+   if (mFrames.Size() > 0)
+      mBlit();
    pResMan->Release();
 }
 
@@ -87,6 +88,9 @@ void sUiAnimElem::mBlit()
 // update the frame with the dt, shows next frame if must be
 void sUiAnimElem::Update(float dt)
 {
+   if (mFrames.Size() == 0)
+      return;
+
    int oFrame = mFrame;
 
    // Increment

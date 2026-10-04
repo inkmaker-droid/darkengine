@@ -9,6 +9,7 @@
 #include <drawelem.h>
 #include <2d.h>
 #include <res.h>
+#include <resapi.h>
 #include <lgsprntf.h>
 #include <rect.h>
 #include <string.h>
@@ -193,7 +194,9 @@ void ElementDrawText(DrawElement *d, DrawElemState state, short x, short y, shor
 {
    char s[DRAWELEM_STRLEN],s2[DRAWELEM_STRLEN];  // s carries the final string, some use s2 for formatting or
                                                  // other temporary string storage
-   Id font_id = guiStyleAvail(draw_style) ? guiStyleGetFont(draw_style,StyleFontNormal) : lgad_default_font;  // what font to use, can be overriden
+   Id font_id = lgad_default_font;  // legacy resource-id fallback/override
+   bool style_font = FALSE;
+   bool font_override = FALSE;
    short sw,sh; // size in width and height, used for centering and size-setting
    int *v; // variable contents
    int stylecol = textcols[state];
@@ -271,13 +274,19 @@ void ElementDrawText(DrawElement *d, DrawElemState state, short x, short y, shor
       case DRAWTYPE_TEXT:
       case DRAWTYPE_TEXTREF:
          if (d->draw_data2 != NULL)
+         {
             font_id = (Id)(d->draw_data2);
+            font_override = TRUE;
+         }
          break;
    }
 
    // Actually do it
    gr_set_fcolor(color);
-   gr_set_font((grs_font *)ResLock(font_id));
+   if (!font_override && guiStyleAvail(draw_style))
+      style_font = guiStyleSetupFont(draw_style,StyleFontNormal);
+   if (!style_font)
+      gr_set_font((grs_font *)ResLock(font_id));
 
    format = (d->draw_flags & DRAWFLAG_FORMAT_BITS) >> DRAWFLAG_FORMAT_SHIFT;
 
@@ -325,13 +334,17 @@ void ElementDrawText(DrawElement *d, DrawElemState state, short x, short y, shor
             break;
       }
    }
-   ResUnlock(font_id);
+   if (style_font)
+      guiStyleCleanupFont(draw_style,StyleFontNormal);
+   else
+      ResUnlock(font_id);
 }
 
 
 void ElementDrawBitmap(DrawElement *d, DrawElemState state, short x, short y, short w, short h, Point *size)
 {
-   grs_bitmap *draw_me; // what we should actually draw
+   grs_bitmap *draw_me = NULL; // what we should actually draw
+   IRes *named_res = NULL;
    Ref draw_ref = 0; // What Ref we are drawing?
    int offs = 0;
 
@@ -349,6 +362,22 @@ void ElementDrawBitmap(DrawElement *d, DrawElemState state, short x, short y, sh
          if (limit == 0 || state < limit)
          {
             draw_me = *(((grs_bitmap**)d->draw_data) + state);
+         }
+         break;
+      }
+      case DRAWTYPE_IRES:
+         named_res = (IRes *)d->draw_data;
+         if (named_res != NULL)
+            draw_me = (grs_bitmap *)IRes_Lock(named_res);
+         break;
+      case DRAWTYPE_IRESOFFSET:
+      {
+         int limit = (int)d->draw_data2;
+         if (limit == 0 || state < limit)
+         {
+            named_res = ((IRes **)d->draw_data)[state];
+            if (named_res != NULL)
+               draw_me = (grs_bitmap *)IRes_Lock(named_res);
          }
          break;
       }
@@ -412,7 +441,9 @@ void ElementDrawBitmap(DrawElement *d, DrawElemState state, short x, short y, sh
    }
    else
       gr_bitmap(draw_me,x,y);
-   if (draw_ref)
+   if (named_res)
+      IRes_Unlock(named_res);
+   else if (draw_ref)
       RefUnlock(draw_ref);
 }
 
@@ -438,6 +469,8 @@ ElemDrawFunc elem_draw_funcs[] =
    ElementDrawCallback, 
    ElementDrawBitmap,
    ElementDrawText,
+   ElementDrawBitmap,
+   ElementDrawBitmap,
    ElementDrawBitmap
 };
 

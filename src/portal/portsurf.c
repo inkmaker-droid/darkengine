@@ -761,6 +761,7 @@ grs_bitmap *get_cached_surface(PortalPolygonRenderInfo *render,
    bool cache;
    uchar *data, *bits;
    uchar log_bpp;
+
 #ifdef DO_DECALS
    void (*decal_build_func)();
 #endif
@@ -972,8 +973,14 @@ static void pt16_surfbuild(int slog)
    uchar *src;
    LightmapEntry *light;
    ushort *dest;
-   //int cl, cr, dcl, dcr, c, dc;
    int size, i,j;
+   int x0, x1, y0, y1;
+   int w00, w10, w01, w11, denom;
+   ushort c00, c10, c01, c11;
+   ushort n555;
+   uchar color;
+   ushort *clut;
+   extern uchar light_ipal[];
 
    dest  = (ushort *)_portal_surface_output;
    src   = _portal_surface_texture;
@@ -982,54 +989,47 @@ static void pt16_surfbuild(int slog)
    drow  = _portal_surface_output_row>>1;
    lrow  = _portal_surface_lightmap_row;
 
-   // light map pixels start out 4.4; we want c to be 4.8, so we shift by 4
-   // and shift deltas by the appropriate amount to compensate for size.
-
    size = 1<<slog;
-
-#if 0
-   cl = light[0];
-   cr = light[1];
-   dcl = (light[lrow] - cl)<<(4-slog);
-   dcr = (light[lrow+1] - cr)<<(4-slog);
-   cl <<= 4;
-   cr <<= 4;
-
-   for (j=0;j<size;j++)
-   {
-      c = cl;
-      dc = (cr-cl)>>slog;
-      for (i=0;i<size;i++) {
-         dest[i] = grd_ltab816[(c&0xff00) + src[i]];
-         c += dc;
-      }
-      cl += dcl;
-      cr += dcr;
-      dest += drow;
-      src += srow;
-   }
-#else // 0
-   // just use the tl color
-   {
-      extern uchar light_ipal[];
 #ifdef RGB_888
-      ushort n555 = (light[0].A[0] >> 3)
-                  + ((light[0].A[1] >> 3) << 5)
-                  + ((light[0].A[2] >> 3) << 10);
-      uchar color = light_ipal[n555];
+   c00 = (light[0].A[0] >> 3) | ((light[0].A[1] >> 3) << 5) | ((light[0].A[2] >> 3) << 10);
+   c10 = (light[1].A[0] >> 3) | ((light[1].A[1] >> 3) << 5) | ((light[1].A[2] >> 3) << 10);
+   c01 = (light[lrow].A[0] >> 3) | ((light[lrow].A[1] >> 3) << 5) | ((light[lrow].A[2] >> 3) << 10);
+   c11 = (light[lrow+1].A[0] >> 3) | ((light[lrow+1].A[1] >> 3) << 5) | ((light[lrow+1].A[2] >> 3) << 10);
 #else // RGB_888
-      uchar color = light_ipal[light[0]];
+   c00 = light[0];
+   c10 = light[1];
+   c01 = light[lrow];
+   c11 = light[lrow+1];
 #endif // RGB_888
-      ushort *clut = &grd_ltab816[(color+24) << 8];
-      for (j=0; j < size; ++j) {
-         for (i=0; i < size; ++i) {
-            dest[i] = clut[src[i]];
-         }
-         dest += drow;
-         src  += srow;
+
+   // Interpolate each 5:5:5 light channel independently.  Interpolating the
+   // packed value directly lets carries leak between channels; using only the
+   // top-left sample produces the conspicuous square lighting blocks.
+   denom = size * size;
+   for (j=0; j<size; ++j) {
+      y0 = size-j;
+      y1 = j;
+      for (i=0; i<size; ++i) {
+         x0 = size-i;
+         x1 = i;
+         w00 = x0*y0;
+         w10 = x1*y0;
+         w01 = x0*y1;
+         w11 = x1*y1;
+         n555 = (ushort)(
+            (((((c00      ) & 31)*w00 + ((c10      ) & 31)*w10 +
+                ((c01      ) & 31)*w01 + ((c11      ) & 31)*w11) / denom)) |
+            (((((c00 >>  5) & 31)*w00 + ((c10 >>  5) & 31)*w10 +
+                ((c01 >>  5) & 31)*w01 + ((c11 >>  5) & 31)*w11) / denom) << 5) |
+            (((((c00 >> 10) & 31)*w00 + ((c10 >> 10) & 31)*w10 +
+                ((c01 >> 10) & 31)*w01 + ((c11 >> 10) & 31)*w11) / denom) << 10));
+         color = light_ipal[n555];
+         clut = &grd_ltab816[(color+24) << 8];
+         dest[i] = clut[src[i]];
       }
+      dest += drow;
+      src  += srow;
    }
-#endif // 0
 
 #endif // SOFTWARE_RGB
 }

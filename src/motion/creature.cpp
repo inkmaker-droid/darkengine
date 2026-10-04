@@ -523,7 +523,7 @@ void CreatureDebugSaveLoadTest()
    mp_free_multiped(mp);
    mp_init_multiped(mp);
    mp_read_multiped(mp,buf,MotSwizzle);
-   delete buf;
+   delete[] buf;
 }
 
 EXTERN BOOL g_mot_quat_debug;
@@ -1002,7 +1002,7 @@ void CreaturesRead(fCreatureReadWrite func, eObjPartition partition)
    int i, ver, num;
    if(g_pMotSwizzleMap)
    {
-      delete g_pMotSwizzleMap;
+      delete[] g_pMotSwizzleMap;
       g_pMotSwizzleMap=NULL;
       g_nSwizzleMots=0;
    }
@@ -1544,7 +1544,7 @@ cCreature::cCreature(int type, ObjID objID, fCreatureReadWrite func, int version
 
       mp_read_multiped(&m_sMultiped,buf,MotSwizzle);
 
-      delete buf;
+      delete[] buf;
    }
 
 // initialize remaining data
@@ -1588,8 +1588,8 @@ cCreature::cCreature(int type, ObjID objID, fCreatureReadWrite func, int version
       Warning(("cCreature()#2: %s has no position\n",ObjWarnName(m_ObjID)));
    }
 
-   delete lengths.pTorsos;
-   delete lengths.pLimbs;
+   delete[] lengths.pTorsos;
+   delete[] lengths.pLimbs;
 
    MvrUtilsRegisterDefaultObjFlags(m_ObjID);
 }
@@ -1616,10 +1616,10 @@ cCreature::~cCreature()
    mp_stop_all_motions(&m_sMultiped);
    mp_free_multiped(&m_sMultiped);
 
-   delete m_pJoints;
-   delete m_pOrients;
-   delete m_pTorsos;
-   delete m_pLimbs;
+   delete[] m_pJoints;
+   delete[] m_pOrients;
+   delete[] m_pTorsos;
+   delete[] m_pLimbs;
 }
 
 ///////////////////////////////////////////////////
@@ -1673,7 +1673,7 @@ void cCreature::Write(fCreatureReadWrite func)
    uchar *buf= new uchar[msize];
    mp_write_multiped(&m_sMultiped, (void *)buf);
    func((void *)buf,msize,1);
-   delete buf;
+   delete[] buf;
 }
 
 ///////////////////////////////////////////////////
@@ -1709,7 +1709,7 @@ void cCreature::ResetLengths()
       const Position *pPos=ObjPosGet(m_ObjID);
       SetCretObjPos(m_ObjID,&pPos->loc.vec,&pPos->fac); // this needed to update brush and refs
    }
-   delete rot;
+   delete[] rot;
 }
 
 ///////////////////////////////////////////////////
@@ -1764,7 +1764,7 @@ void cCreature::PoseAtMotionFrame(int motNum, float frame)
       SlamPhysicsModels();
    CreatureAttachmentsPosUpdate(m_ObjID);
 
-   delete rot;
+   delete[] rot;
 }
 
 ///////////////////////////////////////////////////
@@ -1856,7 +1856,7 @@ void cCreature::RecomputeJointPositions()
       quat_from_matrix(&rot[m_sMultiped.num_joints],&m_sMultiped.global_orient);
       mx_zero_vec(&v);
       mp_apply_motion(&m_sMultiped,rot,&v,-1);
-      delete rot;
+      delete[] rot;
    } else
    {
       mp_initial_update(&m_sMultiped);

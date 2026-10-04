@@ -618,7 +618,6 @@ void mp_apply_motion(multiped * mp, quat * rot, mxs_vector * trans, int stop_joi
          mx_mat_muleq_vec(&m, &v1);
 
          mx_add_vec(&mp->joints[l->joint_id[j+1]], &mp->joints[l->joint_id[j]], &v1);
-
          if (l->joint_id[j] == stop_joint)
          {
             goto mp_finished;
@@ -652,7 +651,7 @@ mp_finished:
 
 bool mp_get_motion_data(multiped * mp, 
                         mps_motion * m, 
-                        int frame, 
+                        float frame,
                         quat * rot, 
                         mxs_vector * trans)
 {

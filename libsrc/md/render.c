@@ -8,6 +8,7 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 
 #include <md.h>
 #include <md_.h>
@@ -76,10 +77,78 @@ static r3s_phandle vlist[64];
 static int buff_light_off; // where the light vals start
 static int buff_norm_off;  // where the norm values are start
 
+// Model polygon offsets come from the model BSP and are normally trusted.
+// Reject a damaged entry here so a bad model cannot turn into arbitrary
+// indexed reads in either of the two polygon rendering paths.
+static bool md_pgon_valid(mds_pgon *p)
+{
+   uchar *model_start;
+   uchar *pgon_start;
+   uchar *pgon_end;
+   uchar *cursor;
+   ulong bytes;
+   int i;
+   int norm_count;
+   int light_count;
+   int uv_count;
+   int prim;
+
+   if (!mdd.model || !p)
+      return FALSE;
+
+   model_start = (uchar *)mdd.model;
+   pgon_start = model_start + mdd.model->pgon_off;
+   pgon_end = model_start + mdd.model->node_off;
+   cursor = (uchar *)p;
+
+   if (cursor < pgon_start || cursor > pgon_end - sizeof(mds_pgon))
+      goto invalid;
+
+   prim = p->type & MD_PGON_PRIM_MASK;
+   if (p->num == 0 || p->num > 64 || prim > MD_PGON_PRIM_TMAP)
+      goto invalid;
+
+   bytes = sizeof(mds_pgon) + 2 * p->num * sizeof(ushort);
+   if (prim == MD_PGON_PRIM_TMAP)
+      bytes += p->num * sizeof(ushort);
+   if (mdd.model->ver > 3)
+      bytes += sizeof(mds_pgon_aux);
+   if (bytes > (ulong)(pgon_end - cursor))
+      goto invalid;
+
+   norm_count = (mdd.model->pgon_off - mdd.model->norm_off) / sizeof(mxs_vector);
+   light_count = (mdd.model->norm_off - mdd.model->light_off) / sizeof(mds_light);
+   uv_count = (mdd.model->vhot_off - mdd.model->uv_off) / sizeof(mds_uv);
+   if (p->norm >= norm_count)
+      goto invalid;
+
+   for (i = 0; i < p->num; ++i) {
+      if (p->verts[i] >= mdd.model->verts || p->verts[p->num + i] >= light_count)
+         goto invalid;
+      if (prim == MD_PGON_PRIM_TMAP && p->verts[2 * p->num + i] >= uv_count)
+         goto invalid;
+   }
+
+   return TRUE;
+
+invalid:
+   {
+      static int reports_left = 16;
+      if (reports_left-- > 0) {
+         char name[9];
+         memcpy(name, mdd.model->name, 8);
+         name[8] = '\0';
+         fprintf(stderr, "Skipping invalid model polygon: model=%s offset=%ld\n",
+                 name, (long)(cursor - pgon_start));
+      }
+   }
+   return FALSE;
+}
+
 #ifndef SHIP
    #define TEST_VERSION(fname,model)   \
    do { \
-      if (model->ver!=MD_CUR_VER) { \
+      if (model->ver < MD_COMPATIBLE_VER || model->ver > MD_CUR_VER) { \
          char safename[10]; \
          strncpy(safename,model->name,8); \
          safename[8]='\0'; \
@@ -632,6 +701,8 @@ void md_render_pgon(mds_pgon *p)
    ulong flag=0;
    ulong type;
 
+   if (!md_pgon_valid(p)) return;
+
    // Bail if it isn't facing you
    // use the cached normal dot prod
    if ((mdd.buff_norms[p->norm] + p->d) <= 0.0) return;
@@ -716,6 +787,8 @@ void md_render_pgon_render_callback(mds_pgon *p)
    grs_bitmap *bm;
    ulong color;
    ulong type;
+
+   if (!md_pgon_valid(p)) return;
 
    // Bail if it isn't facing you
    // use the cached normal dot prod

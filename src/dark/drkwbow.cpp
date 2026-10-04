@@ -13,6 +13,7 @@
 #include <appagg.h>
 #include <config.h>
 #include <cfgdbg.h>
+#include <stdio.h>
 #include <math.h>
 #include <rand.h>
 #include <mprintf.h>

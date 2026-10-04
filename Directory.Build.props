@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <BuildThief2 Condition="'$(BuildThief2)' == ''">true</BuildThief2>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(BuildThief2)' == 'true'">
+    <!-- Dark's persisted structures and cross-library ABI use byte packing. -->
+    <ClCompile>
+      <StructMemberAlignment>1Byte</StructMemberAlignment>
+      <!-- The renderer uses C99 array designators for sparse dispatch tables.
+           MSVC's legacy C mode accepts the syntax but initializes entries
+           sequentially, producing corrupt function-pointer tables. -->
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <PreprocessorDefinitions>WINDOWS_IGNORE_PACKING_MISMATCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

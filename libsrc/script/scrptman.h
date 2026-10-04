@@ -336,6 +336,7 @@ inline HRESULT cScriptMan::DoSendDirect(IScript * pScript, sScrMsg * pMsg,
    // LGALLOC_PUSH_CREDIT();
    
    // Here's where we intercept messages for breaks and mono spew.
+   ScriptDebugLogDispatch(pScript, pMsg);
    result = pScript->ReceiveMessage(pMsg, pReply, FindDebugFlags(pMsg));
 
    // LGALLOC_POP_CREDIT();

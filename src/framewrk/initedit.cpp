@@ -31,6 +31,9 @@
 #include <edittool.h>
 #include <sdestool.h>
 #include <iobjed.h>
+#ifdef THIEF2_GAME
+#include <motmngr.h>
+#endif
 
 // must be last header
 #include <dbmem.h>
@@ -135,12 +138,23 @@ tResult LGAPI AppInit()
 {
    CoreEngineAppInit();
 
+#ifdef THIEF2_GAME
+   // The playtest startup path can load a command-line mission before the
+   // biped loop client has created its motion database on modern builds.
+   if (!g_pMotionSet)
+      MotionManagerInit();
+#endif
+
    if (!gPrimordialMode)
    {
+#ifdef THIEF2_GAME
+      setup_game_mode();
+#else
       if (config_is_defined("start_game_mode"))
          setup_game_mode();
       else
          setup_edit_mode();
+#endif
    }
 
    load_dlg_lib();

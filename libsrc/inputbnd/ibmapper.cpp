@@ -78,13 +78,13 @@ unsigned short g_shift_to_scan[0xE0];
 #define MASK_CAPS_LOCK 0x000004
 #define MASK_LSHIFT    0x000008
 #define MASK_RSHIFT    0x000010
-#define MASK_SHIFT     (MASK_LSHIFT & MASK_RSHIFT)
+#define MASK_SHIFT     (MASK_LSHIFT | MASK_RSHIFT)
 #define MASK_LCTRL     0x000020
 #define MASK_RCTRL     0x000040
-#define MASK_CTRL      (MASK_LCTRL & MASK_RCTRL)
+#define MASK_CTRL      (MASK_LCTRL | MASK_RCTRL)
 #define MASK_LALT      0x000080
 #define MASK_RALT      0x000100
-#define MASK_ALT       (MASK_LALT & MASK_RALT)
+#define MASK_ALT       (MASK_LALT | MASK_RALT)
 
 #define SCANCODE_LCTRL 29
 #define SCANCODE_RCTRL 157
@@ -299,7 +299,7 @@ input_code g_valid_input_controls[202] = {
 	{NULL, 0} };
 
 cIBInputMapper::cIBInputMapper()
-	: m_control_binds{}, m_mod_states{ 0 }, m_trapping{ false }, m_valid_events{ std::numeric_limits<uint>::max() }, m_pCtrlIterNode{ nullptr }, m_joyproc{ nullptr }
+	: m_control_binds{}, m_mod_states{ 0 }, m_trapping{ false }, m_valid_events{ (std::numeric_limits<uint>::max)() }, m_pCtrlIterNode{ nullptr }, m_joyproc{ nullptr }
 {
 	uiSetMouseMotionPolling(true);
 
@@ -785,6 +785,8 @@ cControlDownNode* CDECL cIBInputMapper::GetControlDownNode(const char* pControl)
 		if (pNode->item.control == pControl)
 			return pNode;
 	}
+
+	return nullptr;
 }
 
 int cIBInputMapper::SendButtonCmd(const char* control, int down, int mod)
@@ -796,6 +798,12 @@ int cIBInputMapper::SendButtonCmd(const char* control, int down, int mod)
 		const auto* cmd = m_control_binds.Find(control);
 		if (cmd)
 		{
+			if (!already_down)
+			{
+				g_input_down.Add(control, new uchar[1]{}, 1);
+				already_down = g_input_down.Find(control);
+			}
+
 			if (!GetControlDownNode(control))
 			{
 				auto node = new cControlDownNode;
@@ -822,7 +830,7 @@ int cIBInputMapper::SendButtonCmd(const char* control, int down, int mod)
 		char* pCmd = nullptr;
 		if (node)
 		{
-			pCmd = new char[strlen(node->item.pCmd)]; // fixme: may be an error; no alloc in original version
+			pCmd = new char[strlen(node->item.pCmd) + 1];
 			strcpy(pCmd, node->item.pCmd);
 			delete g_ctrldown_list.Remove(node);
 		}
@@ -1405,87 +1413,83 @@ double CDECL cIBInputMapper::ShortScaleDouble(short m)
 
 const char* cIBInputMapper::DecomposeControl(const char* control_str, char(*controls)[32], long* num_controls)
 {
+	*num_controls = 0;
+	if (!control_str || !*control_str)
+		return "Invalid input control";
+
+	char tmp_controls[4][32] = {};
 	int num = 0;
-	char tmp_controls[32][4] = {};
 
-	for (int i = 0; ; ++i)
+	// A lone plus sign names the '+' key.  Otherwise plus separates the
+	// primary control from up to three modifiers.
+	if (control_str[0] == '+' && control_str[1] == '\0')
 	{
-		if (*control_str == '\0')
-			break;
-
-		if (*control_str == '+' && i != 0)
+		strcpy(tmp_controls[num++], "+");
+	}
+	else
+	{
+		const char* token_start = control_str;
+		for (const char* cursor = control_str; ; ++cursor)
 		{
-			tmp_controls[num][i] = '\0';
+			if (*cursor != '+' && *cursor != '\0')
+				continue;
+
+			const size_t token_len = static_cast<size_t>(cursor - token_start);
+			if (token_len == 0 || token_len >= sizeof(tmp_controls[0]))
+				return "Invalid input control";
+			if (num == 4)
+				return "Too many controls in compound binding";
+
+			memcpy(tmp_controls[num], token_start, token_len);
+			tmp_controls[num][token_len] = '\0';
 			++num;
-			i = 0;
-			++control_str;
+
+			if (*cursor == '\0')
+				break;
+			token_start = cursor + 1;
 		}
+	}
 
-		if (num == 4)
-			break;
+	auto is_modifier = [](const char* control) {
+		return !strcmp(control, "alt") || !strcmp(control, "ctrl") || !strcmp(control, "shift");
+	};
 
-		tmp_controls[num][i] = *control_str;
-		++control_str;
+	int primary = -1;
+	for (int i = 0; i < num; ++i)
+	{
+		if (!is_modifier(tmp_controls[i]))
+		{
+			if (primary != -1)
+				return "Multiple non-modifier controls are not allowed";
+			primary = i;
+		}
+	}
+
+	if (num > 1 && primary == -1)
+		return "A non-modifier control is needed in compound bindings";
+	if (primary > 0)
+		std::swap(tmp_controls[0], tmp_controls[primary]);
+
+	for (int i = 1; i < num; ++i)
+	{
+		for (int j = i + 1; j < num; ++j)
+		{
+			const int cmp = strcmp(tmp_controls[i], tmp_controls[j]);
+			if (cmp == 0)
+				return "Duplicate modifier";
+			if (cmp > 0)
+				std::swap(tmp_controls[i], tmp_controls[j]);
+		}
+	}
+
+	for (int i = 0; i < num; ++i)
+	{
+		if (!g_input_codes.Find(tmp_controls[i]))
+			return "Invalid input control";
+		strcpy(controls[i], tmp_controls[i]);
 	}
 
 	*num_controls = num;
-	for (int i = 0; i < num; ++i)
-	{
-		if (strcmp(tmp_controls[i], "alt") && strcmp(tmp_controls[i], "ctrl") && strcmp(tmp_controls[i], "shift"))
-		{
-			if (i != 0)
-			{
-				std::swap(tmp_controls[0], tmp_controls[i]);
-			}
-			break;
-		}
-
-		if (num > 1 && i == num - 1)
-			return "A non-modifier control is needed in compound bindings";
-	}
-
-	for (int i = num; i > 2; --i)
-	{
-		for (int j = 1; j < i - 1; ++j)
-		{
-			if (strcmp(tmp_controls[j], "alt") && strcmp(tmp_controls[j], "ctrl") && strcmp(tmp_controls[j], "shift")
-				|| strcmp(tmp_controls[j + 1], "alt")
-				&& strcmp(tmp_controls[j + 1], "ctrl")
-				&& strcmp(tmp_controls[j + 1], "shift"))
-			{
-				return "Multiple non-modifier controls are not allowed";
-			}
-
-			auto cmp = strcmp(tmp_controls[j], tmp_controls[j + 1]);
-			if (cmp == 0)
-			{
-				return "Duplicate modifier";
-			}
-
-			if (cmp > 0)
-			{
-				std::swap(tmp_controls[j], tmp_controls[j + 1]);
-			}
-		}
-	}
-
-	if (num == 2
-		&& strcmp(tmp_controls[1], "alt")
-		&& strcmp(tmp_controls[1], "ctrl")
-		&& strcmp(tmp_controls[1], "shift"))
-	{
-		return "Multiple non-modifier controls are not allowed";
-	}
-
-	for (int i = 0; i < num; ++i)
-		strcpy(controls[i], tmp_controls[i]);
-
-	for (int i = num - 1; i >= 0; --i)
-	{
-		if (!g_input_codes.Find(controls[i]))
-			return "Invalid input control";
-	}
-
 	return nullptr;
 }
 

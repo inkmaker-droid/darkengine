@@ -24,6 +24,9 @@
 #include <dbasemsg.h>
 #include <objmodel.h>
 #include <sdestool.h>
+#ifdef THIEF2_GAME
+#include <motmngr.h>
+#endif
 
 // must be last header
 #include <dbmem.h>
@@ -90,6 +93,13 @@ tResult LGAPI AppInit()
 {
 
    CoreEngineAppInit();
+
+#ifdef THIEF2_GAME
+   // Direct command-line mission loads occur before the biped loop client
+   // has had an opportunity to create the motion database.
+   if (!g_pMotionSet)
+      MotionManagerInit();
+#endif
 
    if (!gPrimordialMode)
       setup_game_mode();   

@@ -9,6 +9,8 @@
 #include <objarray.h>
 
 #include <math.h>
+#include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 extern "C" {
@@ -1448,6 +1450,50 @@ static BOOL render_md(int idx, ObjID obj, int fragment, int color, uchar *clut)
    CTIMER_RETVAL(kCTimerRendMD, rv);
 }
 
+static BOOL queued_pgon_is_valid(mds_model *model, mds_pgon *poly, ObjID obj)
+{
+   const uchar *model_start = (const uchar *)model;
+   const uchar *model_end;
+   const uchar *poly_start = (const uchar *)poly;
+   size_t poly_header_size = offsetof(mds_pgon, verts);
+   size_t poly_size;
+   int i;
+
+   if (model->mod_size < sizeof(mds_model))
+      goto invalid;
+
+   model_end = model_start + model->mod_size;
+   if (poly_start < model_start || poly_start > model_end
+       || (size_t)(model_end - poly_start) < poly_header_size)
+      goto invalid;
+
+   if (poly->num < 3 || poly->num > 64)
+      goto invalid;
+
+   poly_size = poly_header_size + poly->num * sizeof(poly->verts[0]);
+   if ((size_t)(model_end - poly_start) < poly_size)
+      goto invalid;
+
+   for (i = 0; i < poly->num; ++i)
+      if (poly->verts[i] >= model->verts)
+         goto invalid;
+
+   return TRUE;
+
+invalid:
+   {
+      static int reports_left = 16;
+      if (reports_left > 0) {
+         fprintf(stderr,
+                 "Skipping invalid model polygon: object=%d model=%.8s "
+                 "verts=%u polygon=%p\n",
+                 obj, model->name, model->verts, poly);
+         --reports_left;
+      }
+   }
+   return FALSE;
+}
+
 static BOOL poly_clip_codes_and(mds_pgon *poly)
 {
    ushort *vlist = poly->verts;
@@ -1583,6 +1629,8 @@ static void queue_render_md(void *q, uchar *clut)
          else
 #endif
          for (i=0; i < count; ++i, ++poly) {
+            if (!queued_pgon_is_valid(m, *poly, qm->obj_id))
+               continue;
             if (!poly_clip_codes_and(*poly))
 #ifdef EDITOR
                editor_safe_render_pgon(*poly);

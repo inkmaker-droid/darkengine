@@ -503,14 +503,16 @@ short cZipStream::Getc()
 	if (m_pInfo->m_nCompressionMethod)
 	{
 		if (m_pData && m_nOpenCount && m_nLastPos < m_pInfo->m_nUncompressedSize)
-			return m_pData[m_nLastPos++];
+			return static_cast<unsigned char>(m_pData[m_nLastPos++]);
 		else
 			return -1;
 	}
 
 	char c{};
 	if (m_nOpenCount && Read(1, &c) == 1)
-		return c;
+		return static_cast<unsigned char>(c);
+
+	return -1;
 }
 
 ///////////////////////////////////////

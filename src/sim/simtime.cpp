@@ -309,7 +309,15 @@ static void SlowFrame(long nMilliseconds)
 }
 
 
+#ifdef THIEF2_GAME
+// The original simulation clamps very short frames to 10 ms.  Running the
+// recovered executable uncapped on a modern machine therefore advances game
+// time faster than wall time.  Keep the playtest build near the cadence the
+// game was authored for; an explicit SlowFrame setting can still override it.
+static int nSlowFrameTime = 16;
+#else
 static int nSlowFrameTime = 0;
+#endif
 static long nLastRealFrameTime = 0;
 
 #pragma off(unreferenced)

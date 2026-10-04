@@ -263,18 +263,42 @@ STDMETHODIMP_(BOOL) cInputBinder::Unbind(const char* pControl)
 
 STDMETHODIMP_(void) cInputBinder::QueryBind(const char* pControl, char* pCmdBuf, long iBufLen)
 {
+	if (!pCmdBuf || iBufLen <= 0)
+		return;
+
 	char pBuf[256] = {};
 
 	snprintf(pBuf, 256, "bind %s", pControl);
-	strncpy(pCmdBuf, ProcessCmd(pBuf), iBufLen);
+	const char* pCmd = ProcessCmd(pBuf);
+	if (pCmd)
+	{
+		strncpy(pCmdBuf, pCmd, iBufLen - 1);
+		pCmdBuf[iBufLen - 1] = '\0';
+	}
+	else
+	{
+		pCmdBuf[0] = '\0';
+	}
 }
 
 STDMETHODIMP_(void) cInputBinder::GetVarValue(const char* pVarStr, char* pValBuf, long iBufLen)
 {
+	if (!pValBuf || iBufLen <= 0)
+		return;
+
 	char pBuf[256] = {};
 
 	snprintf(pBuf, 256, "echo $%s", pVarStr);
-	strncpy(pValBuf, ProcessCmd(pBuf), iBufLen);
+	const char* pVal = ProcessCmd(pBuf);
+	if (pVal)
+	{
+		strncpy(pValBuf, pVal, iBufLen - 1);
+		pValBuf[iBufLen - 1] = '\0';
+	}
+	else
+	{
+		pValBuf[0] = '\0';
+	}
 }
 
 STDMETHODIMP_(const char*) cInputBinder::ProcessCmd(const char* pCmdStr)

@@ -249,4 +249,6 @@ cResourceData* cHashByResName::FindResData(const char* pName, IStore* pStore, BO
 
 		return pData;
 	}
+
+	return nullptr;
 }

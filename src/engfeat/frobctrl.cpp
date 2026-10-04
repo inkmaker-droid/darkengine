@@ -9,6 +9,8 @@
 #include <lg.h>
 #include <mprintf.h>
 #include <cfgdbg.h>  // For ConfigSpew
+#include <config.h>
+#include <stdio.h>
 
 #include <appagg.h>
 #include <lazyagg.h>

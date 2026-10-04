@@ -408,4 +408,12 @@ DECLARE_INTERFACE_(IScriptModule, IUnknown)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// Lightweight runtime tracing used by the Thief command console. Each
+// dispatched script message is written immediately while tracing is enabled.
+EXTERN void ScriptDebugSetEnabled(BOOL enabled);
+EXTERN BOOL ScriptDebugIsEnabled(void);
+EXTERN void ScriptDebugLogDispatch(IScript* script, const sScrMsg* message);
+
+///////////////////////////////////////////////////////////////////////////////
+
 #endif /* !__SCRPTAPI_H */

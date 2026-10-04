@@ -16,6 +16,7 @@
 #include <plyrmode.h>
 #include <plyrvmot.h>
 #include <config.h>
+#include <stdio.h>
 #include <matrixs.h>
 #include <objtype.h>
 #include <command.h>

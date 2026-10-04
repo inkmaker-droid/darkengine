@@ -101,7 +101,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dinput.lib;d3dx.lib;dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;arq.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;odbc32.lib;odbccp32.lib;winmm.lib;comctl32.lib;zlib.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;arq.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;odbc32.lib;odbccp32.lib;winmm.lib;comctl32.lib;zlib.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -122,7 +122,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>arq.lib;dinput.lib;d3dx.lib;dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;odbc32.lib;odbccp32.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>arq.lib;dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;odbc32.lib;odbccp32.lib;winmm.lib;comctl32.lib;zlib.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -140,7 +140,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dinput.lib;d3dx.lib;dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;arq.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;odbc32.lib;odbccp32.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;arq.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;odbc32.lib;odbccp32.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -161,7 +161,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>arq.lib;dinput.lib;d3dx.lib;dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;odbc32.lib;odbccp32.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>arq.lib;dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;odbc32.lib;odbccp32.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -2630,6 +2630,39 @@
     <MASM Include="portal\Ptsurf16.asm">
       <FileType>Document</FileType>
     </MASM>
+  </ItemGroup>
+  <PropertyGroup Condition="'$(BuildThief2)'=='true'">
+    <TargetName>Thief2</TargetName>
+    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\Thief2\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(BuildThief2)'=='true' And '$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;DEBUG;DBG_ON;WARN_ON;SPEW_ON;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;STRICT=1;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;THIEF2_GAME;PROPERTY_BLAME;DIRECTINPUT_VERSION=0x0700</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(BuildThief2)'=='true' And '$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;STRICT=1;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;THIEF2_GAME;PROPERTY_BLAME;DIRECTINPUT_VERSION=0x0700</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <GenerateMapFile>true</GenerateMapFile>
+      <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup Condition="'$(BuildThief2)'=='true'">
+    <ClCompile Update="editor\**\*.c;editor\**\*.cpp;csg\**\*.c;csg\**\*.cpp;framewrk\Report.cpp;sound\Songedtr.cpp">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
+    <!-- Small UI/service shims shared by the game command and scripting code. -->
+    <ClCompile Update="editor\Isdesced.cpp;editor\Menus.cpp;editor\Prompts.c;editor\Sdesparm.cpp;editor\Status.c;framewrk\Gameiid.c">
+      <ExcludedFromBuild>false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Update="framewrk\Initedit.cpp">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Update="framewrk\Initgame.cpp">
+      <ExcludedFromBuild>false</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

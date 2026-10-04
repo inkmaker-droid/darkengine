@@ -458,11 +458,11 @@ protected:
       }
       memset (&mButtDrawElem[SLIDER_BMPRES], 0, sizeof (DrawElement));
       mButtDrawElem[SLIDER_BMPRES].draw_data = (void *)mButtBmpRes[SLIDER_BMPRES];
-      mButtDrawElem[SLIDER_BMPRES].draw_type = DRAWTYPE_RESOFFSET;
+      mButtDrawElem[SLIDER_BMPRES].draw_type = DRAWTYPE_IRESOFFSET;
 
       //get our slider base bitmap
       memset (&mSliderBaseBmp, 0, sizeof (DrawElement));
-      mSliderBaseBmp.draw_type = DRAWTYPE_RES;
+      mSliderBaseBmp.draw_type = DRAWTYPE_IRES;
       mSliderBaseBmp.draw_data = (void *)pResMan->Bind ("slidbase", RESTYPE_IMAGE, NULL, mResPath);
 
       for (int i = 0; i < (int)kNumSubPanelSlides; i++)
@@ -1394,7 +1394,7 @@ protected:
 
       memset (draw_elem, 0, sizeof (DrawElement));
       draw_elem->draw_data = (void *)butt_res;
-      draw_elem->draw_type = DRAWTYPE_RESOFFSET;
+      draw_elem->draw_type = DRAWTYPE_IRESOFFSET;
    }
 
    //////////////////////////////////////////////////////

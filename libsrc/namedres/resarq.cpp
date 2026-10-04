@@ -223,6 +223,11 @@ bool cResARQFulfiller::IsFulfilled(IRes* pRes)
     auto* pResourceTypeData = g_pResMan->GetResourceTypeData(pRes);
     auto* pResRequest = m_Controls.Search(pResourceTypeData);
 
+    // A synchronous preload is completed immediately and deliberately does
+    // not leave a control-table request behind.
+    if (!pResRequest && !IsAsynchronous())
+        return true;
+
     AssertMsg1(pResRequest, "Resource 0x%x was never queued", pResourceTypeData->GetName());
 
     // If we're actually operating asynchronously...
@@ -322,6 +327,16 @@ HRESULT cResARQFulfiller::GetResult(IRes* pRes, void ** ppResult)
 
         ResThreadUnlock();
         return retVal;
+    }
+
+    // Without an asynchronous queue, a caller may observe an immediately
+    // fulfilled request that has no control-table entry (notably after a
+    // synchronous preload).  Complete the lock directly in that case.
+    if (!IsAsynchronous())
+    {
+        *ppResult = g_pResMan->LockResource(pRes);
+        ResThreadUnlock();
+        return *ppResult ? S_OK : E_FAIL;
     }
 
     CriticalMsg("Tried to get the result of an unknown async request.");
@@ -455,8 +470,8 @@ bool cResARQFulfiller::QueueRequest(IRes* pRes, int priority,
         // ... or if we're not operating asynchronously just do it...
         if (pResourceTypeData->m_pData != nullptr || !IsAsynchronous())
         {
-            g_pResMan->LockResource(pResRequest->pResource);
-            g_pResMan->UnlockResource(pResRequest->pResource);
+            g_pResMan->LockResource(pRes);
+            g_pResMan->UnlockResource(pRes);
             return true;
         }
     }
