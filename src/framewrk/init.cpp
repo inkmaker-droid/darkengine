@@ -37,6 +37,7 @@
 #include <iobjsys.h>
 #include <scrptapi.h>
 #include <scrnmode.h>
+#include <mode.h>
 
 #include <appname.h>
 #include <contexts.h>
@@ -403,6 +404,26 @@ tResult LGAPI CoreEngineCreateObjects(int argc, const char *argv[])
 //------------------------------------------------------------
 // CORE INIT FUNCTION
 //
+#ifdef THIEF2_GAME
+static void SetSupportedScreenSize(const char *size_var, const char *depth_var,
+                                   int native_width, int native_height)
+{
+   int dimensions[2] = { native_width, native_height };
+   int count = 2;
+   int depth = 16;
+
+   config_get_value(size_var, CONFIG_INT_TYPE, dimensions, &count);
+   config_get_int(depth_var, &depth);
+   if (gr_find_closest_registered_mode(dimensions[0], dimensions[1], depth,
+                                       &dimensions[0], &dimensions[1]) < 0)
+   {
+      dimensions[0] = 640;
+      dimensions[1] = 480;
+   }
+   config_set_value(size_var, CONFIG_INT_TYPE, dimensions, 2);
+}
+#endif
+
 tResult LGAPI CoreEngineAppInit()
 {
    pGameShell = AppGetObj(IGameShell);
@@ -428,25 +449,34 @@ tResult LGAPI CoreEngineAppInit()
    tm_init();
 
 #ifdef THIEF2_GAME
+   // The raster and hardware paths use 16-bit render surfaces. Normalize
+   // 24/32-bit NewDark configuration values to the supported path.
+   {
+      int depth;
+      if (!config_get_int("screen_depth", &depth) || depth > 16)
+         config_set_int("screen_depth", 16);
+      if (!config_get_int("game_screen_depth", &depth) || depth > 16)
+         config_set_int("game_screen_depth", 16);
+   }
+
    // Respect an explicit user setting. Otherwise start at the native size of
    // the display under the pointer, which is the best available "current"
    // display before the game creates its window.
-   if (!config_is_defined("screen_size") ||
-       !config_is_defined("game_screen_size"))
    {
       POINT point = { 0, 0 };
       MONITORINFO info = { sizeof(info) };
-      int dimensions[2];
+      int native_width;
+      int native_height;
 
       GetCursorPos(&point);
       GetMonitorInfo(MonitorFromPoint(point, MONITOR_DEFAULTTOPRIMARY), &info);
-      dimensions[0] = info.rcMonitor.right - info.rcMonitor.left;
-      dimensions[1] = info.rcMonitor.bottom - info.rcMonitor.top;
+      native_width = info.rcMonitor.right - info.rcMonitor.left;
+      native_height = info.rcMonitor.bottom - info.rcMonitor.top;
 
-      if (!config_is_defined("screen_size"))
-         config_set_value("screen_size", CONFIG_INT_TYPE, dimensions, 2);
-      if (!config_is_defined("game_screen_size"))
-         config_set_value("game_screen_size", CONFIG_INT_TYPE, dimensions, 2);
+      SetSupportedScreenSize("screen_size", "screen_depth",
+                             native_width, native_height);
+      SetSupportedScreenSize("game_screen_size", "game_screen_depth",
+                             native_width, native_height);
    }
 #endif
 

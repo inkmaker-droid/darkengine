@@ -67,6 +67,7 @@ EXTERN int ScrnSetDisplay(int kind, int flags, GUID *pDDrawGuid);
 // palette or not
 // returns TRUE for success
 EXTERN BOOL ScrnSetRes(ScrnMode mode,ulong flags);
+EXTERN const char* ScrnGetLastSetResError(void);
 
 EXTERN void ScrnUnsetRes(void); 
 

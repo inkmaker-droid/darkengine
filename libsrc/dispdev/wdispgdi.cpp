@@ -97,15 +97,18 @@ void cGDIProvider::DoGetInfo(sGrDeviceInfo * pGrDeviceInfo, sGrModeInfo * pModeI
 {
     memset(pGrDeviceInfo, 0, sizeof(sGrDeviceInfo));
 
-    // Claim support for all
+    // Claim support for initialized static and runtime-registered modes.
+    // Reserved dynamic slots have zero dimensions and must not be exposed.
+    short * pModes = pGrDeviceInfo->modes;
     for (short i = 0; i < GRD_MODES; i++)
     {
-        pGrDeviceInfo->modes[i] = i;
+        if (pModeInfo[i].w > 0 && pModeInfo[i].h > 0)
+            *pModes++ = i;
     }
-    pGrDeviceInfo->modes[GRD_MODES] = -1;
+    *pModes = -1;
 
     // Claim fullscreen for all
-    short * pModes = pGrDeviceInfo->modes;
+    pModes = pGrDeviceInfo->modes;
     while (*pModes != -1)
     {
         pModeInfo[*pModes].flags |= kGrModeCanFullscreen;

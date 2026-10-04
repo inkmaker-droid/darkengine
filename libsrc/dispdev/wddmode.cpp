@@ -838,7 +838,14 @@ BOOL cOffVideoDDModeOps::StartMode(const sGrModeInfo & modeInfo, int flags, sGrM
         if (result != DD_OK)
         {
             DebugMsgIfErr("DoSetMode::SetDisplayMode", result);
-            return FALSE;
+            // Modern Windows can expose only the 32-bit desktop mode while
+            // still supporting 16-bit system-memory surfaces and converted
+            // blits. Keep the desktop mode and emulate the requested render
+            // surface in that case.
+            if (realBitsPerPixel <= 16)
+                GetDD()->RestoreDisplayMode();
+            else
+                return FALSE;
         }
     }
 
@@ -889,6 +896,28 @@ BOOL cOffVideoDDModeOps::StartMode(const sGrModeInfo & modeInfo, int flags, sGrM
     surfaceDesc.ddpfPixelFormat.dwSize = sizeof(surfaceDesc.ddpfPixelFormat);
     result = m_pPrimarySurface->GetPixelFormat(&surfaceDesc.ddpfPixelFormat);
     DebugMsgIfErr("m_pPrimarySurface->GetPixelFormat()", result);
+
+    if (result == DD_OK &&
+        surfaceDesc.ddpfPixelFormat.dwRGBBitCount != realBitsPerPixel &&
+        realBitsPerPixel <= 16)
+    {
+        memset(&surfaceDesc.ddpfPixelFormat, 0, sizeof(surfaceDesc.ddpfPixelFormat));
+        surfaceDesc.ddpfPixelFormat.dwSize = sizeof(surfaceDesc.ddpfPixelFormat);
+        surfaceDesc.ddpfPixelFormat.dwFlags = DDPF_RGB;
+        surfaceDesc.ddpfPixelFormat.dwRGBBitCount = 16;
+        if (modeInfo.bitDepth == 15)
+        {
+            surfaceDesc.ddpfPixelFormat.dwRBitMask = 0x7C00;
+            surfaceDesc.ddpfPixelFormat.dwGBitMask = 0x03E0;
+            surfaceDesc.ddpfPixelFormat.dwBBitMask = 0x001F;
+        }
+        else
+        {
+            surfaceDesc.ddpfPixelFormat.dwRBitMask = 0xF800;
+            surfaceDesc.ddpfPixelFormat.dwGBitMask = 0x07E0;
+            surfaceDesc.ddpfPixelFormat.dwBBitMask = 0x001F;
+        }
+    }
 
     result = GetDD()->CreateSurface(&surfaceDesc, &m_pSecondarySurface, NULL);
     DebugMsgIfErr("DoSetMode::CreateSurface (secondary 1)", result);

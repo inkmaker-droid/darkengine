@@ -268,6 +268,18 @@ HRESULT CALLBACK
         short ** ppModes = (short **)context;
         *(*ppModes) = (short)mode;
         (*ppModes)++;
+
+        // Current Windows drivers often enumerate only the 32-bit desktop
+        // depth even though legacy DirectDraw can provide a 16-bit emulated
+        // surface. Advertise that renderer-compatible variant as well.
+        if (bitDepth == 32 &&
+            cDisplayDevice::ModeInfoToEnumMode(pSurfaceDesc->dwWidth,
+                                               pSurfaceDesc->dwHeight,
+                                               16, &mode))
+        {
+            *(*ppModes) = (short)mode;
+            (*ppModes)++;
+        }
     }
 
     return DDENUMRET_OK;
@@ -357,39 +369,15 @@ void cDDProvider::DoGetInfo(sGrDeviceInfo * pGrDeviceInfo, sGrModeInfo * pModeIn
     //
     BEGIN_DEBUG_MSG("Enumerating native modes from DirectDraw");
 
-    YieldDisplay(m_pDisplayDevice);
-
-    // We set the cooperative level to ensure DirectDraw exposes the
-    // Mode X modes. Since setting the cooperative level forces a show of
-    // the window, we save the attributes of the window, make it so it
-    // won't draw, then restore that state
-    const BOOL fWasVisible     = IsWindowVisible(GetMainWnd());
-    const long ulWindowStyle   = GetWindowLong(GetMainWnd(), GWL_STYLE);
-    const long ulWindowExStyle = GetWindowLong(GetMainWnd(), GWL_EXSTYLE);
-
-    if (!fWasVisible)
-    {
-        SetWindowLong(GetMainWnd(), GWL_EXSTYLE, WS_EX_TOPMOST);
-        SetWindowLong(GetMainWnd(), GWL_STYLE, WS_POPUP);
-        ShowWindow(GetMainWnd(), SW_SHOW);
-    }
-    SetCooperativeLevel(kDDFullScreenCoopFlags);
-
+    // Enumerate before entering exclusive mode. On current Windows display
+    // drivers, exclusive cooperative mode can hide the emulated 8/16-bit
+    // modes that this renderer supports and expose only the 32-bit desktop
+    // depth. Mode X discovery is no longer useful on these systems.
     pModes = pGrDeviceInfo->modes;
     result = m_pDD->EnumDisplayModes(0, NULL, &pModes, EnumDisplayModesCallback);
     *pModes = -1;
 
-    SetCooperativeLevel(DDSCL_NORMAL);
-    if (!fWasVisible)
-    {
-        ShowWindow(GetMainWnd(), SW_HIDE);
-        SetWindowLong(GetMainWnd(), GWL_STYLE, ulWindowStyle);
-        SetWindowLong(GetMainWnd(), GWL_EXSTYLE, ulWindowExStyle);
-    }
-
     DebugMsgIfErr("DoGetInfo: EnumDisplayModes", result);
-
-    RegainDisplay(m_pDisplayDevice);
 
     // Claim native for all modes enumerated above 
     pModes = pGrDeviceInfo->modes;

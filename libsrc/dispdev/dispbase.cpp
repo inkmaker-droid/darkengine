@@ -334,7 +334,7 @@ STDMETHODIMP cDisplayDevice::GetRenderTargets(sGrRenderTargets *)
 
 BOOL cDisplayDevice::ModeInfoToEnumMode(int width, int height, int bitDepth, int *retMode)
 {
-    return ((*retMode = gr_mode_from_info(width, height, bitDepth)) >= 0);
+    return ((*retMode = gr_register_mode(width, height, bitDepth)) >= 0);
 }
 
 ///////////////////////////////////////

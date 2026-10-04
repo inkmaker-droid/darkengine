@@ -83,8 +83,12 @@ still valid, remove the `GameDataPath` value with Registry Editor and launch
 the executable again.
 
 If `screen_size` or `game_screen_size` is already defined in `cam.cfg`, that
-setting is retained. Otherwise, the game uses the native resolution of the
-display under the mouse pointer at startup.
+size is retained when the display driver supports it. Otherwise, the game
+uses the closest supported mode to the native resolution of the display under
+the mouse pointer at startup. Display modes reported by DirectDraw are
+registered at runtime instead of being limited to the engine's original fixed
+resolution table. Unsupported 24/32-bit NewDark settings are normalized to
+the original renderer's 16-bit surface path.
 
 The retail game writes `skip_intro` after the intro has played. Add
 `always_play_intro` to `cam.cfg` to show the intro on every launch.
@@ -134,9 +138,9 @@ repository.
 
 - The x64 solution configurations are not supported or validated. The working
   target is Release/x86.
-- The renderer and display stack still use legacy DirectX-era assumptions,
-  including a 16-bit game screen mode. Native-resolution behavior needs
-  testing across more GPUs, high-DPI configurations, and ultrawide displays.
+- The renderer and display stack still use legacy DirectX-era APIs. Runtime
+  display-mode registration and native-resolution behavior need testing
+  across more GPUs, high-DPI configurations, and ultrawide displays.
 - The first-run picker and startup path need clean-machine testing against the
   common CD, GOG, and Steam directory layouts.
 - There is no installer or redistributable package. The executable is run

@@ -5,6 +5,7 @@
 
 // $Header: r:/t2repos/thief2/src/render/scrnloop.c,v 1.28 2000/02/25 16:28:37 kevin Exp $ 
 #include <windows.h>
+#include <string.h>
 #include <config.h>
 #include <resapi.h>
 #include <palrstyp.h>
@@ -71,8 +72,15 @@ eLoopMessageResult LGAPI ScrnManLoopFunc(void* context, eLoopMessage msg, tLoopM
                BOOL last_resort = auto_fail ? FALSE : ScrnModeSet(NULL, ScrnModeGetDefault() ,NULL);
                if (!last_resort)
                {
-                  char buf[80]; 
-                  config_get_raw("scrn_loop_fail_msg",buf,sizeof(buf)); 
+                  char buf[256] =
+                     "The requested display mode could not be initialized. "
+                     "Check the configured resolution, color depth, and fullscreen settings.";
+                  const char *detail = ScrnGetLastSetResError();
+                  if (detail != NULL && detail[0] != '\0')
+                     strncpy(buf, detail, sizeof(buf) - 1);
+                  else
+                     config_get_raw("scrn_loop_fail_msg",buf,sizeof(buf) - 1);
+                  buf[sizeof(buf) - 1] = '\0';
                   MessageBox ((HWND)NULL, buf, (LPCSTR)NULL, MB_ICONWARNING);
                   exit(0); 
                }

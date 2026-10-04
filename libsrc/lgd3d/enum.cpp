@@ -150,21 +150,30 @@ static HRESULT WINAPI
   EnumDisplayModesCallback(LPDDSURFACEDESC pSD, LPVOID data)
 {
    lgd3ds_device_enum_info *info = (lgd3ds_device_enum_info *)data;
-   int mode = gr_mode_from_info(pSD->dwWidth, pSD->dwHeight, 
+   int modes[2];
+   int mode_count = 1;
+   int candidate;
+
+   modes[0] = gr_register_mode(pSD->dwWidth, pSD->dwHeight,
       pSD->ddpfPixelFormat.dwRGBBitCount);
+   if (pSD->ddpfPixelFormat.dwRGBBitCount == 32) {
+      modes[1] = gr_register_mode(pSD->dwWidth, pSD->dwHeight, 16);
+      mode_count = 2;
+   }
 
-   if (mode < 0)
-      return D3DENUMRET_OK;
+   for (candidate = 0; candidate < mode_count; ++candidate) {
+      int mode = modes[candidate];
+      int i;
+      if (mode < 0)
+         continue;
 
-   // first make sure we haven't already listed this mode as supported
-   int i;
-   for (i=0; i<info->num_supported; i++)
-      if (info->supported_modes[i] == mode) break;
+      // first make sure we haven't already listed this mode as supported
+      for (i=0; i<info->num_supported; i++)
+         if (info->supported_modes[i] == mode) break;
 
-   if (i<info->num_supported)
-      return D3DENUMRET_OK;
-
-   info->supported_modes[info->num_supported++] = (short )mode;
+      if (i == info->num_supported)
+         info->supported_modes[info->num_supported++] = (short)mode;
+   }
    return D3DENUMRET_OK;
 }
 
