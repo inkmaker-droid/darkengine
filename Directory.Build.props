@@ -11,10 +11,7 @@
            MSVC's legacy C mode accepts the syntax but initializes entries
            sequentially, producing corrupt function-pointer tables. -->
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <!-- The runner validates a retail Thief 2 data directory before engine
-           startup, so the original physical-disc copy-protection prompt is
-           neither useful nor correct for this build. -->
-      <PreprocessorDefinitions>WINDOWS_IGNORE_PACKING_MISMATCH;DONT_CHECK_CD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WINDOWS_IGNORE_PACKING_MISMATCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
 </Project>
