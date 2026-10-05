@@ -184,6 +184,8 @@ repository.
 - The first-run picker and startup path need clean-machine testing against the
   common CD, GOG, and Steam directory layouts.
 - NewDark data formats are not yet supported or validated.
+- Thief Gold and System Shock 2 game targets are not yet supported or
+  validated by this runner and modern presentation path.
 - A supported DromEd editor build has not yet been restored and validated.
 - Squirrel scripting support required by NewDark-era fan missions and mods,
   including *The Black Parade*, is not implemented.
