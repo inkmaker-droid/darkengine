@@ -30,6 +30,9 @@
     <ClInclude Include="dddynf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="d3d11present.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="dispbase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -75,6 +78,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dddynf.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d11present.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dispbase.cpp">

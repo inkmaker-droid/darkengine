@@ -449,6 +449,11 @@ tResult LGAPI CoreEngineAppInit()
    tm_init();
 
 #ifdef THIEF2_GAME
+   // The original Direct3D HAL path does not produce a usable scene on
+   // current Windows drivers. Keep rendering into the engine's software
+   // canvas and present that canvas through the D3D11 display backend.
+   config_set_string("disallow_hardware", "");
+
    // The raster and hardware paths use 16-bit render surfaces. Normalize
    // 24/32-bit NewDark configuration values to the supported path.
    {

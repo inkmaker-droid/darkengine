@@ -24,6 +24,9 @@
     <ClInclude Include="imutil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="mfmovie.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="lgvdguid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -60,6 +63,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="imutil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mfmovie.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="mtype.cpp">

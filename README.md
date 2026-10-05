@@ -21,8 +21,9 @@ The runner currently provides:
 - reuse of the selected directory on later launches;
 - native display-resolution defaults when the user has not configured a
   resolution;
+- borderless fullscreen and resizable windowed presentation;
 - the standard splash/startup, intro movie, and main-menu flow; and
-- an in-game command console on an unused slash or backslash binding.
+- a configurable in-game command console, defaulting to backslash when free.
 
 ## Requirements
 
@@ -35,8 +36,9 @@ The runner currently provides:
 - A retail Thief 2 installation containing `cam.cfg` and either `DARK.GAM` or
   `MISS1.MIS`
 
-The legacy DirectX headers and import libraries used by the build are under
-`3rdparty/dx7sdk`. The build target is 32-bit x86.
+The legacy DirectX headers and import libraries still needed by engine-facing
+interfaces are under `3rdparty/dx7sdk`. Current Windows output uses a D3D11
+swap chain and Windows Media Foundation. The build target is 32-bit x86.
 
 ## Build instructions
 
@@ -85,19 +87,48 @@ the executable again.
 If `screen_size` or `game_screen_size` is already defined in `cam.cfg`, that
 size is retained when the display driver supports it. Otherwise, the game
 uses the closest supported mode to the native resolution of the display under
-the mouse pointer at startup. Display modes reported by DirectDraw are
-registered at runtime instead of being limited to the engine's original fixed
-resolution table. Unsupported 24/32-bit NewDark settings are normalized to
-the original renderer's 16-bit surface path.
+the mouse pointer at startup. The Video Options list merges the active
+monitor's current Windows display modes with compatibility render sizes,
+including 640x480, 800x600, and widescreen equivalents that fit on that
+display. Resolutions are listed with the highest first; use the arrow buttons
+or mouse wheel to reach lower entries such as 640x480 and 800x600.
+Unsupported 24/32-bit NewDark settings are normalized to the engine's 16-bit
+internal canvas. That canvas is converted to 32-bit color and presented by
+D3D11; Windows is not switched into an obsolete 16-bit display mode. The
+engine's gamma setting is applied by the D3D11 presentation shader using the
+same power curve as the legacy palette correction.
+
+The Video Options screen includes a **Display Mode** toggle. **Fullscreen**
+uses a borderless window on the current display. **Windowed** uses a normal,
+resizable window. Resolution and display-mode changes are applied when
+**Done** is selected. The same setting can be changed in `cam.cfg` with
+`game_full_screen 1` or `game_full_screen 0`.
+
+On a multi-monitor system, the display containing the game window determines
+both the resolution list and the target for borderless fullscreen. To change
+displays, switch to Windowed, move the game window to the other display,
+reopen Video Options, and then select a resolution or Fullscreen. The list is
+queried again for that display; it is not assumed that every connected
+display supports the same modes.
 
 The retail game writes `skip_intro` after the intro has played. Add
-`always_play_intro` to `cam.cfg` to show the intro on every launch.
+`always_play_intro` to `cam.cfg` to show the intro on every launch. When the
+retail movie directory contains both formats, the runner uses the H.264 MP4
+through Windows Media Foundation instead of requiring the obsolete Indeo 5
+codec used by the original AVI.
 
 ## In-game console
 
-Press backslash (`\`) during a mission. If backslash already has a custom
-binding, slash (`/`) is used when available. Existing user bindings are not
-overwritten.
+The console appears as **Console** under **Options > Controls > Customize
+Controls**. It defaults to backslash (`\`) when that key is free and no console
+binding already exists. It can be rebound like any other control, and the
+selection is saved in `user.bnd`.
+
+The console pauses gameplay while open. Press **Enter** to run a command and
+keep the console open. Use the **mouse wheel**, the draggable scrollbar, or
+**Page Up** and **Page Down** to move through its 4,096-line scrollback;
+**Home** jumps to the oldest retained output and **End** returns to the newest.
+Press **Escape** to close the console and resume play.
 
 Available commands:
 
@@ -106,6 +137,8 @@ Available commands:
 - `listmissions` - list installed missions and their short names
 - `immunity [on/off]` - prevent player damage
 - `flying [on/off]` - disable or restore player gravity
+- `playerphysics [on/off]` - toggle player collision and gravity for noclip
+  free-flight while leaving world physics active
 - `invisible [on/off]` - toggle the existing player-invisibility property
 - `reticle [on/off]` - show or hide the center reticle
 - `retinfo` - describe the object and mesh under the reticle
@@ -138,20 +171,29 @@ repository.
 
 - The x64 solution configurations are not supported or validated. The working
   target is Release/x86.
-- The renderer and display stack still use legacy DirectX-era APIs. Runtime
-  display-mode registration and native-resolution behavior need testing
-  across more GPUs, high-DPI configurations, and ultrawide displays.
+- Scene rasterization currently uses the engine's software renderer and a
+  D3D11 presentation backend. Porting polygon and texture submission directly
+  to D3D11 is still in progress; the unusable legacy Direct3D HAL is disabled
+  in the Thief 2 build.
+- Native-resolution, high-DPI, window resizing, and ultrawide behavior need
+  testing across more GPUs and display configurations.
+- Gamma correction is implemented in the D3D11 presentation path. Visual
+  equivalence of shadow detail, lightmaps, and emissive-looking light-source
+  textures still needs comparison against the retail renderer on additional
+  displays.
 - The first-run picker and startup path need clean-machine testing against the
   common CD, GOG, and Steam directory layouts.
 - There is no installer or redistributable package. The executable is run
   directly from the build output and uses separately installed retail data.
-- The console overlay has no scrollback. Long mission and script listings are
+- Console scrollback retains the latest 4,096 output lines; command recall is
+  a separate 256-command history. Long mission and script listings are also
   written to `thief-console.log`.
-- `flying` disables gravity but does not disable world collision. It is not a
-  noclip mode.
+- `flying` disables gravity while preserving collision. Use `playerphysics off`
+  for noclip free-flight; its movement behavior still needs broader mission
+  testing.
 - `invisible` uses the engine's existing invisibility/render property. AI
   perception behavior has not been exhaustively verified for every mission.
-- Keyboard-layout behavior for the slash and backslash console bindings needs
+- Keyboard-layout behavior for the default backslash console binding needs
   broader testing on non-US layouts.
 - The full build still emits numerous warnings inherited from the legacy
   source. They require separate review before warning levels can be tightened.

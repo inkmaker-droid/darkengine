@@ -1144,18 +1144,26 @@ void InitIBVars ()
    g_pInputBinder->SetMasterProcessCallback (GenericBind);
 
 #ifdef THIEF2_GAME
-   // Keep user customizations authoritative. Backslash is free in the stock
-   // binding sets; slash is the fallback for layouts that report it instead.
+   // Install the console default in the gameplay context. Do not add it when
+   // the user has already selected another key or backslash is already used.
+   ulong old_context;
+   char console_control[32] = "";
    char console_binding[128] = "";
-   g_pInputBinder->QueryBind("\\", console_binding, sizeof(console_binding));
-   if (!console_binding[0])
-      g_pInputBinder->Bind("\\", "edit_command");
-   else
+
+   g_pInputBinder->GetContext(&old_context);
+   if (old_context != HK_GAME_MODE)
+      g_pInputBinder->SetContext(HK_GAME_MODE, TRUE);
+
+   g_pInputBinder->GetControlFromCmdStart("edit_command", console_control);
+   if (!console_control[0])
    {
-      g_pInputBinder->QueryBind("/", console_binding, sizeof(console_binding));
+      g_pInputBinder->QueryBind("\\", console_binding, sizeof(console_binding));
       if (!console_binding[0])
-         g_pInputBinder->Bind("/", "edit_command");
+         g_pInputBinder->Bind("\\", "edit_command");
    }
+
+   if (old_context != HK_GAME_MODE)
+      g_pInputBinder->SetContext(old_context, TRUE);
 #endif
 
    SetCountryKeyboard();

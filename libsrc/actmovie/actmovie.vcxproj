@@ -158,6 +158,7 @@
     <ClInclude Include="evcode.h" />
     <ClInclude Include="getlgvid.h" />
     <ClInclude Include="imutil.h" />
+    <ClInclude Include="mfmovie.h" />
     <ClInclude Include="lgvdguid.h" />
     <ClInclude Include="lgvidapi.h" />
     <ClInclude Include="mtype.h" />
@@ -171,6 +172,7 @@
     <ClCompile Include="amguids.cpp" />
     <ClCompile Include="getlgvid.cpp" />
     <ClCompile Include="imutil.cpp" />
+    <ClCompile Include="mfmovie.cpp" />
     <ClCompile Include="mtype.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

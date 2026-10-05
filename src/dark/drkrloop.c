@@ -16,6 +16,7 @@
 #include <dispbase.h>  
 #include <loopmsg.h>
 #include <bugterm.h>
+#include <cmdterm.h>
 
 #include <simloop.h>
 #include <simflags.h>
@@ -87,6 +88,10 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
             dark_rend_update_frame();
             InvUIRender(info.frame->nTicks); 
          }
+         // The command terminal pauses normal scene rendering, so redraw it
+         // after the render clients on every loop frame. A one-shot gadget
+         // draw is otherwise overwritten by the following presentation.
+         cmdterm_redraw();
          break;
 
       case kMsgSuspendMode:

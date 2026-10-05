@@ -187,6 +187,11 @@ EXTERN BOOL PhysObjOnPlatform(ObjID objID);
 
 EXTERN void PhysSetFlag(ObjID objID, int flag, BOOL state);
 
+// Disable only the player's collision handling. Other world physics remains
+// active so this can be used as a reversible noclip/free-flight mode.
+EXTERN void PhysSetPlayerPhysicsEnabled(BOOL enabled);
+EXTERN BOOL PhysPlayerPhysicsEnabled(void);
+
 EXTERN eMediaState PhysGetObjMediaState(ObjID objID);
 EXTERN BOOL PhysObjInWater(ObjID objID);
 

@@ -1229,7 +1229,7 @@ static void add_unclipped_run(int x0, int x1, int y)
 
 #endif
 
-#define CLIP_DATA_HEIGHT   768
+#define CLIP_DATA_HEIGHT   G2C_MAX_HEIGHT
 #define CLIP_DATA_TOTAL    (CLIP_DATA_HEIGHT * 8)
 
 static RunClipData clip_data[CLIP_DATA_TOTAL];  // allocation pool

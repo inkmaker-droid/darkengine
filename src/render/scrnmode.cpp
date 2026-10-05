@@ -251,7 +251,11 @@ BOOL ScrnSetModeRaw(const sScrnMode* mode)
     // First, figure out our display
     GUID *pDD;
     int flags = 0;
-    int kind = (mode->flags & kScrnMode2dDriver) ? kDispFullScreen : kDispDebug;
+    int kind;
+    if (mode->flags & kScrnModeWindowed)
+        kind = kDispWindowed;
+    else
+        kind = (mode->flags & kScrnMode2dDriver) ? kDispFullScreen : kDispDebug;
     int modeflags = 0;
 
     if (kind == kDispFullScreen && (mode->flags & kScrnMode3dDriver))
@@ -437,17 +441,25 @@ sScrnMode* ScrnModeGetConfig(sScrnMode* targ, const char* prefix)
       targ->valid_fields |= kScrnModeFlagsValid;
 
    BOOL flag = 0;
+   int fullScreenSetting = -1;
 
    // get separate fullscreen bit
    sprintf(var,"%sfull_screen",prefix);
    if (config_get_int(var,&flag))
    {
+      fullScreenSetting = !!flag;
       targ->valid_fields |= kScrnModeFlagsValid;
 
       if (flag)
+      {
+         targ->flags &= ~kScrnModeWindowed;
          targ->flags |= kScrnModeFullScreen|kScrnMode2dDriver;
+      }
       else
-         targ->flags &= ~(kScrnModeFullScreen|kScrnMode2dDriver);
+      {
+         targ->flags &= ~kScrnModeFullScreen;
+         targ->flags |= kScrnModeWindowed|kScrnMode2dDriver;
+      }
    }
 
    // get separate 3d bit
@@ -460,6 +472,15 @@ sScrnMode* ScrnModeGetConfig(sScrnMode* targ, const char* prefix)
          targ->flags |= kScrnModeFullScreen|kScrnMode2dDriver|kScrnMode3dDriver;
       else
          targ->flags &= ~(kScrnMode3dDriver);
+   }
+
+   // Hardware used to imply exclusive fullscreen. Preserve an explicit
+   // windowed request after reading the legacy hardware setting so the
+   // modern presenter can use DirectDraw's off-screen canvas in a window.
+   if (fullScreenSetting == 0)
+   {
+      targ->flags &= ~(kScrnModeFullScreen|kScrnMode3dDriver);
+      targ->flags |= kScrnModeWindowed|kScrnMode2dDriver;
    }
 
    return targ;

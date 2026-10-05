@@ -8,6 +8,8 @@
 #ifndef __WDDMODE_H
 #define __WDDMODE_H
 
+class cD3D11Presenter;
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // CLASS: cDDModeOpsBase
@@ -107,6 +109,30 @@ protected:
 
         RegainDisplay(m_pDisplayDevice);
         return result;
+    }
+
+    void EnableDesktopPresentation()
+    {
+        HWND hwnd = m_pOuter->GetMainWnd();
+        MONITORINFO monitorInfo;
+        memset(&monitorInfo, 0, sizeof(monitorInfo));
+        monitorInfo.cbSize = sizeof(monitorInfo);
+
+        m_pOuter->m_pDD->RestoreDisplayMode();
+        m_pOuter->SetCooperativeLevel(cDDProvider::kDDWindowedCoopFlags);
+        m_pOuter->m_DDCoopFlags = cDDProvider::kDDWindowedCoopFlags;
+
+        SetWindowLong(hwnd, GWL_STYLE, WS_POPUP);
+        if (GetMonitorInfo(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST),
+                           &monitorInfo))
+        {
+            SetWindowPos(hwnd, HWND_TOPMOST,
+                         monitorInfo.rcMonitor.left,
+                         monitorInfo.rcMonitor.top,
+                         monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
+                         monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top,
+                         SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOCOPYBITS);
+        }
     }
 
     PALETTEENTRY * GetPaletteEntries()
@@ -210,14 +236,28 @@ class cOffVideoDDModeOps : public cDDModeOpsBase
 public:
     cOffVideoDDModeOps(cWinDisplayDevice * pDisplayDevice, cDDProvider * pOuter, LPDIRECTDRAWPALETTE pPalette)
       : cDDModeOpsBase(pDisplayDevice, pOuter, pPalette)
+      , m_UseDesktopPresentation(FALSE)
+      , m_UseD3D11Presentation(FALSE)
+      , m_pPresenter(NULL)
     {
     }
 
+    virtual ~cOffVideoDDModeOps();
     virtual BOOL StartMode(const sGrModeInfo &, int flags, sGrModeCap * pReturnModeInfo);
     virtual void DoFlush();
     virtual void DoFlushRect(int x0, int y0, int x1, int y1);
     virtual BOOL DoLock(sGrModeCap *);
     virtual BOOL DoUnlock();
+    virtual BOOL DoSetGamma(double gamma);
+    virtual BOOL HandlesWindowResize() const
+    {
+        return m_UseD3D11Presentation;
+    }
+
+private:
+    BOOL m_UseDesktopPresentation;
+    BOOL m_UseD3D11Presentation;
+    cD3D11Presenter *m_pPresenter;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

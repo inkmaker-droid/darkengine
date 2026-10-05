@@ -976,10 +976,13 @@ static void pt16_surfbuild(int slog)
    int size, i,j;
    int x0, x1, y0, y1;
    int w00, w10, w01, w11, denom;
+   int red_shift, green_shift, blue_shift;
+   int red_max, green_max, blue_max;
    ushort c00, c10, c01, c11;
-   ushort n555;
-   uchar color;
-   ushort *clut;
+   ushort p00, p10, p01, p11;
+   uchar color00, color10, color01, color11;
+   ushort *clut00, *clut10, *clut01, *clut11;
+   grs_rgb_bitmask bmask;
    extern uchar light_ipal[];
 
    dest  = (ushort *)_portal_surface_output;
@@ -1002,9 +1005,28 @@ static void pt16_surfbuild(int slog)
    c11 = light[lrow+1];
 #endif // RGB_888
 
-   // Interpolate each 5:5:5 light channel independently.  Interpolating the
-   // packed value directly lets carries leak between channels; using only the
-   // top-left sample produces the conspicuous square lighting blocks.
+   // Resolve each corner through the RGB lighting tables once, then bilinearly
+   // interpolate the resulting screen-format colors. Interpolating the light
+   // first and sending every pixel back through light_ipal quantizes broad
+   // areas to one entry and leaves visible square steps.
+   color00 = light_ipal[c00];
+   color10 = light_ipal[c10];
+   color01 = light_ipal[c01];
+   color11 = light_ipal[c11];
+   clut00 = &grd_ltab816[(color00 + 24) << 8];
+   clut10 = &grd_ltab816[(color10 + 24) << 8];
+   clut01 = &grd_ltab816[(color01 + 24) << 8];
+   clut11 = &grd_ltab816[(color11 + 24) << 8];
+
+   gr_get_screen_rgb_bitmask(&bmask);
+   red_shift = green_shift = blue_shift = 0;
+   while (((bmask.red >> red_shift) & 1) == 0) ++red_shift;
+   while (((bmask.green >> green_shift) & 1) == 0) ++green_shift;
+   while (((bmask.blue >> blue_shift) & 1) == 0) ++blue_shift;
+   red_max = bmask.red >> red_shift;
+   green_max = bmask.green >> green_shift;
+   blue_max = bmask.blue >> blue_shift;
+
    denom = size * size;
    for (j=0; j<size; ++j) {
       y0 = size-j;
@@ -1016,16 +1038,23 @@ static void pt16_surfbuild(int slog)
          w10 = x1*y0;
          w01 = x0*y1;
          w11 = x1*y1;
-         n555 = (ushort)(
-            (((((c00      ) & 31)*w00 + ((c10      ) & 31)*w10 +
-                ((c01      ) & 31)*w01 + ((c11      ) & 31)*w11) / denom)) |
-            (((((c00 >>  5) & 31)*w00 + ((c10 >>  5) & 31)*w10 +
-                ((c01 >>  5) & 31)*w01 + ((c11 >>  5) & 31)*w11) / denom) << 5) |
-            (((((c00 >> 10) & 31)*w00 + ((c10 >> 10) & 31)*w10 +
-                ((c01 >> 10) & 31)*w01 + ((c11 >> 10) & 31)*w11) / denom) << 10));
-         color = light_ipal[n555];
-         clut = &grd_ltab816[(color+24) << 8];
-         dest[i] = clut[src[i]];
+         p00 = clut00[src[i]];
+         p10 = clut10[src[i]];
+         p01 = clut01[src[i]];
+         p11 = clut11[src[i]];
+         dest[i] = (ushort)(
+            ((((((p00 & bmask.red) >> red_shift) * w00 +
+                 ((p10 & bmask.red) >> red_shift) * w10 +
+                 ((p01 & bmask.red) >> red_shift) * w01 +
+                 ((p11 & bmask.red) >> red_shift) * w11) / denom) & red_max) << red_shift) |
+            ((((((p00 & bmask.green) >> green_shift) * w00 +
+                 ((p10 & bmask.green) >> green_shift) * w10 +
+                 ((p01 & bmask.green) >> green_shift) * w01 +
+                 ((p11 & bmask.green) >> green_shift) * w11) / denom) & green_max) << green_shift) |
+            ((((((p00 & bmask.blue) >> blue_shift) * w00 +
+                 ((p10 & bmask.blue) >> blue_shift) * w10 +
+                 ((p01 & bmask.blue) >> blue_shift) * w01 +
+                 ((p11 & bmask.blue) >> blue_shift) * w11) / denom) & blue_max) << blue_shift));
       }
       dest += drow;
       src  += srow;

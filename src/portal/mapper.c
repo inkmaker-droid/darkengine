@@ -30,6 +30,7 @@
 
 #include <mapper.h>
 #include <ptmapper.h>
+#include <scancvt.h>
 
 #include <profile.h>
 
@@ -96,7 +97,9 @@ extern uchar length_mapping[MAX_LENGTH];
 //   General scan conversion routines
 //
 
-#define MAX_HEIGHT  768
+// Keep the portal mapper in step with g2's modern-resolution scan buffers.
+// The original 768-line arrays and clipping pool overflow at 1080p.
+#define MAX_HEIGHT G2C_MAX_HEIGHT
 
 int y_max, y_min;
 extern bool span_clip;
@@ -1438,7 +1441,7 @@ typedef struct foo
    struct foo *next;
 } RunClipData;
 
-#define CLIP_DATA_HEIGHT   768
+#define CLIP_DATA_HEIGHT   MAX_HEIGHT
 #define CLIP_DATA_TOTAL    (CLIP_DATA_HEIGHT * 8)
 
 RunClipData clip_data[CLIP_DATA_TOTAL];  // allocation pool

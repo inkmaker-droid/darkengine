@@ -28,6 +28,8 @@ enum CmdTermFlags
 
 EXTERN void CreateCommandTerminal(struct _LGadRoot* root, struct Rect* bounds, ulong flags);
 EXTERN void DestroyCommandTerminal(void);
+EXTERN void cmdterm_print(const char* text);
+EXTERN void cmdterm_redraw(void);
 
 #endif // __CMDTERM_H
 

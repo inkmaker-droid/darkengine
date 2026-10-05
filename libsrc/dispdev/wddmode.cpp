@@ -30,6 +30,7 @@
 
 #include <wdispdd.h>
 #include <wddmode.h>
+#include <d3d11present.h>
 
 #ifdef MONO_SPEW
 #define put_mono(c) (*((uchar *)0xb0078)) = (c)
@@ -783,6 +784,18 @@ BOOL cPhoney512ModeOps::DoUnlock()
 // class cOffVideoDDModeOps
 //
 
+cOffVideoDDModeOps::~cOffVideoDDModeOps()
+{
+    delete m_pPresenter;
+}
+
+BOOL cOffVideoDDModeOps::DoSetGamma(double gamma)
+{
+    if (!m_UseD3D11Presentation || !m_pPresenter)
+        return FALSE;
+    return m_pPresenter->SetGamma(gamma);
+}
+
 BOOL cOffVideoDDModeOps::StartMode(const sGrModeInfo & modeInfo, int flags, sGrModeCap * pReturnModeInfo)
 {
     HRESULT result;
@@ -794,58 +807,65 @@ BOOL cOffVideoDDModeOps::StartMode(const sGrModeInfo & modeInfo, int flags, sGrM
     DebugMsgEx(SETMODE, "Releasing previous surfaces, if any...");
     SafeRelease(m_pPrimarySurface);          // Sets m_pPrimarySurface to null
     SafeRelease(m_pSecondarySurface);
+    m_UseDesktopPresentation = FALSE;
+    m_UseD3D11Presentation = FALSE;
+    if (m_pPresenter)
+        m_pPresenter->Stop();
 
-    // If we're not running in a window, set the screen display mode to the best available
+    // The engine still renders its legacy 16-bit canvas, but modern Windows
+    // presents it through a normal 32-bit desktop swap chain. Do not request
+    // obsolete exclusive 16-bit display modes from the OS.
     if (!(GetCoopFlags() & DDSCL_NORMAL))
     {
-        int targetMode = -1;
-
-        // First look for an exact match, if we're not trying a ModeX mode
-        if (modeInfo.w > 400)
+        if (realBitsPerPixel <= 16)
         {
-            targetMode = cDisplayDevice::GetAvailableMode(modeInfo.w, modeInfo.h, modeInfo.bitDepth);
-            DebugMsgTrueEx(SETMODE, targetMode != -1, "Picked exact match");
+            EnableDesktopPresentation();
+            m_UseDesktopPresentation = TRUE;
         }
-
-        // Next try a perfect doubling
-        if (targetMode == -1)
+        else
         {
-            targetMode = cDisplayDevice::GetAvailableMode(modeInfo.w * 2, modeInfo.h * 2, modeInfo.bitDepth);
-            DebugMsgTrueEx(SETMODE, targetMode != -1, "Picked double w and double h");
-        }
+            int targetMode = -1;
 
-        // Next try a double of the horizontal axis
-        if (targetMode == -1)
-        {
-            targetMode = cDisplayDevice::GetAvailableMode(modeInfo.w * 2, modeInfo.h, modeInfo.bitDepth);
-            DebugMsgTrueEx(SETMODE, targetMode != -1, "Picked double w and double h");
-        }
+            // First look for an exact match, if we're not trying a ModeX mode
+            if (modeInfo.w > 400)
+            {
+                targetMode = cDisplayDevice::GetAvailableMode(modeInfo.w, modeInfo.h, modeInfo.bitDepth);
+                DebugMsgTrueEx(SETMODE, targetMode != -1, "Picked exact match");
+            }
 
-        // Finally, just choose 640x480
-        if (targetMode == -1)
-        {
-            targetMode = cDisplayDevice::GetAvailableMode(640, 480, modeInfo.bitDepth);
-            DebugMsgTrueEx(SETMODE, targetMode != -1, "Picked highest res");
-        }
+            // Next try a perfect doubling
+            if (targetMode == -1)
+            {
+                targetMode = cDisplayDevice::GetAvailableMode(modeInfo.w * 2, modeInfo.h * 2, modeInfo.bitDepth);
+                DebugMsgTrueEx(SETMODE, targetMode != -1, "Picked double w and double h");
+            }
 
-        if (targetMode == -1)
-            return FALSE;
+            // Next try a double of the horizontal axis
+            if (targetMode == -1)
+            {
+                targetMode = cDisplayDevice::GetAvailableMode(modeInfo.w * 2, modeInfo.h, modeInfo.bitDepth);
+                DebugMsgTrueEx(SETMODE, targetMode != -1, "Picked double w and double h");
+            }
 
-        // Now set the mode
-        const sGrModeInfo & targetModeInfo = cDisplayDevice::EnumModeToModeInfo(targetMode);
-        result = SetDisplayMode(targetModeInfo.w, targetModeInfo.h, targetModeInfo.bitDepth);
+            // Finally, just choose 640x480
+            if (targetMode == -1)
+            {
+                targetMode = cDisplayDevice::GetAvailableMode(640, 480, modeInfo.bitDepth);
+                DebugMsgTrueEx(SETMODE, targetMode != -1, "Picked highest res");
+            }
 
-        if (result != DD_OK)
-        {
-            DebugMsgIfErr("DoSetMode::SetDisplayMode", result);
-            // Modern Windows can expose only the 32-bit desktop mode while
-            // still supporting 16-bit system-memory surfaces and converted
-            // blits. Keep the desktop mode and emulate the requested render
-            // surface in that case.
-            if (realBitsPerPixel <= 16)
-                GetDD()->RestoreDisplayMode();
-            else
+            if (targetMode == -1)
                 return FALSE;
+
+            // Non-legacy formats retain the original display-mode behavior.
+            const sGrModeInfo & targetModeInfo = cDisplayDevice::EnumModeToModeInfo(targetMode);
+            result = SetDisplayMode(targetModeInfo.w, targetModeInfo.h, targetModeInfo.bitDepth);
+
+            if (result != DD_OK)
+            {
+                DebugMsgIfErr("DoSetMode::SetDisplayMode", result);
+                return FALSE;
+            }
         }
     }
 
@@ -940,6 +960,17 @@ BOOL cOffVideoDDModeOps::StartMode(const sGrModeInfo & modeInfo, int flags, sGrM
 
     DebugMsgDesc(m_SecondaryDesc);
 
+    if (realBitsPerPixel <= 16)
+    {
+        if (!m_pPresenter)
+            m_pPresenter = new cD3D11Presenter;
+        if (m_pPresenter)
+            m_UseD3D11Presentation = m_pPresenter->Start(
+                m_pOuter->GetMainWnd(),
+                m_SecondaryDesc.dwWidth,
+                m_SecondaryDesc.dwHeight);
+    }
+
     // Store info about the render target
     SetModeInfoFromSurfaceDesc(m_SecondaryDesc,
                                (flags & kGrSetWindowed) ? kGrModeIsWindowed : 0,
@@ -1022,7 +1053,20 @@ void cOffVideoDDModeOps::DoFlushRect(int x0Source, int y0Source, int x1Source, i
         destRect.bottom = Scale(sourceRect.bottom);
 
         // Move destination to right place on screen
-        if (m_ModeInfoEx.flags & kGrModeIsWindowed)
+        if (m_UseDesktopPresentation)
+        {
+            RECT clientRect;
+            GetClientRect(m_pOuter->GetMainWnd(), &clientRect);
+            destRect.left = MulDiv(sourceRect.left, clientRect.right,
+                                   m_SecondaryDesc.dwWidth);
+            destRect.top = MulDiv(sourceRect.top, clientRect.bottom,
+                                  m_SecondaryDesc.dwHeight);
+            destRect.right = MulDiv(sourceRect.right, clientRect.right,
+                                    m_SecondaryDesc.dwWidth);
+            destRect.bottom = MulDiv(sourceRect.bottom, clientRect.bottom,
+                                     m_SecondaryDesc.dwHeight);
+        }
+        else if (m_ModeInfoEx.flags & kGrModeIsWindowed)
         {
             POINT originClient = { 0, 0 };
             ClientToScreen(m_pOuter->GetMainWnd(), &originClient);
@@ -1065,11 +1109,20 @@ void cOffVideoDDModeOps::DoFlushRect(int x0Source, int y0Source, int x1Source, i
             }
         }
 
-        HRESULT result = m_pPrimarySurface->Blt(&destRect, m_pSecondarySurface, &sourceRect, DDBLT_WAIT, NULL);
-        if (result == DDERR_SURFACELOST)
+        HRESULT result = E_NOTIMPL;
+        if (m_UseD3D11Presentation && m_pPresenter &&
+            m_pPresenter->Present(m_pSecondarySurface))
         {
-            RestoreSurfaces();
+            result = DD_OK;
+        }
+        else if (!m_UseDesktopPresentation)
+        {
             result = m_pPrimarySurface->Blt(&destRect, m_pSecondarySurface, &sourceRect, DDBLT_WAIT, NULL);
+            if (result == DDERR_SURFACELOST)
+            {
+                RestoreSurfaces();
+                result = m_pPrimarySurface->Blt(&destRect, m_pSecondarySurface, &sourceRect, DDBLT_WAIT, NULL);
+            }
         }
         if (result != DD_OK)
         {
@@ -1079,7 +1132,12 @@ void cOffVideoDDModeOps::DoFlushRect(int x0Source, int y0Source, int x1Source, i
             HDC sourceDC = NULL;
             HDC destDC = NULL;
             HRESULT sourceResult = m_pSecondarySurface->GetDC(&sourceDC);
-            HRESULT destResult = m_pPrimarySurface->GetDC(&destDC);
+            HRESULT destResult = DD_OK;
+
+            if (m_UseDesktopPresentation)
+                destDC = GetDC(m_pOuter->GetMainWnd());
+            else
+                destResult = m_pPrimarySurface->GetDC(&destDC);
 
             if (sourceResult == DD_OK && destResult == DD_OK)
             {
@@ -1097,7 +1155,12 @@ void cOffVideoDDModeOps::DoFlushRect(int x0Source, int y0Source, int x1Source, i
             }
 
             if (destDC)
-                m_pPrimarySurface->ReleaseDC(destDC);
+            {
+                if (m_UseDesktopPresentation)
+                    ReleaseDC(m_pOuter->GetMainWnd(), destDC);
+                else
+                    m_pPrimarySurface->ReleaseDC(destDC);
+            }
             if (sourceDC)
                 m_pSecondarySurface->ReleaseDC(sourceDC);
         }

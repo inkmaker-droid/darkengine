@@ -664,7 +664,10 @@ STDMETHODIMP cWinDisplayDevice::GetRenderTargets(sGrRenderTargets *)
 
 STDMETHODIMP_(BOOL) cWinDisplayDevice::SetGamma(double gamma)
 {
-    return FALSE;
+    cAutoDisplayMutex mutex(this);
+    if (!m_pDisplayModeOperations)
+        return FALSE;
+    return m_pDisplayModeOperations->DoSetGamma(gamma);
 }
 
 ///////////////////////////////////////

@@ -2362,7 +2362,8 @@ static void CheckModelTerrainCollisions(cPhysModel * pModel, mxs_real t0, mxs_re
    int i;
    cPhysClsn *pClsn;
 
-   if (pModel->IsRemote() || pModel->IsSleeping() || !pModel->IsTranslating())
+   if ((!g_PhysicsOn && pModel->IsPlayer()) ||
+       pModel->IsRemote() || pModel->IsSleeping() || !pModel->IsTranslating())
       return;
    for (i = 0; i < pModel->NumSubModels(); i++)
    {
@@ -3369,7 +3370,7 @@ void CheckModelObjectCollisions(cPhysModel * pModel, mxs_real t0, mxs_real dt, B
    static cHashTable<ObjID, BOOL, cHashTableFunctions<ObjID> > objectsSeen;
    static cDynArray<cPhysModel *> potentialModels;
 
-   if (pModel->ObjectPassThru())
+   if ((!g_PhysicsOn && pModel->IsPlayer()) || pModel->ObjectPassThru())
       return;
 
    if (pModel->IsCreature() && CreatureSelfPropelled(pModel->GetObjID()) && (subModId < 0))
@@ -3454,6 +3455,11 @@ void CheckModelObjectCollisions(cPhysModel * pModel, mxs_real t0, mxs_real dt, B
             // Does it even have physics?
             if ((pCurModel = g_PhysModels.GetActive(objID)) != NULL)
             {
+               // When player physics is disabled, exclude the player from
+               // checks initiated by other moving objects as well.
+               if (!g_PhysicsOn && pCurModel->IsPlayer())
+                  goto next_coll_obj;
+
                // Has this object already done its collision checking this frame?
                if (!pCurModel->ObjectPassThru())
                {
@@ -6519,7 +6525,7 @@ static void ValidatePositions()
    cPhysModel *pModel;
 
    // The player
-   if (PlayerObjectExists())
+   if (g_PhysicsOn && PlayerObjectExists())
    {
       pModel = g_PhysModels.Get(PlayerObject());
 

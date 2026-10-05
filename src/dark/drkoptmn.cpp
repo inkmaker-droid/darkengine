@@ -4,6 +4,8 @@
 */
 
 // $Header: r:/t2repos/thief2/src/dark/drkoptmn.cpp,v 1.75 2000/03/22 18:19:55 patmac Exp $
+#include <windows.h>
+#include <stdlib.h>
 #include <string.h>
 #include <dev2d.h>
 #include <keydefs.h>
@@ -107,6 +109,11 @@ extern int sfx_use_channels;
 //max cmds we will display per a given cmd
 #define MAX_BINDS_PER_CMD 5
 
+#ifdef THIEF2_GAME
+static const char kConsoleBindCommand[] = "edit_command";
+static const char kConsoleBindName[] = "Console";
+#endif
+
 /////////////////
 
 #define SLIDER_BMPRES 0
@@ -124,18 +131,132 @@ extern int sfx_use_channels;
 
 #define MIN_RES_X 400
 #define MIN_RES_Y 300
-#define MAX_RES_Y 1200
 
-//all 8-bit for software
-short soft_modes[] = {
-   GRM_400x300x8,
-   GRM_512x384x8,
-   GRM_640x400x8, 
-   GRM_640x480x8,
-   GRM_800x600x8,
-   -1
+#define MAX_DISPLAY_RESOLUTIONS 128
+
+struct sDisplayResolution
+{
+   int w;
+   int h;
 };
 
+static int CompareDisplayResolutions(const void *left, const void *right)
+{
+   const sDisplayResolution *a = (const sDisplayResolution *)left;
+   const sDisplayResolution *b = (const sDisplayResolution *)right;
+   __int64 aPixels = (__int64)a->w * a->h;
+   __int64 bPixels = (__int64)b->w * b->h;
+
+   if (aPixels != bPixels)
+      return aPixels < bPixels ? 1 : -1;
+   if (a->w != b->w)
+      return a->w < b->w ? 1 : -1;
+   return b->h - a->h;
+}
+
+static void AddDisplayResolution(sDisplayResolution *resolutions, int capacity,
+                                 int *count, int width, int height)
+{
+   int i;
+   int registeredMode;
+
+   if (*count >= capacity || width < MIN_RES_X || height < MIN_RES_Y ||
+       width > 8191 || height > 8191)
+      return;
+
+   for (i = 0; i < *count; ++i)
+      if (resolutions[i].w == width && resolutions[i].h == height)
+         return;
+
+   registeredMode = gr_register_mode(width, height, 16);
+   if (registeredMode < 0)
+      return;
+
+   grd_mode_info[registeredMode].flags |= GRM_CAN_WINDOW;
+   resolutions[*count].w = width;
+   resolutions[*count].h = height;
+   ++*count;
+}
+
+// Enumerate the modes exposed by Windows for the monitor containing the game
+// window. DirectDraw's legacy table includes emulated modes which are not a
+// useful description of the current display.
+static int GetDisplayResolutions(sDisplayResolution *resolutions, int capacity)
+{
+   MONITORINFOEXA monitorInfo;
+   HMONITOR monitor;
+   HWND window = GetActiveWindow();
+   DEVMODEA displayMode;
+   int count = 0;
+   DWORD modeIndex;
+   static const sDisplayResolution compatibilityModes[] =
+   {
+      { 640, 360 }, { 640, 480 },
+      { 800, 450 }, { 800, 600 },
+      { 1024, 576 }, { 1024, 768 },
+      { 1280, 720 }, { 1280, 800 },
+      { 1366, 768 }, { 1600, 900 },
+      { 1920, 1080 }
+   };
+
+   if (window)
+      monitor = MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST);
+   else
+   {
+      POINT cursor;
+      GetCursorPos(&cursor);
+      monitor = MonitorFromPoint(cursor, MONITOR_DEFAULTTOPRIMARY);
+   }
+
+   memset(&monitorInfo, 0, sizeof(monitorInfo));
+   monitorInfo.cbSize = sizeof(monitorInfo);
+   if (!GetMonitorInfoA(monitor, &monitorInfo))
+      return 0;
+
+   for (modeIndex = 0; count < capacity; ++modeIndex)
+   {
+      memset(&displayMode, 0, sizeof(displayMode));
+      displayMode.dmSize = sizeof(displayMode);
+      if (!EnumDisplaySettingsExA(monitorInfo.szDevice, modeIndex,
+                                  &displayMode, 0))
+         break;
+      if (displayMode.dmBitsPerPel < 24 ||
+          displayMode.dmPelsWidth < MIN_RES_X ||
+          displayMode.dmPelsHeight < MIN_RES_Y ||
+          displayMode.dmPelsWidth > 8191 ||
+          displayMode.dmPelsHeight > 8191)
+         continue;
+
+      AddDisplayResolution(resolutions, capacity, &count,
+                           displayMode.dmPelsWidth,
+                           displayMode.dmPelsHeight);
+   }
+
+   // Merge the monitor's advertised modes with a guaranteed compatibility
+   // set. The D3D11 presenter can scale these internal render sizes without
+   // asking Windows to switch the physical display mode.
+   {
+      int i;
+      int monitorWidth = monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left;
+      int monitorHeight = monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top;
+      for (i = 0; i < (int)(sizeof(compatibilityModes) /
+                            sizeof(compatibilityModes[0])); ++i)
+      {
+         // Always retain the two baseline legacy modes. Avoid offering larger
+         // synthetic render targets than the active monitor.
+         if (i == 1 || i == 3 ||
+             (compatibilityModes[i].w <= monitorWidth &&
+              compatibilityModes[i].h <= monitorHeight))
+            AddDisplayResolution(resolutions, capacity, &count,
+                                 compatibilityModes[i].w,
+                                 compatibilityModes[i].h);
+      }
+   }
+
+   qsort(resolutions, count, sizeof(resolutions[0]),
+         CompareDisplayResolutions);
+   return count;
+}
 
       //#define CanChangeEAX() (CanChangeDifficultyNow() && SFX_Is_EAX_Available())
 //#define CanChangeEAX() (SFX_Is_EAX_Available())
@@ -238,7 +359,7 @@ public:
       kNumControlRects = 8,
 
       //video buttons
-	  kHardwareDriver = kMouseSensTextRect + 1,
+      kDisplayMode = kMouseSensTextRect + 1,
       kScreenRes,
       kFogToggle,
 	  kWeatherToggle,
@@ -359,6 +480,7 @@ protected:
    int mListPrevPick;
    int mTopList;
    int mNumListTotal;
+   bool mCanScrollListDown;
    LGadButtonList mListButtons;
    LGadButtonListDesc mListButtonDesc;
    DrawElement mListButtonElems[NUM_LIST];
@@ -368,7 +490,6 @@ protected:
    BOOL mNumVidDevices;
    int mSelectedRes;
    int m3dDriver;
-
    //binding-related data
    int mTopBind;
    int mNumBindable;
@@ -579,6 +700,7 @@ protected:
             break;
          case kSubList:
             LGadDestroyButtonList (&mListButtons);
+            LGadDestroyButtonList (&mBindScrollers);
             break;
       }
 
@@ -609,6 +731,7 @@ protected:
          }
 
          LGadDestroyButtonList (&mListButtons);
+         LGadDestroyButtonList (&mBindScrollers);
       }
    }
 
@@ -721,8 +844,8 @@ protected:
    void InitVideoOptions ()
    {
       InitButtonList ( &mSubPanelDesc[kSubBasicVideo], &mSubPanelButtons[kSubBasicVideo],
-                       &mSubPanelRects[(int)kHardwareDriver], &mSubPanelElems[(int)kHardwareDriver],
-                       OnSubPanelButton, &mSubPanelStrs[(int)kHardwareDriver], "videob_", kNumBasicVideoButts, 0);
+                       &mSubPanelRects[(int)kDisplayMode], &mSubPanelElems[(int)kDisplayMode],
+                       OnSubPanelButton, &mSubPanelStrs[(int)kDisplayMode], "videob_", kNumBasicVideoButts, 0);
       mPerSubRectNum [(int)kSubBasicVideo] = kNumBasicVideoRects;
       
       //let's get some info about the video card
@@ -752,6 +875,8 @@ protected:
       }
 
       SetGameScreenMode (&mode);
+
+      SetDisplayModeString();
 
       SetUIString (mSubPanelStrs[(int)kWeatherToggle], mSubPanelElems[(int)kWeatherToggle], "videob_4", 
 	 (char *)(const char *)mMiscStrs[(WeatherIsAllowed() && (mode.flags & kScrnMode3dDriver) != 0) ? kMiscStrOn : kMiscStrOff]);
@@ -877,6 +1002,26 @@ protected:
          mNumBindable++;
       }
 
+#ifdef THIEF2_GAME
+      // This command is new, so it has no entry in the retail string table.
+      BOOL consoleListed = FALSE;
+      for (int i = 0; i < mNumBindable; ++i)
+      {
+         if (mBindCmd[i] == kConsoleBindCommand)
+         {
+            consoleListed = TRUE;
+            break;
+         }
+      }
+
+      if (!consoleListed && mNumBindable < MAX_NUM_BINDABLE)
+      {
+         mBindCmd[mNumBindable] = kConsoleBindCommand;
+         mBindButtsFilled[mNumBindable] = FALSE;
+         mNumBindable++;
+      }
+#endif
+
       FillBindStrs ();
 
 
@@ -918,6 +1063,7 @@ protected:
 
       mPerSubRectNum [(int)kSubList] = (int)kNumListRects;
       mTopList = 0;
+      mCanScrollListDown = false;
    }
 
 
@@ -932,6 +1078,11 @@ protected:
       char buf[128];
       sprintf (buf, "bindname_%d", bind_num);
 
+#ifdef THIEF2_GAME
+      if (mBindCmd[bind_num] == kConsoleBindCommand)
+         *pFuncStr = kConsoleBindName;
+      else
+#endif
       *pFuncStr = FetchUIString (panel_name, buf, mResPath);
       *pBindStr = "";
 
@@ -1130,7 +1281,9 @@ protected:
       int i, j;
       uiMouseEvent *pMouseEvent = (uiMouseEvent *) p_event;
 
-      if ( (gpOptions->mCurSub == gpOptions->kSubBind) && (p_event->type == UI_EVENT_MOUSE)
+      if ( (gpOptions->mCurSub == gpOptions->kSubBind ||
+            (gpOptions->mCurSub == gpOptions->kSubList && reslist)) &&
+           (p_event->type == UI_EVENT_MOUSE)
            && (pMouseEvent->wheel != 0) ) {
 
          if ( pMouseEvent->wheel > 0 ) {
@@ -1163,79 +1316,56 @@ protected:
       memcpy (&mode, old_mode, sizeof (sScrnMode));
 
       char *mode_desc = (char *)(const char *)mListButtonStrs[mSelectedRes];
-      sscanf (mode_desc, "%dx%dx%d", &mode.w, &mode.h, &mode.bitdepth);
+      if (sscanf (mode_desc, "%dx%d", &mode.w, &mode.h) != 2)
+         return;
+      mode.bitdepth = 16;
 
       SetGameScreenMode (&mode);
+      ScrnModeSetConfig (GetGameScreenMode (), "game_");
    }
 
    //////////////////////////////////////////////////////
 
    void FillVidResStrs ()
    {
-      //int mTopList;
+      sDisplayResolution resolutions[MAX_DISPLAY_RESOLUTIONS];
       const sScrnMode *mode = GetGameScreenMode ();
-      lgd3ds_device_info *info;
-
-      int idx = mNumVidDevices - 1; 
-      if (config_is_defined("d3d_driver_index"))
-         config_get_int("d3d_driver_index", &idx);
-      info = lgd3d_get_device_info (idx);
-
-      int bpp;
-      short *cur_mode;
+      int resolutionCount = GetDisplayResolutions(resolutions,
+                                                   MAX_DISPLAY_RESOLUTIONS);
       char buf[32], mode_str[32];
-      
-      if (mNumVidDevices > 0 && (mode->flags & kScrnMode3dDriver)) {
-         cur_mode = &info->supported_modes[mTopList];
-         bpp = 16;
-      }
-      else {
-         cur_mode = &soft_modes[mTopList];
-         bpp = 8;
-      }
 
       //get current mode string so we know what to select
-      sprintf (mode_str, "%dx%dx%d", mode->w, mode->h, mode->bitdepth);
+      sprintf (mode_str, "%dx%d", mode->w, mode->h);
       //dunny button will be default selection if we dont have a matching res for some reason
       LGadRadioButtonSelect (&mListButtons, mListPrevPick = NUM_LIST - 1); 
 
+      if (mTopList > resolutionCount - (NUM_LIST - 1))
+         mTopList = resolutionCount - (NUM_LIST - 1);
+      if (mTopList < 0)
+         mTopList = 0;
+      mCanScrollListDown = mTopList + (NUM_LIST - 1) < resolutionCount;
+
       mNumListTotal = 0;
-      for (long i = 0, inc = 0; i < NUM_LIST; i += inc) {
-         inc = 0;
-         if (*cur_mode != -1 && i < NUM_LIST - 1) 
-         {
-               grs_mode_info& info = grd_mode_info[*cur_mode]; 
+      long i;
+      for (i = 0; i < NUM_LIST - 1 && mTopList + i < resolutionCount; ++i)
+      {
+         sDisplayResolution *resolution = &resolutions[mTopList + i];
+         sprintf (buf, "%dx%d", resolution->w, resolution->h);
+         mListButtonStrs[i] = buf;
+         if (!strcmp (buf, mode_str))
+            LGadRadioButtonSelect (&mListButtons, mListPrevPick = i);
+         ++mNumListTotal;
+      }
 
-            if (info.bitDepth == bpp                 
-                && info.w >= MIN_RES_X
-                && info.h >= MIN_RES_Y
-                && info.h <= MAX_RES_Y) 
+      for (; i < NUM_LIST; ++i)
+         mListButtonStrs[i] = "";
 
-            {
-
-               sprintf (buf, "%dx%dx%d", grd_mode_info[*cur_mode].w,
-                  grd_mode_info[*cur_mode].h, grd_mode_info[*cur_mode].bitDepth);
-
-               mListButtonStrs[i] = buf;
-            
-               if (!strcmp (buf, mode_str))
-                  LGadRadioButtonSelect (&mListButtons, mListPrevPick = i); 
-
-               inc = 1;
-               mNumListTotal++;
-            }
-            cur_mode++;
-         }
-         else {
-            mListButtonStrs[i] = "";
-            inc = 1;
-         }
-
+      for (i = 0; i < NUM_LIST; ++i)
+      {
          memset (&mListButtonElems[i], 0, sizeof (DrawElement));      
          mListButtonElems[i].draw_data = (void *)(const char *)mListButtonStrs[i];
          mListButtonElems[i].draw_type = DRAWTYPE_TEXT;
       }
-
    }
 
 
@@ -1409,6 +1539,17 @@ protected:
 
    //////////////////////////////////////////////////////
 
+   void SetDisplayModeString ()
+   {
+      const sScrnMode *mode = GetGameScreenMode ();
+      cStr &str = mSubPanelStrs[(int)kDisplayMode];
+      str = "Display Mode: ";
+      str += (mode->flags & kScrnModeWindowed) ? "Windowed" : "Fullscreen";
+      mSubPanelElems[(int)kDisplayMode].draw_data = (void *)(const char *)str;
+   }
+
+   //////////////////////////////////////////////////////
+
    void AppendRects (const char *rect_file, cRectArray &old_rects)
    {
       long old_sz, tmp_sz;
@@ -1518,7 +1659,7 @@ protected:
 
          case kSubList:
             region_expose (LGadBoxRegion (&mListButtons), LGadBoxRect (&mListButtons)); 
-//            DrawButtonList (&mBindScrollerDesc);
+            DrawButtonList (&mBindScrollerDesc);
          break;
 
          case kSubBindBlank:
@@ -1639,12 +1780,13 @@ protected:
       }
 
       else if (new_sub == kSubList) {
+         mTopList = 0;
          LGadCreateButtonListDesc (&mListButtons, LGadCurrentRoot (), &mListButtonDesc);
          LGadBoxSetUserData (VB(&mListButtons), this);
          LGadBoxSetStyle (&mListButtons, &mBindStyle); 
 
-//         LGadCreateButtonListDesc (&mBindScrollers, LGadCurrentRoot (), &mBindScrollerDesc);
-//         LGadBoxSetUserData (VB(&mBindScrollers), this);
+         LGadCreateButtonListDesc (&mBindScrollers, LGadCurrentRoot (), &mBindScrollerDesc);
+         LGadBoxSetUserData (VB(&mBindScrollers), this);
 
          if (mListSub == kSubBasicVideo)
 		 {
@@ -1653,7 +1795,6 @@ protected:
 			else
 				FillVidDevStrs();
 		 }
-         mTopList = 0;
       }
 
       FillBlack (FILL_SUBPANEL);
@@ -1802,11 +1943,25 @@ protected:
             RedrawDisplay ();
          break;
 
-         case kHardwareDriver:
-            mSwap = kSubList;
-            mListSub = kSubBasicVideo;
-            mTopList = 0;
-			reslist = FALSE; //hack to know which sublist we took
+         case kDisplayMode:
+         {
+            sScrnMode mode = *GetGameScreenMode ();
+            if (mode.flags & kScrnModeWindowed)
+            {
+               mode.flags &= ~kScrnModeWindowed;
+               mode.flags |= kScrnModeFullScreen|kScrnMode2dDriver;
+            }
+            else
+            {
+               mode.flags &= ~(kScrnModeFullScreen|kScrnMode3dDriver);
+               mode.flags |= kScrnModeWindowed|kScrnMode2dDriver;
+            }
+            SetGameScreenMode (&mode);
+            ScrnModeSetConfig (GetGameScreenMode (), "game_");
+            SetDisplayModeString ();
+            FillBlack ((int)kDisplayMode);
+            RedrawDisplay ();
+         }
          break;
 
 	 case kFogToggle:
@@ -2268,7 +2423,7 @@ protected:
                //resolutions
                case kSubList:
 				  if (reslist)                  					 
-					  if (mNumListTotal >= NUM_LIST - 1) {                     
+				  if (mCanScrollListDown) {
 						  mTopList++;					 
 						  FillVidResStrs ();                  
 					  }
@@ -2347,7 +2502,7 @@ protected:
             valid_butt = FALSE;
          }
          else {
-            mSelectedRes = mTopList + button;
+            mSelectedRes = button;
             SetVidRes ();
          }
 	  }
@@ -2383,6 +2538,10 @@ protected:
             if (mCurSub == kSubList)
                OnSubPanelButtonList (action, 0);
 
+            // The screen manager applies GetGameScreenMode() after the
+            // Options panel has exited and its parent mode resumes. Replacing
+            // display surfaces inside this button callback invalidates live
+            // gadgets and corrupts the process heap.
             cAutoIPtr<IPanelMode> mode = GetPanelMode(); 
             mode->Exit(); 
          }

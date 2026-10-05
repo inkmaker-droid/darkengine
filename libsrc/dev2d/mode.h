@@ -143,6 +143,9 @@ extern int gr_register_mode(int w, int h, int bitDepth);
 extern int gr_find_closest_registered_mode(int w, int h, int bitDepth,
                                            int *registeredWidth,
                                            int *registeredHeight);
+// Enumerates modes actually advertised by the active display provider.
+extern int gr_get_registered_mode_count(int bitDepth);
+extern int gr_get_registered_mode(int ordinal, int bitDepth);
 extern const char * gr_mode_name(int mode);
 
 // Finds the first 2d mode with w,h, and bitdepth

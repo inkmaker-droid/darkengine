@@ -46,11 +46,19 @@ public:
     virtual BOOL DoStatHTrace();
     virtual BOOL DoStatVTrace();
     virtual BOOL DoSetPalette(LOGPALETTE & palette, unsigned uStart, unsigned n);
+    virtual BOOL DoSetGamma(double gamma);
     virtual BOOL DoPageFlip();
     virtual BOOL DoLock(sGrModeCap *) = 0;
     virtual BOOL DoUnlock() = 0;
     virtual void DoFlush();
     virtual void DoFlushRect(int x0, int y0, int x1, int y1);
+
+    // Modern presentation backends resize their output independently of the
+    // fixed-size engine canvas. Legacy backends still need AdjustWindow().
+    virtual BOOL HandlesWindowResize() const
+    {
+        return FALSE;
+    }
 
     const sGrModeInfoEx & GetModeInfoEx() const
     {

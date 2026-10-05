@@ -73,6 +73,13 @@ BOOL cWinDisplayModeOperations::DoSetPalette(LOGPALETTE &, unsigned, unsigned)
 
 ///////////////////////////////////////
 
+BOOL cWinDisplayModeOperations::DoSetGamma(double)
+{
+    return FALSE;
+}
+
+///////////////////////////////////////
+
 BOOL cWinDisplayModeOperations::DoPageFlip()
 {
     return FALSE;

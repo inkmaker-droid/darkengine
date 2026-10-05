@@ -248,7 +248,6 @@ void dark_rend_update_frame(void)
 // In-game command terminal
 //
 
-#define NUM_CMD_TERM_LINES 2
 #define NUM_BUG_TERM_LINES 10
 #define CMD_Y_MARGIN 2
 
@@ -261,9 +260,12 @@ static void build_cmd_term(LGadRoot* root)
    gr_string_size("X",&w,&h);
    guiStyleCleanupFont(NULL,StyleFontNormal);
 
-   r.lr.y = (short)(h * NUM_CMD_TERM_LINES + CMD_Y_MARGIN);
+   // Give the larger in-game message font enough room for useful scrollback.
+   // A proportional height also remains usable across the supported modes.
+   r.lr.y = (short)(r.ul.y + RectHeight(&r) / 3);
    CreateCommandTerminal(root,&r,kCmdTermHideUnfocused);
 
+   r = *LGadBoxRect(root);
    r.lr.y = h * NUM_BUG_TERM_LINES + CMD_Y_MARGIN;
    CreateBugTerminal(root,&r,kCmdTermHideUnfocused);
 }
@@ -275,9 +277,6 @@ static void build_cmd_term(LGadRoot* root)
 // parse the key
 static bool game_key_parse(int keycode)
 {
-   if (keycode&KB_FLAG_DOWN)
-   {
-   }
    return FALSE;
 }
 
@@ -443,6 +442,7 @@ static const sConsoleMission gConsoleMissions[] =
 
 static BOOL gConsoleImmune = FALSE;
 static BOOL gConsoleFlying = FALSE;
+static BOOL gConsolePlayerPhysics = TRUE;
 static BOOL gConsoleInvisible = FALSE;
 static BOOL gConsoleReticle = FALSE;
 
@@ -458,6 +458,7 @@ static void console_message(const char* format, ...)
 
    DarkMessage(message);
    mprintf("%s\n", message);
+   cmdterm_print(message);
 }
 
 static int console_on_off(const char* value, BOOL current)
@@ -550,6 +551,15 @@ static void console_list_missions(void)
 
       mprintf("%2d %-14s %s\n", gConsoleMissions[i].number,
               gConsoleMissions[i].short_name, gConsoleMissions[i].title);
+      {
+         char line[128];
+         _snprintf(line, sizeof(line) - 1, "%2d %-14s %s",
+                   gConsoleMissions[i].number,
+                   gConsoleMissions[i].short_name,
+                   gConsoleMissions[i].title);
+         line[sizeof(line) - 1] = '\0';
+         cmdterm_print(line);
+      }
       if (log)
          fprintf(log, "%2d %-14s %s\n", gConsoleMissions[i].number,
                  gConsoleMissions[i].short_name, gConsoleMissions[i].title);
@@ -575,6 +585,7 @@ static void console_immunity(char* value)
 static void console_flying(char* value)
 {
    int state = console_on_off(value, gConsoleFlying);
+   BOOL freeFlight;
    if (state < 0)
    {
       console_message("Usage: flying [on/off]");
@@ -582,14 +593,40 @@ static void console_flying(char* value)
    }
 
    gConsoleFlying = state;
+   freeFlight = state || !gConsolePlayerPhysics;
    if (PlayerObjectExists())
    {
-      PhysSetGravity(PlayerObject(), state ? 0.0f : 1.0f);
-      PhysSetBaseFriction(PlayerObject(), state ? 320.0f : 0.0f);
-      if (!state)
+      PhysSetGravity(PlayerObject(), freeFlight ? 0.0f : 1.0f);
+      PhysSetBaseFriction(PlayerObject(), freeFlight ? 320.0f : 0.0f);
+      if (!freeFlight)
          PhysStopAxisControlVelocity(PlayerObject(), 2);
    }
    console_message("Flying %s.", state ? "on" : "off");
+}
+
+static void console_player_physics(char* value)
+{
+   int state = console_on_off(value, gConsolePlayerPhysics);
+   BOOL freeFlight;
+
+   if (state < 0)
+   {
+      console_message("Usage: playerphysics [on/off]");
+      return;
+   }
+
+   gConsolePlayerPhysics = state;
+   PhysSetPlayerPhysicsEnabled(state);
+   freeFlight = gConsoleFlying || !state;
+   if (PlayerObjectExists())
+   {
+      PhysSetGravity(PlayerObject(), freeFlight ? 0.0f : 1.0f);
+      PhysSetBaseFriction(PlayerObject(), freeFlight ? 320.0f : 0.0f);
+      if (!freeFlight)
+         PhysStopAxisControlVelocity(PlayerObject(), 2);
+   }
+   console_message("Player physics %s%s", state ? "on." : "off: ",
+                   state ? "" : "collision and gravity disabled.");
 }
 
 static void console_invisible(char* value)
@@ -653,6 +690,13 @@ static void console_list_scripts(void)
    {
       mprintf("%s (%s)\n", script->pszClass,
               script->pszModule ? script->pszModule : "unknown module");
+      {
+         char line[192];
+         _snprintf(line, sizeof(line) - 1, "%s (%s)", script->pszClass,
+                   script->pszModule ? script->pszModule : "unknown module");
+         line[sizeof(line) - 1] = '\0';
+         cmdterm_print(line);
+      }
       if (log)
          fprintf(log, "%s (%s)\n", script->pszClass,
                  script->pszModule ? script->pszModule : "unknown module");
@@ -685,6 +729,7 @@ static Command thief_console_commands[] =
    { "listmissions", FUNC_VOID,   console_list_missions, "list installed missions" },
    { "immunity",     FUNC_STRING, console_immunity,      "immunity [on/off]" },
    { "flying",       FUNC_STRING, console_flying,        "flying [on/off]" },
+   { "playerphysics", FUNC_STRING, console_player_physics, "playerphysics [on/off]" },
    { "invisible",    FUNC_STRING, console_invisible,     "invisible [on/off]" },
    { "reticle",      FUNC_STRING, console_reticle,       "reticle [on/off]" },
    { "retinfo",      FUNC_VOID,   console_retinfo,       "describe the object under the reticle" },

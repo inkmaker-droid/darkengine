@@ -2578,7 +2578,8 @@ void portal_add_simple_dynamic_dark(float br, float ambient, Location *loc,
 }
 
 
-#define RECIP_TABLE_SIZE 2048
+// Perspective/lighting spans can be as wide as a modern render target.
+#define RECIP_TABLE_SIZE 8192
 fix reciprocal_table_24[RECIP_TABLE_SIZE+1];
 float int_table[32];
 

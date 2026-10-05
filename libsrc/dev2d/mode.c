@@ -315,6 +315,33 @@ int gr_find_closest_registered_mode(int w, int h, int bitDepth,
    return bestMode;
 }
 
+int gr_get_registered_mode_count(int bitDepth)
+{
+   int i;
+   int count = 0;
+   for (i = 0; i < grd_mode_count; ++i)
+      if (grd_registered_modes[i] && grd_mode_info[i].bitDepth == bitDepth)
+         ++count;
+   return count;
+}
+
+int gr_get_registered_mode(int ordinal, int bitDepth)
+{
+   int i;
+   if (ordinal < 0)
+      return -1;
+   for (i = 0; i < grd_mode_count; ++i)
+   {
+      if (grd_registered_modes[i] && grd_mode_info[i].bitDepth == bitDepth)
+      {
+         if (ordinal == 0)
+            return i;
+         --ordinal;
+      }
+   }
+   return -1;
+}
+
 // Get a human-readable form of the mode name
 const char * gr_mode_name(int mode)
 {

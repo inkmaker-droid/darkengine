@@ -11,6 +11,7 @@
 #include <lg.h>
 #include <r3d.h>
 #include <dev2d.h>
+#include <fcolor.h>
 #include <g2.h>
 #include <objpos.h>
 #include <simtime.h>
@@ -1660,6 +1661,23 @@ void free_old_tluc_tables(void)
 
 static BOOL gRenderMode = FALSE; 
 
+static ushort particle_color16(int color)
+{
+   uchar *palette = palmgr_get_pal(0);
+
+   if (palette)
+   {
+      // gr_make_screen_fcolor() expects ordinary packed RGB with red in the
+      // low byte. gr_bind_rgb() produces the engine's fixed-point grs_rgb
+      // representation and shifts every channel to different bit positions.
+      int red = palette[color * 3];
+      int green = palette[color * 3 + 1];
+      int blue = palette[color * 3 + 2];
+      return (ushort)gr_make_screen_fcolor(red | (green << 8) | (blue << 16));
+   }
+   return 0;
+}
+
 void ParticleGroupUpdateModeStart(void)
 {
    num_alpha_colors = 0;
@@ -1727,12 +1745,11 @@ static int get_tluc_color(int color)
          gr_get_screen_rgb_bitmask(&bmask);
          bitdepth = (bmask.green == 0x3e0 ? BMF_RGB_555 : BMF_RGB_565);
       }
-      if (grd_pal16_list && grd_pal16_list[0])
-         color = grd_pal16_list[0][color];
-      else if (grd_pal16)
-         color = grd_pal16[color];
-      else
-         color = (15 << 11) | 31;  // pinkish
+      // This table may be requested before the cached 16-bit palette has
+      // been populated. Convert from the authoritative 8-bit palette now;
+      // caching the old magenta fallback made particle colors stay wrong for
+      // the rest of the display mode.
+      color = particle_color16(color);
 
       for (i=0; i < NUM_ALPHA; ++i) {
          float opacity = (float) (i*2+1)/(NUM_ALPHA*2);
@@ -1773,12 +1790,7 @@ void particle_group_update_mode_change(ObjID obj)
    } else {
 
       // convert 8-bit color to device 16-bit color
-      if (grd_pal16_list && grd_pal16_list[0])
-         pg->render_datum = grd_pal16_list[0][pg->cr];
-      else if (grd_pal16)
-         pg->render_datum = grd_pal16[pg->cr];
-      else
-         pg->render_datum = (15 << 11) | 31;  // pinkish
+      pg->render_datum = particle_color16(pg->cr);
    }
 
    switch(pg->render_type) {

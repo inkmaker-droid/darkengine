@@ -2084,6 +2084,38 @@ void PhysSetFlag(ObjID objID, int flag, BOOL state)
       Warning(("PhysSetFlag: %s has no physics\n", ObjWarnName(objID)));
 }      
 
+void PhysSetPlayerPhysicsEnabled(BOOL enabled)
+{
+   cPhysModel *pModel;
+   int i;
+
+   g_PhysicsOn = enabled;
+   if (!PlayerObjectExists())
+      return;
+
+   pModel = g_PhysModels.Get(PlayerObject());
+   if (!pModel)
+      return;
+
+   // Remove contacts and pending collisions immediately. Otherwise an old
+   // contact can continue constraining the player after collision checks stop.
+   RemoveObjectCollisions(PlayerObject());
+   pModel->ClearConstraints();
+   if (!enabled)
+   {
+      for (i = 0; i < pModel->NumSubModels(); ++i)
+      {
+         pModel->DestroyAllTerrainContacts(i);
+         DestroyAllObjectContacts(PlayerObject(), i, pModel);
+      }
+   }
+}
+
+BOOL PhysPlayerPhysicsEnabled(void)
+{
+   return g_PhysicsOn;
+}
+
 
 //
 // Get the media state of an object

@@ -51,7 +51,7 @@ void (*g2pt_func_perspective_core)(void);
 void (*g2pt_func_perspective_run)(void);
 
 
-#define RECIP_TABLE_SIZE 2048
+#define RECIP_TABLE_SIZE 8192
 fix g2pt_reciprocal_table_24[RECIP_TABLE_SIZE+1];
 float g2pt_int_table[32];
 

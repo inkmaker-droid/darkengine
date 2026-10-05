@@ -154,6 +154,7 @@
     <ClInclude Include="aggddraw.h" />
     <ClInclude Include="cbchain.h" />
     <ClInclude Include="dddynf.h" />
+    <ClInclude Include="d3d11present.h" />
     <ClInclude Include="dispbase.h" />
     <ClInclude Include="wdcreate.h" />
     <ClInclude Include="wddmode.h" />
@@ -172,6 +173,7 @@
     <ClCompile Include="aggddraw.cpp" />
     <ClCompile Include="cbchain.cpp" />
     <ClCompile Include="dddynf.cpp" />
+    <ClCompile Include="d3d11present.cpp" />
     <ClCompile Include="dispbase.cpp" />
     <ClCompile Include="wdcreate.cpp" />
     <ClCompile Include="wddmode.cpp" />

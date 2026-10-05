@@ -299,12 +299,21 @@ BOOL cDDProvider::DoProcessMessage(UINT msg, WPARAM /*wParam*/, LPARAM /*lParam*
         case WM_SIZE:
             if (m_pModeOps && (m_pModeOps->GetModeInfoEx().flags & kGrModeIsWindowed))
             {
-                m_pModeOps->SetScaleFactor(
-                    AdjustWindow(GetMainWnd(),
-                                 m_pModeOps->GetModeInfoEx().width,
-                                 m_pModeOps->GetModeInfoEx().height,
-                                 TRUE)
-                    );
+                if (m_pModeOps->HandlesWindowResize())
+                {
+                    // The D3D11 presenter resizes its swap chain on the next
+                    // frame while retaining the engine's fixed render canvas.
+                    m_pModeOps->SetScaleFactor(0);
+                }
+                else
+                {
+                    m_pModeOps->SetScaleFactor(
+                        AdjustWindow(GetMainWnd(),
+                                     m_pModeOps->GetModeInfoEx().width,
+                                     m_pModeOps->GetModeInfoEx().height,
+                                     TRUE)
+                        );
+                }
             }
             break;
 
@@ -435,14 +444,17 @@ void cDDProvider::DoGetInfo(sGrDeviceInfo * pGrDeviceInfo, sGrModeInfo * pModeIn
         pModes++;
     }
 
-    // Claim windowed for all with size less than screen and depth equal to screen
+    // The modern presenter renders legacy 8/15/16-bit modes into an off-screen
+    // surface and converts them to the desktop swap-chain format. They no
+    // longer need to match the desktop bit depth to run in a window.
     pModes = pGrDeviceInfo->modes;
     while (*pModes != -1)
     {
         int modePixelSize = (pModeInfo[*pModes].bitDepth == 15) ? 16 : pModeInfo[*pModes].bitDepth;
-        if (pModeInfo[*pModes].w < desktopSurfaceDesc.dwWidth &&
-            pModeInfo[*pModes].h < desktopSurfaceDesc.dwHeight &&
-            modePixelSize == desktopSurfaceDesc.ddpfPixelFormat.dwRGBBitCount)
+        if (modePixelSize <= 16 ||
+            (pModeInfo[*pModes].w < desktopSurfaceDesc.dwWidth &&
+             pModeInfo[*pModes].h < desktopSurfaceDesc.dwHeight &&
+             modePixelSize == desktopSurfaceDesc.ddpfPixelFormat.dwRGBBitCount))
             {
             pModeInfo[*pModes].flags |= kGrModeCanWindow;
             }
@@ -573,13 +585,18 @@ cDDProvider::DoSetMode(const sGrModeInfo & modeInfo,
     
     if (flags & kGrSetWindowed)
     {
+        const LONG windowedStyle = m_NormalWindowStyle |
+                                   WS_THICKFRAME | WS_MAXIMIZEBOX;
         if (m_DDCoopFlags != kDDWindowedCoopFlags)
         {
-            SetWindowLong(GetMainWnd(), GWL_STYLE, m_NormalWindowStyle);
             m_DDCoopFlags = kDDWindowedCoopFlags;
             m_pDD->RestoreDisplayMode();
             result = SetCooperativeLevel(m_DDCoopFlags);
         }
+        SetWindowLong(GetMainWnd(), GWL_STYLE, windowedStyle);
+        SetWindowPos(GetMainWnd(), HWND_NOTOPMOST, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE |
+                     SWP_FRAMECHANGED);
     }
     else
     {
@@ -634,7 +651,13 @@ cDDProvider::DoSetMode(const sGrModeInfo & modeInfo,
     DebugMsgEx2(SETMODE, "using flags = 0x%x, m_Flags = 0x%x", flags, m_Flags);
 
     // For now, we always emulate modeX modes, and (only for now), windowed operation
-    BOOL bUseEmulation = (flags & kGrSetWindowed) || (m_Flags & kAlwaysEmulate) || !fModeIsNative || (!(flags & kGrSetWindowed) && modeInfo.w < 400);
+    // Modern presentation always starts from an off-screen legacy canvas.
+    // A mode reported as native by Windows must not send a 16-bit request
+    // back through the obsolete direct-to-display path.
+    BOOL bUseEmulation = modeInfo.bitDepth <= 16 ||
+                         (flags & kGrSetWindowed) ||
+                         (m_Flags & kAlwaysEmulate) || !fModeIsNative ||
+                         (!(flags & kGrSetWindowed) && modeInfo.w < 400);
 
     if (modeInfo.w == 512 && !fModeIsNative) // @Note (toml 12-09-96): hack for Dark.  Need real support for direct-faked subregion modes
     {
