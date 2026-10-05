@@ -187,6 +187,7 @@ eObjCastResult ObjRaycast(Location *pStartLoc, Location *pEndLoc,
 
    g_fEarliestTime = 1.0;
    eObjCastResult rv = kObjCastNone;
+   ObjID HitObjID = OBJ_NULL;
    cDynArray_<ObjID, 128> ObjsCompared;
 
    // This is global since it's used for both kinds of object
@@ -255,6 +256,7 @@ eObjCastResult ObjRaycast(Location *pStartLoc, Location *pEndLoc,
                {
                   if (MDDetect()) {
                      rv = kObjCastMD;
+                     HitObjID = g_ObjCastObjID;
                      if (ShortCircuit)
                         goto Done;
                   }
@@ -265,6 +267,7 @@ eObjCastResult ObjRaycast(Location *pStartLoc, Location *pEndLoc,
                {
                   if (MeshDetect()) {
                      rv = kObjCastMesh;
+                     HitObjID = g_ObjCastObjID;
                      if (ShortCircuit)
                         goto Done;
                   }
@@ -287,6 +290,10 @@ eObjCastResult ObjRaycast(Location *pStartLoc, Location *pEndLoc,
    }
 
 Done:
+   // The loop continues testing other references after a non-short-circuit
+   // hit, so g_ObjCastObjID otherwise names the last object tested rather
+   // than the nearest object that was actually hit.
+   g_ObjCastObjID = HitObjID;
    r3_done_with_context();
    if (pOldContext)
    {

@@ -329,6 +329,15 @@ DECLARE_INTERFACE_(IInputBinder, IUnknown)
    STDMETHOD_(void, Reset)(THIS) PURE;
 };
 
+// Visits every binding in the input binder's current context.  This keeps
+// diagnostic and help UIs from having to save and re-parse a temporary .bnd
+// file just to display the active controls.
+typedef BOOL (LGAPI *tInputBindingIterCallback)(const char *pControl,
+                                                const char *pCommand,
+                                                void *pData);
+EXTERN void LGAPI InputBinderForEachBinding(tInputBindingIterCallback callback,
+                                             void *pData);
+
 
 
 #define InputBinderCreate(ppInputBinder) \

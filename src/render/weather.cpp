@@ -406,6 +406,12 @@ static inline void SetNumCells()
 static void CheckForWeatherCells()
 {
    g_bAnyWeatherCells = FALSE;
+
+   // Mission file variables can be restored while the editor is switching
+   // back from game mode, before the per-cell weather array is rebuilt.
+   if (g_pWeatherPerCell == NULL)
+      return;
+
    for (int i = 0; i < wr_num_cells; ++i)
       if (g_pWeatherPerCell[i]) {
          g_bAnyWeatherCells = TRUE;

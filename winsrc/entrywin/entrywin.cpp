@@ -30,7 +30,7 @@ extern "C"
 	int _g_referenceEntryPoint = 0;
 }
 
-static BOOL IsThief2Executable(const char* executable)
+static BOOL UsesThief2Data(const char* executable)
 {
     const char* name = executable;
     const char* slash;
@@ -45,7 +45,8 @@ static BOOL IsThief2Executable(const char* executable)
     if (slash)
         name = slash + 1;
 
-    return _strnicmp(name, "thief2", 6) == 0;
+    return _strnicmp(name, "thief2", 6) == 0 ||
+           _strnicmp(name, "dromed", 6) == 0;
 }
 
 static BOOL FileExistsInDirectory(const char* directory, const char* name)
@@ -241,7 +242,7 @@ int main(int argc, const char* argv[])
     if (!g_pMalloc && !HeapInit())
         return 1;
 
-    if (IsThief2Executable(argc > 0 ? argv[0] : NULL) &&
+    if (UsesThief2Data(argc > 0 ? argv[0] : NULL) &&
         !PrepareThief2DataDirectory())
         return 0;
 

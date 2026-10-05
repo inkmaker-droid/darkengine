@@ -385,6 +385,8 @@ static sScrnMode max_scrnmode =
 static ScrnManContext def_scrnparm = 
 { 
    { NULL, &min_scrnmode, &max_scrnmode}, 
+   NULL,
+   FALSE,
 }; 
 
 
@@ -491,6 +493,8 @@ STDMETHODIMP_(const sLoopInstantiator*) cPanelMode::Instantiator()
 {
    // set the screen mode 
    mScrnParm.mode_params.preferred = mPanelDesc.screen_mode; 
+   mScrnParm.preserve_screen =
+      (mPanelDesc.flags & kPanelPreserveScreen) != 0;
    if (mPanelDesc.pal)
       mScrnParm.pal_res = mPanelDesc.pal;
 

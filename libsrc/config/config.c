@@ -449,6 +449,7 @@ errtype config_write_file(const char* in,writefunc writable)
 {
    errtype err;
    int ofd,ifd;
+   char input[_MAX_PATH];
    char fn[_MAX_PATH];
    char dbuf[80],fbuf[FN_BUFSIZE];
    citer iter;
@@ -457,7 +458,13 @@ errtype config_write_file(const char* in,writefunc writable)
    err = hash_copy(&seen_vars,&config_table);
    if (err != OK) return err;
    if (config_enabled <= 0) return ERR_NULL;
-   split_fname(in,dbuf,fbuf);
+   if (in == NULL || strlen(in) >= sizeof(input)) return ERR_NULL;
+
+   // split_fname temporarily writes terminators into its argument.  Its
+   // callers commonly pass string literals (CONFIG_FILE is "cam.cfg"), so
+   // never let it modify the caller-owned path.
+   strcpy(input,in);
+   split_fname(input,dbuf,fbuf);
 
    // Construct a temporary filename
    strcpy(fn,dbuf);
@@ -516,7 +523,7 @@ errtype config_write_file(const char* in,writefunc writable)
    }
    iter.fd = ofd;
    iter.writable = writable;
-   iter.fn = (char *)in;
+   iter.fn = input;
    hash_iter(&config_table,(HashIterFunc)config_write_iter,&iter);
    close(ofd);
    hash_destroy(&config_table);

@@ -983,6 +983,13 @@ void vm_render_camera(int c)
       DrawRelations();
 
    reg = camera_to_region_mapping[c];
+   // Mode dispatch can deliver an initial frame before the editor client has
+   // finished constructing its child regions.  The legacy renderer assumed
+   // those callbacks were always strictly ordered and dereferenced a null
+   // region rectangle during modern startup.  Leave the redraw flags set and
+   // draw this camera on the next frame after EditorCreateGUI has completed.
+   if (vmGetRegion(reg)->r == NULL)
+      return;
    vm_set_region_canvas(reg);
    vm_start_3d(c);
 

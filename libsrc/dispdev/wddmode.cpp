@@ -791,9 +791,15 @@ cOffVideoDDModeOps::~cOffVideoDDModeOps()
 
 BOOL cOffVideoDDModeOps::DoSetGamma(double gamma)
 {
-    if (!m_UseD3D11Presentation || !m_pPresenter)
+    if (gamma <= 0.0)
         return FALSE;
-    return m_pPresenter->SetGamma(gamma);
+
+    // Gamma is loaded before the first display mode may have created the
+    // presenter. Retain it across that startup ordering and later mode changes.
+    m_Gamma = gamma;
+    if (m_pPresenter)
+        return m_pPresenter->SetGamma(gamma);
+    return TRUE;
 }
 
 BOOL cOffVideoDDModeOps::StartMode(const sGrModeInfo & modeInfo, int flags, sGrModeCap * pReturnModeInfo)
@@ -815,14 +821,14 @@ BOOL cOffVideoDDModeOps::StartMode(const sGrModeInfo & modeInfo, int flags, sGrM
     // The engine still renders its legacy 16-bit canvas, but modern Windows
     // presents it through a normal 32-bit desktop swap chain. Do not request
     // obsolete exclusive 16-bit display modes from the OS.
-    if (!(GetCoopFlags() & DDSCL_NORMAL))
+    if (!(flags & kGrSetWindowed) && realBitsPerPixel <= 16)
     {
-        if (realBitsPerPixel <= 16)
-        {
-            EnableDesktopPresentation();
-            m_UseDesktopPresentation = TRUE;
-        }
-        else
+        EnableDesktopPresentation();
+        m_UseDesktopPresentation = TRUE;
+    }
+    else if (!(GetCoopFlags() & DDSCL_NORMAL))
+    {
+        if (realBitsPerPixel > 16)
         {
             int targetMode = -1;
 
@@ -965,15 +971,20 @@ BOOL cOffVideoDDModeOps::StartMode(const sGrModeInfo & modeInfo, int flags, sGrM
         if (!m_pPresenter)
             m_pPresenter = new cD3D11Presenter;
         if (m_pPresenter)
+        {
+            m_pPresenter->SetGamma(m_Gamma);
             m_UseD3D11Presentation = m_pPresenter->Start(
                 m_pOuter->GetMainWnd(),
                 m_SecondaryDesc.dwWidth,
-                m_SecondaryDesc.dwHeight);
+                m_SecondaryDesc.dwHeight,
+                m_pSecondarySurface);
+        }
     }
 
     // Store info about the render target
     SetModeInfoFromSurfaceDesc(m_SecondaryDesc,
-                               (flags & kGrSetWindowed) ? kGrModeIsWindowed : 0,
+                               (flags & kGrSetWindowed) ? kGrModeIsWindowed :
+                               (m_UseDesktopPresentation ? kGrModeIsBorderless : 0),
                                pReturnModeInfo);
 
     // Make sure surfaces were not discarded, or are restored
@@ -1111,7 +1122,9 @@ void cOffVideoDDModeOps::DoFlushRect(int x0Source, int y0Source, int x1Source, i
 
         HRESULT result = E_NOTIMPL;
         if (m_UseD3D11Presentation && m_pPresenter &&
-            m_pPresenter->Present(m_pSecondarySurface))
+            m_pPresenter->Present(m_pSecondarySurface, sourceRect.left,
+                                  sourceRect.top, sourceRect.right,
+                                  sourceRect.bottom))
         {
             result = DD_OK;
         }

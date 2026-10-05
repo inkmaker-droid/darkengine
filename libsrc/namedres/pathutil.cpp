@@ -87,7 +87,11 @@ bool PathAndName(const char* pPathName, char* pPath, char* pName)
 		return false;
 	}
 
-	memmove(pName, &pPathName[i + 1], nSize - i + 1);
+	// Copy the characters after the final separator plus the terminator.  The
+	// old length was two bytes too large: for a root-level ZIP entry it read
+	// past both the filename and its terminator, corrupting the heap long before
+	// a large mission made the damage visible.
+	memmove(pName, &pPathName[i + 1], nSize - i);
 	if (i < 0)
 		return false;
 

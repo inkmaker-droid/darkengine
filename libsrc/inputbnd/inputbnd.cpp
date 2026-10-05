@@ -10,6 +10,30 @@
 cIBVariableManager* g_IB_variable_manager = nullptr;
 extern cIBInputMapper* g_IB_input_mapper;
 
+void LGAPI InputBinderForEachBinding(tInputBindingIterCallback callback,
+	void* pData)
+{
+	if (!callback || !g_IB_input_mapper)
+		return;
+
+	const int count = g_IB_input_mapper->m_control_binds.GetNumNodes();
+	for (int index = 0; index < count; ++index)
+	{
+		char control[64] = {};
+		char command[128] = {};
+		const auto* boundCommand =
+			g_IB_input_mapper->m_control_binds.GetInOrderAt(index, control);
+		if (!boundCommand)
+			continue;
+		if (!*boundCommand)
+			continue;
+
+		g_IB_input_mapper->StripControl(command, boundCommand);
+		if (!callback(control, command, pData))
+			break;
+	}
+}
+
 class cInputBinder : public cCTDelegating<IInputBinder>,
 	public cCTAggregateMemberControl<kCTU_Default>
 {
@@ -249,7 +273,10 @@ STDMETHODIMP_(BOOL) cInputBinder::Bind(const char* pControl, const char* pCmd)
 {
 	char pBuf[256] = {};
 
-	snprintf(pBuf, 256, "bind %s %s", pControl, pCmd);
+	// The public Bind API receives the whole command as one string.  Preserve
+	// arguments when it is passed through the command parser; without quoting,
+	// only argument-free commands bind successfully.
+	snprintf(pBuf, 256, "bind %s \"%s\"", pControl, pCmd);
 	return ProcessCmd(pBuf) == 0;
 }
 

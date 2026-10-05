@@ -20,6 +20,72 @@
 
 #pragma code_seg("lgalloc")
 
+///////////////////////////////////////////////////////////////////////////////
+//
+// Pool backing storage must not come from operator new: cPoolAllocator is
+// itself used by the engine's global allocator.  The original implementation
+// reserved a separate virtual-memory arena and handed out page-sized chunks.
+// A project-conversion change replaced this with `new sPoolBlock[count]`,
+// which both re-entered the allocator and allocated only pointer-sized blocks
+// while the threading code treated them as full-sized pool elements.
+//
+
+#ifdef _WIN32
+
+#define kPoolCoreGrowSize (1024 * 64)
+#define kPoolCoreMaxSize  (1024 * 1024 * 64)
+
+class cPoolCore
+{
+public:
+    static void *AllocPage();
+
+private:
+    static void *gm_pCoreStack;
+    static void *gm_pCoreStackLimit;
+};
+
+void *cPoolCore::gm_pCoreStack;
+void *cPoolCore::gm_pCoreStackLimit;
+
+void *cPoolCore::AllocPage()
+{
+    if (!gm_pCoreStack)
+    {
+        gm_pCoreStack = VirtualAlloc(NULL, kPoolCoreMaxSize, MEM_RESERVE,
+                                    PAGE_READWRITE);
+        AssertMsg(gm_pCoreStack, "VirtualAlloc reserve failed");
+        if (!gm_pCoreStack)
+            return NULL;
+
+        if (!VirtualAlloc(gm_pCoreStack, kPoolCoreGrowSize, MEM_COMMIT,
+                          PAGE_READWRITE))
+        {
+            CriticalMsg("VirtualAlloc commit failed");
+            return NULL;
+        }
+        gm_pCoreStackLimit = (uchar *)gm_pCoreStack + kPoolCoreGrowSize;
+    }
+
+    void *pReturn = gm_pCoreStack;
+    gm_pCoreStack = (uchar *)gm_pCoreStack + kPageSize;
+
+    while (gm_pCoreStack > gm_pCoreStackLimit)
+    {
+        if (!VirtualAlloc(gm_pCoreStackLimit, kPoolCoreGrowSize, MEM_COMMIT,
+                          PAGE_READWRITE))
+        {
+            CriticalMsg("VirtualAlloc commit failed");
+            return NULL;
+        }
+        gm_pCoreStackLimit = (uchar *)gm_pCoreStackLimit + kPoolCoreGrowSize;
+    }
+
+    return pReturn;
+}
+
+#endif
+
 struct sPoolBlock;
 
 struct sFreePoolPart
@@ -114,8 +180,8 @@ void cPoolAllocator::ThreadNewBlock()
 
     AssertMsg(!m_pFreeList, "ThreadNew called when not empty");
 
-    // First get a new batch ...
-    m_pFreeList = new sPoolBlock[m_nBlockingFactor];
+    // Get one page from storage outside the allocator that this pool serves.
+    m_pFreeList = (sPoolBlock *)cPoolCore::AllocPage();
 
     if (!m_pFreeList)
         return;

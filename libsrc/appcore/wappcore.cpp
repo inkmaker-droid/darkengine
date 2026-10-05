@@ -350,6 +350,13 @@ STDMETHODIMP cWindowsApplication::cApplicationOperations::QueryQuit()
 
 STDMETHODIMP_(void) cWindowsApplication::cApplicationOperations::Quit()
 {
+    // Loop, renderer, sound, and resource teardown is intentionally orderly
+    // and can take noticeable time.  Remove the game window immediately so
+    // Quit has prompt visual feedback while those subsystems finish safely.
+    HWND mainWindow = m_pWindowsApplication->m_WinAppOperations.GetMainWnd();
+    if (mainWindow && IsWindow(mainWindow))
+        ShowWindow(mainWindow, SW_HIDE);
+
     CONNECTION_POINT_ITERATE()
     {
         pSink->OnQuit();

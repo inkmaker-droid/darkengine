@@ -253,7 +253,6 @@ void ml_multi_light_cback(int num, float *out, ulong *norm,
 #ifdef RGB_LIGHTING
    if (mld_multi_rgb)
       num *= 3;
-   return;
 #endif
 
    for (j=0; j < num; ++j)
@@ -460,7 +459,7 @@ int ml_multi_set_lights_for_object(int num, mls_multi_light *inp,
    // add remaining lights as ambient
    for (; i < num; ++i) {
       int j = light_list[i];
-#ifdef RGB_LIGHTINGo
+#ifdef RGB_LIGHTING
       // if we're adding a far lighting in colored mode, we need to
       // actually use a full light calculation again
       float mag = MAG_VEC(inp[j].bright);

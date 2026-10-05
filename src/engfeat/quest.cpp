@@ -497,8 +497,17 @@ STDMETHODIMP_(BOOL) cQuestData::Load(QuestMoveFunc moveFunc, eQuestDataType type
 
    while ((num = moveFunc((void*)&len, sizeof(int), 1)) == sizeof(int))
    {
+      if (len <= 0 || len > 1024)
+      {
+         Warning(("cQuestData::Load - invalid name length %d\n", len));
+         return E_FAIL;
+      }
+
       // Alloc a string of size len, bound within the scope of this block
-      cStr name("",len); 
+      // cStr("", len) means "copy len bytes from this source string" and
+      // therefore read past the one-byte empty literal.  The length-only
+      // constructor is the buffer-allocation form intended here.
+      cStr name(len);
       char* pName = (char*)(const char*)name; 
 
       if ((num = moveFunc((void*)pName, sizeof(char), len)) != len*sizeof(char))
@@ -506,6 +515,7 @@ STDMETHODIMP_(BOOL) cQuestData::Load(QuestMoveFunc moveFunc, eQuestDataType type
          Warning(("cQuestData::Load - bad save format\n"));
          return E_FAIL;
       };
+      pName[len - 1] = '\0';
       if ((num = moveFunc((void*)&value, sizeof(int), 1)) != sizeof(int))
       {
          Warning(("cQuestData::Load - bad save format\n"));

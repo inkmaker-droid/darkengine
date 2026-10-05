@@ -84,6 +84,10 @@
 #include <cmdterm.h>
 #include <simtime.h>
 #include <pick.h>
+#include <objcast.h>
+#include <port.h>
+#include <wr.h>
+#include <wrdbrend.h>
 
 #include <drk_bind.h>
 #include <drkreact.h>
@@ -658,20 +662,60 @@ static void console_reticle(char* value)
 
 static void console_retinfo(void)
 {
+   const float rayDistance = 1000.0f;
+   mxs_vector cameraPosition;
+   mxs_angvec cameraFacing;
+   mxs_matrix cameraMatrix;
+   mxs_vector cameraForward;
+   mxs_vector forward;
+   mxs_vector endPosition;
+   Location startLocation;
+   Location endLocation;
+   Location hitLocation;
+   eObjCastResult hitType;
+   ObjID target;
    char model[64] = "(none)";
    const char* name;
 
-   if (g_PickCurrentObj == OBJ_NULL)
+   CameraGetLocation(PlayerCamera(), &cameraPosition, &cameraFacing);
+   mx_ang2mat(&cameraMatrix, &cameraFacing);
+   mx_mk_vec(&cameraForward, 1.0f, 0.0f, 0.0f);
+   mx_mat_mul_vec(&forward, &cameraMatrix, &cameraForward);
+   mx_scale_add_vec(&endPosition, &cameraPosition, &forward, rayDistance);
+   MakeLocationFromVector(&startLocation, &cameraPosition);
+   MakeLocationFromVector(&endLocation, &endPosition);
+
+   hitType = ObjRaycast(&startLocation, &endLocation, &hitLocation, FALSE);
+   if (hitType == kObjCastTerrain)
    {
-      console_message("Reticle target: none");
+      int polygon = PortalRaycastFindPolygon();
+      int texture = -1;
+      if (PortalRaycastCell != CELL_INVALID && polygon != POLY_INVALID)
+         texture = WR_CELL(PortalRaycastCell)->render_list[polygon].texture_id;
+      console_message("Terrain: cell %d, polygon %d, texture %d",
+                      PortalRaycastCell, polygon, texture);
+      return;
+   }
+
+   if (hitType != kObjCastMD && hitType != kObjCastMesh)
+   {
+      console_message("Reticle target: none within %.0f units", rayDistance);
+      return;
+   }
+
+   target = g_ObjCastObjID;
+   if (target == OBJ_NULL)
+   {
+      console_message("Reticle target: raycast returned no object");
       return;
    }
 
    AutoAppIPtr_(ObjectSystem, pObjectSystem);
-   name = pObjectSystem->GetName(g_PickCurrentObj);
-   ObjGetModelName(g_PickCurrentObj, model);
-   console_message("Target %d: %s, model %s", g_PickCurrentObj,
-                   name && *name ? name : "(unnamed)", model);
+   name = pObjectSystem->GetName(target);
+   ObjGetModelName(target, model);
+   console_message("%s object %d: %s, model %s",
+                   hitType == kObjCastMesh ? "Mesh" : "MD",
+                   target, name && *name ? name : "(unnamed)", model);
 }
 
 static void console_list_scripts(void)

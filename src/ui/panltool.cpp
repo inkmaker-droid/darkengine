@@ -211,19 +211,12 @@ static void create_movie_factory()
 
 ////////////////////////////////////////
 
-static sScrnMode movie_scrnmode_desc = 
-{
-   kScrnModeDimsValid|kScrnModeBitDepthValid, 
-   640, 480,
-   16, 
-}; 
-
 static sPanelModeDesc movie_desc = 
 { 
    &LOOPMODE_Movie,
-   kPanelAutoExit, // kPanelAnyKey,
+   kPanelAutoExit|kPanelPreserveScreen, // kPanelAnyKey,
    &LOOPID_MovieClient,
-   &movie_scrnmode_desc,
+   NULL,
 }; 
 
 BOOL MoviePanel(const char* fn) 

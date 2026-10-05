@@ -277,6 +277,7 @@ public:
 private:
     int                         m_iLock;
     cWinDisplayModeOperations * m_pDisplayModeOperations;
+    double                      m_Gamma;
 
     ///////////////////////////////////
 

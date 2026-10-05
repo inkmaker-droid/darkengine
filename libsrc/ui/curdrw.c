@@ -158,7 +158,12 @@ void bitmap_cursor_drawfunc(int cmd, Region* r, Cursor* c, Point pos)
    }
 #ifdef WIN32
    IDisplayDevice_Unlock(g_pUiDisplayDevice);
-   IDisplayDevice_FlushRect(g_pUiDisplayDevice, pos.x, pos.y, pos.x + bm->w, pos.y + bm->h);
+   // DromEd does not redraw continuously while an editor viewport is idle, so
+   // the software cursor must present its dirty rectangle immediately.  The
+   // D3D11 backend coalesces this through its normal framebuffer upload and
+   // presents without a vsync wait.
+   IDisplayDevice_FlushRect(g_pUiDisplayDevice, pos.x, pos.y,
+                            pos.x + bm->w, pos.y + bm->h);
 #endif
 }
 #pragma on(unreferenced)

@@ -491,6 +491,19 @@ edbFiletype dbLoadTagFile(ITagFile* file, edbFiletype loadtype)
 
    edbFiletype retval = dbMergeLoadTagFile(file, loadtype);
 
+   // A referenced piece (most commonly the .gam) may be unavailable or the
+   // user may cancel the browse dialog.  The old path continued by sending
+   // post-load messages to a database that had just been reset and only
+   // partially reconstructed, which made cancellation crash-prone.  Leave a
+   // valid empty editor database instead and do not post-load missing pieces.
+   if (retval == 0)
+   {
+      dbBuildDefault();
+      AutoAppIPtr_(SimManager,pSim);
+      pSim->SuspendSim();
+      return 0;
+   }
+
    // Post-load all database parts that weren't loaded
    if (~retval & kFiletypeAll)
    {

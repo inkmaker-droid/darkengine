@@ -19,6 +19,13 @@
 
 #include <setup.h>
 #include <texture.h>
+#ifdef MODERN_D3D11
+#include <d3d11legacy.h>
+extern void *g_ModernTextures[LGD3D_MAX_TEXTURES];
+extern grs_bitmap *g_ModernBitmaps[LGD3D_MAX_TEXTURES];
+extern void *g_ModernWhiteTexture;
+extern int g_ModernTextureLevel;
+#endif
 
 #ifdef MONO_SPEW
 #define put_mono(c) \
@@ -76,10 +83,15 @@ static double inv_z_far = 1.0 / 200.0;
 static double z1 = 200.0 / 199.0; // z_far / (z_far - z_near)
 static double z2 = 200.0 / 199.0; // z_near * z_far / (z_far - z_near)
 static double zbias = 0.0;
+static BOOL zbuffer;
+static BOOL zwrite;
+static BOOL zcompare;
 
 void lgd3d_clear_z_rect(int x0, int y0, int x1, int y1)
 {
-    // TODO
+#ifdef MODERN_D3D11
+   D3D11LegacyClearDepth();
+#endif
 }
 
 void lgd3d_set_z(float z)
@@ -94,12 +106,12 @@ void lgd3d_set_z(float z)
 
 int lgd3d_is_zwrite_on(void)
 {
-    return 0; // TODO
+    return zwrite;
 }
 
 int lgd3d_is_zcompare_on(void)
 {
-    return 0; // TODO
+    return zcompare;
 }
 
 double lgd3d_set_zbias(double new_bias)
@@ -272,7 +284,10 @@ static D3DCOLOR get_color(void)
 
 #define d3d_device lpd3dDevice
 
-#ifdef USE_D3D2_API
+#if defined(MODERN_D3D11)
+#define SetRenderState(name,data) ((void)0)
+#define SetLightState(name,data) ((void)0)
+#elif defined(USE_D3D2_API)
 
 #ifndef SHIP
 #define SetRenderState(name, data) \
@@ -305,6 +320,7 @@ void lgd3d_set_fog_level(float fl)
 }
 
 static D3DCOLOR fog_color = D3DRGB(0.8, 0.0, 0.0);
+static BOOL fog_enabled = FALSE;
 
 void lgd3d_set_fog_color(int r, int g, int b)
 {
@@ -321,9 +337,15 @@ void lgd3d_set_fog_color(int r, int g, int b)
    else if (b <0)
       b = 0;
 
+   // Fog color is part of queued draw state in the D3D11 backend.  Submit
+   // primitives using the old color before changing it.
+   Flush();
    fog_color = RGB_MAKE(r, g, b);
    put_mono('a');
    SetRenderState(D3DRENDERSTATE_FOGCOLOR, fog_color);
+#ifdef MODERN_D3D11
+   D3D11LegacySetFog(fog_enabled, fog_color);
+#endif
    put_mono('.');
 }
 
@@ -368,10 +390,6 @@ static void execute(int index, int vertex_count, int inst_offset, int inst_lengt
 
 static void SetTransparent(int flags);
 
-static BOOL zbuffer;
-static BOOL zwrite;
-static BOOL zcompare;
-
 void lgd3d_set_zcompare(BOOL val)
 {
    if (zcompare == val)
@@ -382,6 +400,9 @@ void lgd3d_set_zcompare(BOOL val)
    SetRenderState(D3DRENDERSTATE_ZFUNC, val?D3DCMP_LESSEQUAL:D3DCMP_ALWAYS);
    put_mono('.');
    zcompare = val;
+#ifdef MODERN_D3D11
+   D3D11LegacySetDepth(zcompare, zwrite);
+#endif
 }
 
 void lgd3d_set_zwrite(BOOL val)
@@ -392,12 +413,19 @@ void lgd3d_set_zwrite(BOOL val)
    put_mono('c');
    Flush();
    SetRenderState(D3DRENDERSTATE_ZWRITEENABLE, zwrite=val);
+#ifdef MODERN_D3D11
+   D3D11LegacySetDepth(zcompare, zwrite);
+#endif
    put_mono('.');
 }
 
 void lgd3d_zclear(void)
 {
+#ifdef MODERN_D3D11
+   D3D11LegacyClearDepth();
+#else
    Warning(("zclear not yet implemented"));
+#endif
 }
 
 void lgd3d_blend_normal(void)
@@ -405,6 +433,9 @@ void lgd3d_blend_normal(void)
    Flush();
    SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_SRCALPHA);
    SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
+#ifdef MODERN_D3D11
+   D3D11LegacySetBlend(lgd3d_blend || lgd3d_trans ? kD3D11LegacyBlendAlpha : kD3D11LegacyBlendOpaque);
+#endif
 }
 
 void lgd3d_blend_multiply(int blend_mode)
@@ -422,6 +453,9 @@ void lgd3d_blend_multiply(int blend_mode)
    Flush();
    SetRenderState(D3DRENDERSTATE_SRCBLEND, state1);
    SetRenderState(D3DRENDERSTATE_DESTBLEND, state2);
+#ifdef MODERN_D3D11
+   D3D11LegacySetBlend(blend_mode == BLEND_SRC_DEST ? kD3D11LegacyBlendMultiply : kD3D11LegacyBlendAdd);
+#endif
 }
 
 //
@@ -532,6 +566,10 @@ void lgd3d_set_fog_enable(BOOL enable)
    put_mono('e');
    Flush();
    SetRenderState(D3DRENDERSTATE_FOGENABLE, enable);
+#ifdef MODERN_D3D11
+   fog_enabled = enable;
+   D3D11LegacySetFog(enable, fog_color);
+#endif
    put_mono('.');
 }
 
@@ -572,7 +610,7 @@ void lgd3d_set_fog_density(float density)
 
 int lgd3d_is_fog_on(void)
 {
-    return 0; // TODO
+    return fog_enabled;
 }
 
 int lgd3d_use_linear_table_fog(int bUseIt)
@@ -588,7 +626,9 @@ void lgd3d_set_linear_fog_distance(float fDistance)
 
 void lgd3d_set_texture_level(int n)
 {
-    // TODO
+#ifdef MODERN_D3D11
+   g_ModernTextureLevel = (n != 0);
+#endif
 }
 
 //
@@ -607,6 +647,14 @@ static void SetTransparent(int trans)
 
    lgd3d_trans = trans;
    filter = (trans&BMF_TRANS) ? D3DFILTER_NEAREST : D3DFILTER_LINEAR;
+
+#ifdef MODERN_D3D11
+   D3D11LegacySetSampler(0,
+                         lgd3d_get_texture_wrapping(0),
+                         filter == D3DFILTER_LINEAR);
+   D3D11LegacySetBlend((trans || lgd3d_blend) ? kD3D11LegacyBlendAlpha : kD3D11LegacyBlendOpaque);
+   D3D11LegacySetAlphaTest((trans & BMF_TRANS) != 0);
+#endif
 
 #ifdef USE_D3D2_API
    put_mono('g');
@@ -638,11 +686,21 @@ static void SetTransparent(int trans)
 
 
 static int next_id=TDRV_ID_INVALID;
+#ifdef MODERN_D3D11
+static int modern_next_id1=TDRV_ID_INVALID;
+static int modern_tex_id1=TDRV_ID_INVALID;
+#endif
 
 #define SetPoly() next_id = TDRV_ID_SOLID
 
 void SetTextureId(int n)
 {
+#ifdef MODERN_D3D11
+   if (g_ModernTextureLevel != 0) {
+      modern_next_id1 = n;
+      return;
+   }
+#endif
    next_id = n;
 }
 
@@ -650,9 +708,29 @@ void SetTextureId(int n)
 
 static int tex_id=TDRV_ID_INVALID;
 
+#ifdef MODERN_D3D11
+void lgd3d_modern_reset_texture_state(void)
+{
+   next_id=tex_id=TDRV_ID_INVALID;
+   modern_next_id1=modern_tex_id1=TDRV_ID_INVALID;
+}
+#endif
+
 static void doPolySetup(int n)
 {
-#ifdef USE_D3D2_API
+#ifdef MODERN_D3D11
+   int trans = 0;
+   Flush();
+   if (n == TDRV_ID_SOLID)
+      D3D11LegacyBindTexture(0, g_ModernWhiteTexture);
+   else {
+      AssertMsg1((n>=0)&&(n<LGD3D_MAX_TEXTURES), "Invalid texture id: %i", n);
+      D3D11LegacyBindTexture(0, g_ModernTextures[n]);
+      if (g_ModernBitmaps[n] != NULL)
+         trans = g_ModernBitmaps[n]->flags & (BMF_TRANS|BMF_TLUC);
+   }
+   SetTransparent(trans);
+#elif defined(USE_D3D2_API)
    int trans;
 
    put_mono('h');
@@ -685,6 +763,14 @@ void UnsetTextureId(int n)
       doPolySetup(tex_id=TDRV_ID_SOLID);
       SynchD3D(); // flush it, cause the old handle's about to be released!
    }
+#ifdef MODERN_D3D11
+   if (n==modern_tex_id1) {
+      Flush();
+      modern_tex_id1=TDRV_ID_SOLID;
+      modern_next_id1=TDRV_ID_SOLID;
+      D3D11LegacyBindTexture(1,g_ModernWhiteTexture);
+   }
+#endif
 }
 
 BOOL lgd3d_punt_d3d = FALSE;
@@ -703,8 +789,76 @@ static void prim_setup(void)
       doPolySetup(tex_id = next_id);
 }
 
+#ifdef MODERN_D3D11
+static void modern_setup_second_texture(void)
+{
+   int n;
+   if (modern_tex_id1 == modern_next_id1)
+      return;
+   Flush();
+   n = modern_tex_id1 = modern_next_id1;
+   if (n == TDRV_ID_SOLID)
+      D3D11LegacyBindTexture(1, g_ModernWhiteTexture);
+   else {
+      AssertMsg1((n>=0)&&(n<LGD3D_MAX_TEXTURES), "Invalid lightmap id: %i", n);
+      D3D11LegacyBindTexture(1, g_ModernTextures[n]);
+   }
+   D3D11LegacySetSampler(1, lgd3d_get_texture_wrapping(1), TRUE);
+}
+#endif
+
+#ifdef MODERN_D3D11
+static void ModernConvertVertex(sD3D11LegacyVertex *d, const D3DTLVERTEX *s)
+{
+   d->x=s->sx; d->y=s->sy; d->z=s->sz; d->rhw=s->rhw;
+   d->r=((s->color>>16)&255)/255.0f;
+   d->g=((s->color>>8)&255)/255.0f;
+   d->b=(s->color&255)/255.0f;
+   d->a=((s->color>>24)&255)/255.0f;
+   d->fog=((s->specular>>24)&255)/255.0f;
+   d->u0=s->tu; d->v0=s->tv; d->u1=d->v1=0.0f;
+}
+
+static void ModernSubmitList(int primitive, int n, const D3DTLVERTEX *src)
+{
+   int i;
+   sD3D11LegacyVertex *dst=(sD3D11LegacyVertex *)temp_malloc(n*sizeof(*dst));
+   for(i=0;i<n;++i) ModernConvertVertex(&dst[i],&src[i]);
+   D3D11LegacyDraw(primitive,dst,n,FALSE);
+   temp_free(dst);
+}
+
+static void ModernSubmitFan(int n, const D3DTLVERTEX *src)
+{
+   int i,j=0,count=(n-2)*3;
+   sD3D11LegacyVertex *dst;
+   if(n<3)return;
+   dst=(sD3D11LegacyVertex *)temp_malloc(count*sizeof(*dst));
+   for(i=2;i<n;++i) {
+      ModernConvertVertex(&dst[j++],&src[0]);
+      ModernConvertVertex(&dst[j++],&src[i-1]);
+      ModernConvertVertex(&dst[j++],&src[i]);
+   }
+   D3D11LegacyDraw(kD3D11LegacyTriangles,dst,count,FALSE);
+   temp_free(dst);
+}
+
+static void ModernSubmitIndexed(int count,const ushort *indices,const D3DTLVERTEX *src)
+{
+   int i;
+   sD3D11LegacyVertex *dst=(sD3D11LegacyVertex *)temp_malloc(count*sizeof(*dst));
+   for(i=0;i<count;++i)ModernConvertVertex(&dst[i],&src[indices[i]]);
+   D3D11LegacyDraw(kD3D11LegacyTriangles,dst,count,FALSE);
+   temp_free(dst);
+}
+#endif
+
 static void do_points(int n, LPD3DTLVERTEX vlist)
 {
+#ifdef MODERN_D3D11
+   if (lgd3d_punt_d3d) return;
+   prim_setup(); ModernSubmitList(kD3D11LegacyPoints,n,vlist);
+#else
    HRESULT hres;
 
    if (lgd3d_punt_d3d)
@@ -718,6 +872,7 @@ static void do_points(int n, LPD3DTLVERTEX vlist)
    put_mono('.');
 
    AssertMsg1(!FAILED(hres), "DrawPrimitive failed: error %i", hres&0xffff);
+#endif
 }
 
 //
@@ -726,6 +881,11 @@ static void do_points(int n, LPD3DTLVERTEX vlist)
 
 static void do_trifan(int n, LPD3DTLVERTEX vlist)
 {
+#ifdef MODERN_D3D11
+   AssertMsg(next_id>TDRV_ID_INVALID, "Current Texture is invalid!");
+   if (lgd3d_punt_d3d) return;
+   prim_setup(); ModernSubmitFan(n,vlist);
+#else
    HRESULT hres;
    AssertMsg(next_id>TDRV_ID_INVALID, "Current Texture is invalid!");
 
@@ -740,6 +900,7 @@ static void do_trifan(int n, LPD3DTLVERTEX vlist)
    put_mono('.');
 
    AssertMsg1(!FAILED(hres), "DrawPrimitive failed: error %i", hres&0xffff);
+#endif
 }
 
 #define MAX_POLY_VERTS 50
@@ -752,6 +913,10 @@ static void flush_polys(void)
       return;
 
    if (!lgd3d_punt_d3d) {
+#ifdef MODERN_D3D11
+      if(num_polys==1)ModernSubmitFan(num_poly_verts,poly_vertex_buffer);
+      else ModernSubmitIndexed(tri_index,tri_index_buffer,poly_vertex_buffer);
+#else
       HRESULT hres;
       if (num_polys==1)
          hres = d3d_device->lpVtbl->DrawPrimitive(d3d_device, D3DPT_TRIANGLEFAN, D3DVT_TLVERTEX,
@@ -760,6 +925,7 @@ static void flush_polys(void)
          hres = d3d_device->lpVtbl->DrawIndexedPrimitive(d3d_device, D3DPT_TRIANGLELIST, D3DVT_TLVERTEX,
             (LPVOID)poly_vertex_buffer, num_poly_verts, tri_index_buffer, tri_index, D3DDP_DONOTCLIP);
       AssertMsg1(!FAILED(hres), "DrawPrimitive failed: error %i", hres&0xffff);
+#endif
    }
 
    num_polys = tri_index = num_poly_verts = 0;
@@ -774,10 +940,14 @@ static void flush_points(void)
       return;
 
    if (!lgd3d_punt_d3d) {
+#ifdef MODERN_D3D11
+      ModernSubmitList(kD3D11LegacyPoints,num_points,point_buffer);
+#else
       HRESULT hres;
       hres = d3d_device->lpVtbl->DrawPrimitive(d3d_device, D3DPT_POINTLIST, D3DVT_TLVERTEX,
          (LPVOID)point_buffer, num_points, D3DDP_DONOTCLIP);
       AssertMsg1(!FAILED(hres), "DrawPrimitive failed: error %i", hres&0xffff);
+#endif
    }
    num_points = 0;
 }
@@ -788,6 +958,13 @@ static void flush_primitives(void)
    flush_polys();
    primitives_pending = FALSE;
 }
+
+#ifdef MODERN_D3D11
+void lgd3d_render_flush(void)
+{
+   Flush();
+}
+#endif
 
 
 static LPD3DTLVERTEX PolyMalloc(int n)
@@ -885,6 +1062,9 @@ void lgd3d_set_blend(BOOL blend_enable)
       lgd3d_blend = blend_enable;
       Flush();
       SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, blend_enable||lgd3d_trans);
+#ifdef MODERN_D3D11
+      D3D11LegacySetBlend((blend_enable||lgd3d_trans) ? kD3D11LegacyBlendAlpha : kD3D11LegacyBlendOpaque);
+#endif
    }
    put_mono('.');
 }
@@ -1313,9 +1493,9 @@ static int lgd3d_rgblit_trifan(int n, r3s_point **ppl)
       v = ppl[j]->grp.v;
       vlist[j].tu = u; 
       vlist[j].tv = v;
-      r = 255*g2p->i; if (r>255) r = 255;
-      g = 255*g2p->h; if (g>255) g = 255;
-      b = 255*g2p->d; if (b>255) b = 255;
+      r = 255*g2p->i; if (r>255) r = 255; else if (r<0) r = 0;
+      g = 255*g2p->h; if (g>255) g = 255; else if (g<0) g = 0;
+      b = 255*g2p->d; if (b>255) b = 255; else if (b<0) b = 0;
       vlist[j].color = RGBA_MAKE(r,g,b,lgd3d_alpha);
       vlist[j].specular = fog_specular;
       setxyz(&vlist[j], ppl[j]);
@@ -1608,5 +1788,42 @@ void ReadPoly(void)
    temp_free(vlist);
 }
 #endif
+#endif
+
+#ifdef MODERN_D3D11
+int lgd3d_TrifanMTD(int n, r3s_point **ppl, LGD3D_tex_coord **uv2)
+{
+   int i,j=0,count;
+   sD3D11LegacyVertex *v;
+   if(n<3)return CLIP_ALL;
+   prim_setup();
+   modern_setup_second_texture();
+   count=(n-2)*3;
+   v=(sD3D11LegacyVertex *)temp_malloc(count*sizeof(*v));
+   for(i=2;i<n;++i) {
+      int k,indices[3]={0,i-1,i};
+      for(k=0;k<3;++k) {
+         r3s_point *p=ppl[indices[k]];
+         D3DTLVERTEX old;
+         old.color=(lgd3d_alpha<<24)|0xffffff;
+         old.specular=fog_specular;
+         old.tu=p->grp.u;old.tv=p->grp.v;
+         setxyz(&old,p);
+         ModernConvertVertex(&v[j],&old);
+         v[j].u1=uv2[indices[k]]->u;
+         v[j].v1=uv2[indices[k]]->v;
+         ++j;
+      }
+   }
+   D3D11LegacyDraw(kD3D11LegacyTriangles,v,count,TRUE);
+   temp_free(v);
+   return CLIP_NONE;
+}
+
+int lgd3d_LitTrifanMTD(int n,r3s_point **p,LGD3D_tex_coord **u){return lgd3d_TrifanMTD(n,p,u);}
+int lgd3d_RGBlitTrifanMTD(int n,r3s_point **p,LGD3D_tex_coord **u){return lgd3d_TrifanMTD(n,p,u);}
+int lgd3d_RGBAlitTrifanMTD(int n,r3s_point **p,LGD3D_tex_coord **u){return lgd3d_TrifanMTD(n,p,u);}
+int lgd3d_RGBAFoglitTrifanMTD(int n,r3s_point **p,LGD3D_tex_coord **u){return lgd3d_TrifanMTD(n,p,u);}
+int lgd3d_DiffuseSpecularMTD(int n,r3s_point **p,LGD3D_tex_coord **u){return lgd3d_TrifanMTD(n,p,u);}
 #endif
 

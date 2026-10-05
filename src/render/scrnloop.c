@@ -13,6 +13,7 @@
 #include <appapi.h>
 
 #include <loopapi.h>
+#include <loopmsg.h>
 #include <dispbase.h>
 #include <vismsg.h>
 
@@ -33,18 +34,50 @@
 #include <dbmem.h>
 
 BOOL gScrnLoopSetModeFailed = FALSE; 
+static BOOL gScreenPreservedForNestedMode = FALSE;
+
+static BOOL InstantiatorPreservesScreen(const sLoopInstantiator* mode)
+{
+   sLoopModeInitParm* parm;
+
+   if (mode == NULL || mode->init == NULL)
+      return FALSE;
+
+   for (parm = mode->init; parm->pID != NULL; ++parm)
+   {
+      if (IsEqualGUID(parm->pID, &LOOPID_ScrnMan))
+      {
+         ScrnManContext* context = (ScrnManContext*)parm->data;
+         return context != NULL && context->preserve_screen;
+      }
+   }
+   return FALSE;
+}
 
 eLoopMessageResult LGAPI ScrnManLoopFunc(void* context, eLoopMessage msg, tLoopMessageData hdata)
 {
    eLoopMessageResult result = kLoopDispatchContinue;
 
    ScrnManContext* data = (ScrnManContext*)context;
+   LoopMsg info;
+   info.raw = hdata;
    switch(msg)
    {
       case kMsgEnterMode:
       case kMsgResumeMode:
       {
          BOOL auto_fail = FALSE; 
+
+         // Native movie playback is a child window over the current render
+         // target.  Tearing down and rebuilding the renderer here causes a
+         // visible display-mode flash and is unnecessary.
+         if (data->preserve_screen)
+            break;
+         if (msg == kMsgResumeMode && gScreenPreservedForNestedMode)
+         {
+            gScreenPreservedForNestedMode = FALSE;
+            break;
+         }
 
 
 
@@ -117,6 +150,18 @@ eLoopMessageResult LGAPI ScrnManLoopFunc(void* context, eLoopMessage msg, tLoopM
 
       case kMsgSuspendMode:
       case kMsgExitMode:
+         if (data->preserve_screen)
+            break;
+         if (msg == kMsgSuspendMode && info.mode != NULL &&
+             InstantiatorPreservesScreen(&info.mode->to))
+         {
+            // The transition record's parameter list belongs to the target
+            // dispatch and is only guaranteed to be alive during suspend.
+            // Remember the decision here instead of dereferencing it later
+            // when the previous mode resumes.
+            gScreenPreservedForNestedMode = TRUE;
+            break;
+         }
          porthw_shutdown();
          ScrnTerm3d();
          break;

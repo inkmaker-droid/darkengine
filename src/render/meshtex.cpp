@@ -385,35 +385,27 @@ grs_bitmap *MeshTexGetBitmap(char *pszName)
    if (!pRes)
       return 0;
 
-   // @HACK: This bit here where we distinguish regular textures
-   // from palletized ones is copied directly from objmodel, and
-   // duplicates the "txt16" path used there rather than relying
-   // on a constant shared by both modules.  Ain't I a bum.
-   IStore *pCanonStore = pRes->GetCanonStore();
-   if (!stricmp(pCanonStore->GetName(), "txt16\\")) {
-      // Okay. Get the palette...
-      IRes *pPallRes = g_pResMan->Retype(pRes, RESTYPE_PALETTE, 0);
-      if (pPallRes) {
-         void *pPall = pPallRes->Lock();
-         grs_bitmap *pbm = (grs_bitmap *) pRes->Lock();
+   // Modern texture upload expands palette indices to RGBA.  Keep the
+   // palette carried by every mesh texture instead of relying on mutable
+   // global slot zero; palette allocation deduplicates matching stock data.
+   IRes *pPallRes = g_pResMan->Retype(pRes, RESTYPE_PALETTE, 0);
+   if (pPallRes) {
+      void *pPall = pPallRes->Lock();
+      grs_bitmap *pbm = (grs_bitmap *) pRes->Lock();
 
-         uchar b = pbm->align;
-         pbm->align = palmgr_alloc_pal((uchar *) pPall);
-         if (b != pbm->align)
-            if ((g_tmgr != NULL) && (pbm->flags & BMF_LOADED)) {
-               lgd3d_unload_texture(pbm);
-               lgd3d_load_texture(pbm);
-            }
+      uchar b = pbm->align;
+      pbm->align = palmgr_alloc_pal((uchar *) pPall);
+      if (b != pbm->align)
+         if ((g_tmgr != NULL) && (pbm->flags & BMF_LOADED)) {
+            lgd3d_unload_texture(pbm);
+            lgd3d_load_texture(pbm);
+         }
 
-         pRes->Unlock();
-         pPallRes->Unlock();
-         // We're done with the palette; the palette manager will now
-         // take charge of it.  So we can drop it from memory.
-         pPallRes->Drop();
-         pPallRes->Release();
-      }
+      pRes->Unlock();
+      pPallRes->Unlock();
+      pPallRes->Drop();
+      pPallRes->Release();
    }
-   pCanonStore->Release();
 
    sResTexture NewPair;
    strncpy(NewPair.m_aszName, pszName, 16);
@@ -446,6 +438,8 @@ void MeshTexTerm()
 void MeshTexReset()
 {
    for (int i = 0; i < g_Textures.Size(); ++i) {
+      if (g_Textures[i].m_pBitmap->align != 0)
+         palmgr_release_slot(g_Textures[i].m_pBitmap->align);
       g_Textures[i].m_pRes->Unlock();
       g_Textures[i].m_pRes->Release();
    }

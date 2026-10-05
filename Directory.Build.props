@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
+    <!-- Project-only builds do not define SolutionDir.  Keep all of the
+         historical solution-relative include and library paths working when
+         the shared executable project is built directly. -->
+    <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
     <BuildThief2 Condition="'$(BuildThief2)' == ''">true</BuildThief2>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(BuildThief2)' == 'true'">
+  <ItemDefinitionGroup>
     <!-- Dark's persisted structures and cross-library ABI use byte packing. -->
     <ClCompile>
       <StructMemberAlignment>1Byte</StructMemberAlignment>

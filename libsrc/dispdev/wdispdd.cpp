@@ -483,11 +483,6 @@ BOOL cDDProvider::DoOpen(sGrModeCap *, int)
     m_NormalWindowStyle = GetWindowLong(GetMainWnd(), GWL_STYLE);
     m_NormalWindowExStyle = GetWindowLong(GetMainWnd(), GWL_EXSTYLE);
 
-    // Move window to foreground
-    YieldDisplay(m_pDisplayDevice);
-    SetWindowLong(GetMainWnd(), GWL_EXSTYLE, WS_EX_TOPMOST);
-    RegainDisplay(m_pDisplayDevice);
-
     // Hook into critical message handler
     g_DDCritMsgNotificationHandler.Set(this);
 
@@ -600,7 +595,27 @@ cDDProvider::DoSetMode(const sGrModeInfo & modeInfo,
     }
     else
     {
-        if (m_DDCoopFlags != kDDFullScreenCoopFlags)
+        const int pixelSize = (modeInfo.bitDepth == 15) ? 16 :
+                                                           modeInfo.bitDepth;
+
+        // The modern presenter implements the legacy 15/16-bit modes as a
+        // borderless desktop window.  Never enter DirectDraw exclusive mode
+        // for that path: doing so steals focus during mode changes and makes
+        // the shell treat Alt-Tab as an error that must be corrected.
+        if (pixelSize <= 16)
+        {
+            SetWindowLong(GetMainWnd(), GWL_STYLE, WS_POPUP);
+            if (m_DDCoopFlags != kDDWindowedCoopFlags)
+            {
+                m_DDCoopFlags = kDDWindowedCoopFlags;
+                m_pDD->RestoreDisplayMode();
+                result = SetCooperativeLevel(m_DDCoopFlags);
+            }
+            SetWindowPos(GetMainWnd(), HWND_NOTOPMOST, 0, 0, 0, 0,
+                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE |
+                         SWP_FRAMECHANGED);
+        }
+        else if (m_DDCoopFlags != kDDFullScreenCoopFlags)
         {
             SetWindowLong(GetMainWnd(), GWL_STYLE, WS_POPUP);
             SetForegroundWindow(GetMainWnd());

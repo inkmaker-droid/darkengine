@@ -126,12 +126,13 @@ protected:
         if (GetMonitorInfo(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST),
                            &monitorInfo))
         {
-            SetWindowPos(hwnd, HWND_TOPMOST,
+            SetWindowPos(hwnd, HWND_NOTOPMOST,
                          monitorInfo.rcMonitor.left,
                          monitorInfo.rcMonitor.top,
                          monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
                          monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top,
-                         SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOCOPYBITS);
+                         SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOCOPYBITS |
+                         SWP_NOACTIVATE);
         }
     }
 
@@ -239,6 +240,7 @@ public:
       , m_UseDesktopPresentation(FALSE)
       , m_UseD3D11Presentation(FALSE)
       , m_pPresenter(NULL)
+      , m_Gamma(1.0)
     {
     }
 
@@ -258,6 +260,7 @@ private:
     BOOL m_UseDesktopPresentation;
     BOOL m_UseD3D11Presentation;
     cD3D11Presenter *m_pPresenter;
+    double m_Gamma;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

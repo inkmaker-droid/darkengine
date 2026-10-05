@@ -278,6 +278,15 @@ void palmgr_update_pal_slot(int slot)
    AssertMsg(pal_list!=NULL, "palmgr_update_pal_slot(): palmgr not initialized!");
    info = &pal_list[slot];
    AssertMsg(info->pal_data!=NULL, "palmgr_update_pal_slot(): pal_data is NULL!");
+
+   // The modern renderer always expands indexed textures to RGBA when they
+   // are uploaded, regardless of the logical framebuffer depth.  The legacy
+   // path only forwarded palettes while the framebuffer was 15/16-bit, which
+   // leaves every nonzero object palette uninitialized in a 32-bit mode and
+   // turns authored greens/browns into colors from an unrelated palette.
+   if (g_lgd3d)
+      lgd3d_set_pal_slot(0, 256, info->pal_data, slot);
+
    if (grd_mode >=0)
       switch (grd_bpp)
    {
@@ -287,9 +296,6 @@ void palmgr_update_pal_slot(int slot)
             break;
          case 15:
          case 16:
-            if (g_lgd3d)
-               lgd3d_set_pal_slot(0, 256, info->pal_data, slot);
-
             gr_get_screen_rgb_bitmask(&bmask);
             if (info->pal16 == NULL)
                info->pal16 = Malloc(256 * sizeof(ushort));

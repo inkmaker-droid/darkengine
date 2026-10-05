@@ -138,6 +138,7 @@ extern "C" {
 
     extern void lgd3d_start_frame(int frame);  // frame count passed to texture manager
     extern void lgd3d_end_frame(void);
+    extern void lgd3d_scene_suspend(void);
 
     extern BOOL lgd3d_overlays_master_switch(BOOL bOverlaysOn);
 

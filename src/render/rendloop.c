@@ -621,6 +621,8 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
          nOldMode = -1;
       case kMsgSuspendMode:
          portal_pre_draw_callback = NULL;
+         if (g_lgd3d)
+            lgd3d_scene_suspend();
          invRendFreeQueue();
          ScreenOverlaysFree();
          ParticleGroupExitMode();

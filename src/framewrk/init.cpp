@@ -106,6 +106,172 @@ EXTERN BOOL CheckForCD(void);
 #define GAME_CFG_VAR "game"
 #define INCLUDE_PREFIX "include_"
 void AppShutdownConfig(void);
+static void AppSaveConfig(void);
+
+static void RegisterDisplayMode(int width, int height)
+{
+   int mode;
+
+   if (width < 400 || height < 300 || width > 8191 || height > 8191)
+      return;
+   mode = gr_register_mode(width, height, 16);
+   if (mode >= 0)
+      grd_mode_info[mode].flags |= GRM_CAN_WINDOW;
+}
+
+static BOOL CALLBACK RegisterMonitorModes(HMONITOR monitor, HDC,
+                                          LPRECT, LPARAM)
+{
+   MONITORINFOEXA info;
+   DEVMODEA displayMode;
+   DWORD index;
+
+   memset(&info, 0, sizeof(info));
+   info.cbSize = sizeof(info);
+   if (!GetMonitorInfoA(monitor, &info))
+      return TRUE;
+
+   for (index = 0; ; ++index)
+   {
+      memset(&displayMode, 0, sizeof(displayMode));
+      displayMode.dmSize = sizeof(displayMode);
+      if (!EnumDisplaySettingsExA(info.szDevice, index, &displayMode, 0))
+         break;
+      if (displayMode.dmBitsPerPel >= 24)
+         RegisterDisplayMode(displayMode.dmPelsWidth,
+                             displayMode.dmPelsHeight);
+   }
+
+   RegisterDisplayMode(info.rcMonitor.right - info.rcMonitor.left,
+                       info.rcMonitor.bottom - info.rcMonitor.top);
+   return TRUE;
+}
+
+static void RegisterDisplayModes(void)
+{
+   // Register the union of modes exposed by every connected monitor before
+   // screen-mode configuration is read.  D3D11 presents these as internal
+   // render sizes, so no exclusive legacy display-mode switch is required.
+   EnumDisplayMonitors(NULL, NULL, RegisterMonitorModes, 0);
+   RegisterDisplayMode(640, 480);
+   RegisterDisplayMode(800, 600);
+}
+
+#ifdef THIEF2_GAME
+static const char kUserSettingsKey[] =
+   "Software\\OpenDarkEngine\\Thief2";
+
+static BOOL ReadUserDword(HKEY key, const char *name, DWORD *value)
+{
+   DWORD type = REG_DWORD;
+   DWORD size = sizeof(*value);
+   return RegQueryValueExA(key, name, NULL, &type, (BYTE *)value, &size) ==
+             ERROR_SUCCESS &&
+          type == REG_DWORD && size == sizeof(*value);
+}
+
+static void LoadUserVideoSettings(void)
+{
+   HKEY key;
+   DWORD version;
+   DWORD width;
+   DWORD height;
+   DWORD depth;
+   DWORD fullscreen;
+   DWORD gamma_milli;
+
+   if (RegOpenKeyExA(HKEY_CURRENT_USER, kUserSettingsKey, 0, KEY_QUERY_VALUE,
+                     &key) != ERROR_SUCCESS)
+      return;
+
+   if (ReadUserDword(key, "VideoSettingsVersion", &version) && version == 1)
+   {
+      if (ReadUserDword(key, "GammaMilli", &gamma_milli) &&
+          gamma_milli >= 100 && gamma_milli <= 4000)
+      {
+         float gamma = gamma_milli / 1000.0f;
+         config_set_float_from_var("gamma", gamma);
+      }
+
+      if (ReadUserDword(key, "ScreenWidth", &width) &&
+          ReadUserDword(key, "ScreenHeight", &height) &&
+          width > 0 && height > 0)
+      {
+         int dimensions[2] = { (int)width, (int)height };
+         config_set_value("game_screen_size", CONFIG_INT_TYPE,
+                          dimensions, 2);
+      }
+
+      if (ReadUserDword(key, "ScreenDepth", &depth) && depth > 0)
+         config_set_int("game_screen_depth", (int)depth);
+      if (ReadUserDword(key, "Fullscreen", &fullscreen))
+         config_set_int("game_full_screen", fullscreen != 0);
+   }
+
+   RegCloseKey(key);
+}
+#else
+static void LoadUserVideoSettings(void)
+{
+}
+#endif
+
+void LGAPI CoreEngineSaveVideoSettings(void)
+{
+#ifdef THIEF2_GAME
+   HKEY key;
+   DWORD disposition;
+   DWORD version = 1;
+   DWORD width;
+   DWORD height;
+   DWORD depth;
+   DWORD fullscreen;
+   DWORD gamma_milli;
+   int dimensions[2];
+   int count = 2;
+   int value;
+   float gamma = 1.0f;
+
+   if (RegCreateKeyExA(HKEY_CURRENT_USER, kUserSettingsKey, 0, NULL, 0,
+                       KEY_SET_VALUE, NULL, &key, &disposition) != ERROR_SUCCESS)
+      return;
+
+   if (config_get_float("gamma", &gamma))
+   {
+      gamma_milli = (DWORD)(gamma * 1000.0f + 0.5f);
+      RegSetValueExA(key, "GammaMilli", 0, REG_DWORD,
+                     (const BYTE *)&gamma_milli, sizeof(gamma_milli));
+   }
+
+   if (config_get_value("game_screen_size", CONFIG_INT_TYPE,
+                        dimensions, &count) && count == 2)
+   {
+      width = dimensions[0];
+      height = dimensions[1];
+      RegSetValueExA(key, "ScreenWidth", 0, REG_DWORD,
+                     (const BYTE *)&width, sizeof(width));
+      RegSetValueExA(key, "ScreenHeight", 0, REG_DWORD,
+                     (const BYTE *)&height, sizeof(height));
+   }
+
+   if (config_get_int("game_screen_depth", &value))
+   {
+      depth = value;
+      RegSetValueExA(key, "ScreenDepth", 0, REG_DWORD,
+                     (const BYTE *)&depth, sizeof(depth));
+   }
+   if (config_get_int("game_full_screen", &value))
+   {
+      fullscreen = value != 0;
+      RegSetValueExA(key, "Fullscreen", 0, REG_DWORD,
+                     (const BYTE *)&fullscreen, sizeof(fullscreen));
+   }
+
+   RegSetValueExA(key, "VideoSettingsVersion", 0, REG_DWORD,
+                  (const BYTE *)&version, sizeof(version));
+   RegCloseKey(key);
+#endif
+}
 
 //----------------------------------------
 
@@ -268,7 +434,21 @@ tResult LGAPI CoreEngineCreateObjects(int argc, const char *argv[])
    process_config_includes(INCLUDE_PREFIX);
 #ifdef EDITOR
    process_config_includes("editor_" INCLUDE_PREFIX); 
+
+   // Some retail/NewDark installs ship the editor menu definitions as the
+   // optional sample file instead of including them from DromEd.cfg. Prefer
+   // a user-provided menus.cfg, then make the shipped sample the fallback.
+   if (!config_is_defined("menu_edit"))
+   {
+      config_load("menus.cfg");
+      if (!config_is_defined("menu_edit"))
+         config_load("menus-sample.cfg");
+   }
 #endif 
+
+   // Keep runner-specific video preferences outside the retail data folder.
+   // Command-line values are parsed afterward and therefore still win.
+   LoadUserVideoSettings();
 
    config_parse_commandline(g_argc,g_argv,NULL);
 
@@ -333,6 +513,12 @@ tResult LGAPI CoreEngineCreateObjects(int argc, const char *argv[])
 
    // Get other options from config
    int opt = kGameShellDefault & ~(kLockFrame | kFlushOnEndFrame);
+#ifdef EDITOR
+   // The editor is a desktop application.  Use the native pointer instead of
+   // the legacy framebuffer cursor, which is not reliably presented while an
+   // otherwise-idle D3D11 viewport is on screen.
+   opt |= kShowNativeCursor;
+#endif
    if (config_is_defined("multithread"))
       opt |= kMultithreadedShell;
 
@@ -448,14 +634,19 @@ tResult LGAPI CoreEngineAppInit()
 
    tm_init();
 
-#ifdef THIEF2_GAME
-   // The original Direct3D HAL path does not produce a usable scene on
-   // current Windows drivers. Keep rendering into the engine's software
-   // canvas and present that canvas through the D3D11 display backend.
-   config_set_string("disallow_hardware", "");
+   // D3D11 presents these as render-canvas sizes instead of requesting
+   // obsolete exclusive desktop modes.  Both flavors of the shared project,
+   // including DromEd, need the same compatibility mode list.
+   RegisterDisplayModes();
 
-   // The raster and hardware paths use 16-bit render surfaces. Normalize
-   // 24/32-bit NewDark configuration values to the supported path.
+#ifdef THIEF2_GAME
+   // The modern lgd3d implementation uses D3D11. Prefer it for new runner
+   // configurations while retaining an explicit user override.
+   if (!config_is_defined("game_hardware"))
+      config_set_int("game_hardware", 1);
+
+   // The D3D11 scene is 32-bit, while the retained 2D UI/movie canvas is
+   // 16-bit. Normalize NewDark configuration values to that canvas format.
    {
       int depth;
       if (!config_get_int("screen_depth", &depth) || depth > 16)
@@ -549,10 +740,27 @@ static bool write_func(char* filename, char* var)
    return config_default_writable(filename,var);
 }
 
-void AppShutdownConfig(void)
+static bool g_ConfigSaved = FALSE;
+
+static void AppSaveConfig(void)
 {
+   if (g_ConfigSaved)
+      return;
+
    config_set_writable_table(ConfigWritableTable);
    config_write_file(CONFIG_FILE,write_func);
+   g_ConfigSaved = TRUE;
+}
+
+void AppShutdownConfig(void)
+{
+   static bool shutdown_complete = FALSE;
+
+   if (shutdown_complete)
+      return;
+   shutdown_complete = TRUE;
+
+   AppSaveConfig();
    config_shutdown();
 }
 

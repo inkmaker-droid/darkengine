@@ -2,29 +2,48 @@
 #define __D3D11PRESENT_H
 
 struct IDirectDrawSurface;
+struct sD3D11LegacyVertex;
 
 // Presents the engine's legacy CPU canvas through a native D3D11 swap chain.
 // Keeping this at the display boundary lets the 2D UI, movies, and software
 // rasterizer continue to use their existing 16-bit canvas while Windows sees
 // only a normal 32-bit borderless window.
-class cD3D11Presenter
-{
+class cD3D11Presenter {
 public:
-    cD3D11Presenter();
-    ~cD3D11Presenter();
+  cD3D11Presenter();
+  ~cD3D11Presenter();
 
-    BOOL Start(HWND hwnd, DWORD sourceWidth, DWORD sourceHeight);
-    void Stop();
-    BOOL SetGamma(double gamma);
-    BOOL Present(IDirectDrawSurface *surface);
+  BOOL Start(HWND hwnd, DWORD sourceWidth, DWORD sourceHeight,
+             IDirectDrawSurface *surface);
+  void Stop();
+  BOOL SetGamma(double gamma);
+  BOOL Present(IDirectDrawSurface *surface, int x0, int y0, int x1, int y1);
+
+  BOOL BeginHardwareFrame();
+  void EndHardwareFrame();
+  void DeactivateScene();
+  void ClearDepth();
+  void SetDepth(BOOL compareEnabled, BOOL writeEnabled);
+  void SetBlend(int blendMode);
+  void SetAlphaTest(BOOL enabled);
+  void SetSampler(int level, BOOL wrap, BOOL smooth);
+  void SetFog(BOOL enabled, DWORD rgb);
+  void *CreateTexture(int width, int height, const void *rgba, int rowBytes);
+  BOOL UpdateTexture(void *texture, int width, int height, const void *rgba,
+                     int rowBytes);
+  void DestroyTexture(void *texture);
+  void BindTexture(int level, void *texture);
+  BOOL Draw(int primitive, const sD3D11LegacyVertex *vertices, int vertexCount,
+            BOOL useSecondTexture);
 
 private:
-    struct sImpl;
-    static HRESULT CreateRenderTarget(sImpl *impl);
-    sImpl *m_pImpl;
+  struct sImpl;
+  static HRESULT CreateRenderTarget(sImpl *impl);
+  BOOL FlushHardwareCommands();
+  sImpl *m_pImpl;
 
-    cD3D11Presenter(const cD3D11Presenter &);
-    cD3D11Presenter &operator=(const cD3D11Presenter &);
+  cD3D11Presenter(const cD3D11Presenter &);
+  cD3D11Presenter &operator=(const cD3D11Presenter &);
 };
 
 #endif

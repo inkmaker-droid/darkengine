@@ -16,6 +16,7 @@
 #include <lg.h>
 #include <mprintf.h>
 #include <g2.h> // g2s_point
+#include <lgd3d.h>
 
 // These could be legitimately shared between objects recursing...
 static int         def_vcolor_tab[MD_TAB_SIZE];
@@ -56,6 +57,13 @@ ulong       mdd_tmap_mode=R3_PL_TEXTURE;  // default to perspective
 static bool render_b2f = TRUE; //render back to front?
 
 bool        mdd_rgb_lighting = FALSE; // if true, use RGB lighting
+
+// Retail enables version 4 material translucency and self illumination by
+// default.  The public setters survived in md.h, but the state and their
+// implementations were missing from this reconstruction.
+static bool use_alpha = TRUE;
+static bool use_illum = TRUE;
+static float alpha_scale = 1.0;
 
 // Pgon callback, global
 static mdf_pgon_cback pgon_callback=md_render_pgon;
@@ -207,6 +215,10 @@ void md_set_globals(mds_model *m)
    mdd.norms = md_norm_list(m);
    mdd.pgons = (uchar *)((uchar *)m+m->pgon_off);
    mdd.nodes = (uchar *)((uchar *)m+m->node_off);
+
+   mdd.use_alpha = use_alpha && md_has_alpha(m);
+   mdd.alpha_scale = alpha_scale;
+   mdd.use_illum = use_illum && md_has_illum(m);
 
    update_stride(m);
 }
@@ -550,7 +562,9 @@ void md_render_vcall(mds_model *m)
 
 void md_use_lgd3d()
 {
-    // TODO
+   // The original installed lgd3d material callbacks here.  This build has
+   // a single lgd3d model path, so md_render_pgon applies the same state
+   // directly.
 }
 
 // Normal way to render a model.  Pass in pointer to the model and parms
@@ -623,6 +637,7 @@ void md_set_buff(mds_model *m,void *buff)
 void md_transform_subobj(int i)
 {
    int j;
+   int light_start;
    mds_subobj *s;
    mxs_vector *viewer;
    
@@ -644,8 +659,14 @@ void md_transform_subobj(int i)
    // passing in number of lights, i list, light list, and object space
    // and camera space points
    if (mdd_light_cback) {
+      // RGB lighting stores three floats per model light.  The model's
+      // light_start remains an index into mds_light entries, so scale only
+      // the destination buffer offset.  The original executable does this;
+      // using the scalar offset here overlaps subobjects' RGB triplets and
+      // turns later materials dark or into unrelated colours.
+      light_start = mdd_rgb_lighting ? 3 * s->light_start : s->light_start;
       mdd_light_cback(s->light_num
-         ,&mdd.buff_lights[s->light_start]
+         ,&mdd.buff_lights[light_start]
          ,&mdd.lights[s->light_start]
          ,&mdd.points[s->point_start]
          ,md_buff_point(s->point_start) );
@@ -700,6 +721,7 @@ void md_render_pgon(mds_pgon *p)
    int j;
    ulong flag=0;
    ulong type;
+   float alpha=0;
 
    if (!md_pgon_valid(p)) return;
 
@@ -736,6 +758,21 @@ void md_render_pgon(mds_pgon *p)
       }
    }
 
+   // Version 4 polygons carry their material index after the variable vertex
+   // data.  Apply the authored material translucency around this draw, as the
+   // retail lgd3d callback does.
+   if (mdd.use_alpha) {
+      int num_verts = p->num *
+         ((type&MD_PGON_PRIM_MASK)==MD_PGON_PRIM_TMAP ? 3 : 2);
+      mds_pgon_aux *a = (mds_pgon_aux *)(&p->verts[num_verts]);
+      if (a->mat < mdd.model->mats)
+         alpha = md_amat(mdd.model,a->mat)->trans;
+      if (alpha>0) {
+         lgd3d_set_alpha(alpha * mdd.alpha_scale);
+         lgd3d_set_blend(TRUE);
+      }
+   }
+
    switch (type&MD_PGON_COLOR_MASK) {
       case MD_PGON_COLOR_PAL:
       {
@@ -755,7 +792,7 @@ void md_render_pgon(mds_pgon *p)
       {
          r3_set_polygon_context(flag | R3_PL_POLYGON);
          r3_draw_poly(p->num,vlist);
-         return;
+         break;
       }
       case MD_PGON_PRIM_WIRE:
       {
@@ -764,7 +801,7 @@ void md_render_pgon(mds_pgon *p)
             r3_draw_line(vlist[j],vlist[i]);
             j = i;
          }
-         return;
+         break;
       }
       case MD_PGON_PRIM_TMAP: 
       {   
@@ -776,8 +813,13 @@ void md_render_pgon(mds_pgon *p)
          r3_set_texture(mdd_vtext_tab[p->data]);
          r3_set_polygon_context(flag | R3_PL_POLYGON | mdd_tmap_mode);
          r3_draw_poly(p->num,vlist);
-         return;
+         break;
       }
+   }
+
+   if (alpha>0) {
+      lgd3d_set_alpha(1.0);
+      lgd3d_set_blend(FALSE);
    }
 }
 
@@ -787,6 +829,7 @@ void md_render_pgon_render_callback(mds_pgon *p)
    grs_bitmap *bm;
    ulong color;
    ulong type;
+   float alpha=0;
 
    if (!md_pgon_valid(p)) return;
 
@@ -835,7 +878,24 @@ void md_render_pgon_render_callback(mds_pgon *p)
    } else
       bm = 0;
 
+   if (mdd.use_alpha) {
+      int num_verts = p->num *
+         ((type&MD_PGON_PRIM_MASK)==MD_PGON_PRIM_TMAP ? 3 : 2);
+      mds_pgon_aux *a = (mds_pgon_aux *)(&p->verts[num_verts]);
+      if (a->mat < mdd.model->mats)
+         alpha = md_amat(mdd.model,a->mat)->trans;
+      if (alpha>0) {
+         lgd3d_set_alpha(alpha * mdd.alpha_scale);
+         lgd3d_set_blend(TRUE);
+      }
+   }
+
    render_pgon_callback(p, vlist, bm, color, type);
+
+   if (alpha>0) {
+      lgd3d_set_alpha(1.0);
+      lgd3d_set_blend(FALSE);
+   }
 }
 
 
@@ -878,6 +938,21 @@ void md_set_render_light(bool l)
 
 
 
+
+void md_set_alpha(bool l)
+{
+   use_alpha = l;
+}
+
+void md_set_alpha_scale(float s)
+{
+   alpha_scale = s;
+}
+
+void md_set_illum(bool l)
+{
+   use_illum = l;
+}
 
 // Only render the model, assumes it has been transformed, and in fact,
 // only works then.

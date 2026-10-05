@@ -5401,9 +5401,24 @@ static BOOL CheckStep(cPhysClsn * pClsn, ObjID coll_OBB)
       return FALSE;
    }
 
+   // PortalRaycast does not update the Location passed to it, but it does
+   // report the cell containing the end of a successful cast.  Carry that
+   // cell into the downward probe.  This matters at thin step portals: the
+   // forward probe can cross into the landing cell while start_loc still
+   // carries the lower cell as its hint, causing the down cast to miss the
+   // tread and reject an otherwise valid step.
+   const int landing_cell = (coll_OBB == OBJ_NULL) ? PortalRaycastCell :
+                                                    CELL_INVALID;
+
    MakeHintedLocationFromVector(&start_loc, &end_loc.vec, &start_loc);
+   if (landing_cell != CELL_INVALID)
+   {
+      start_loc.cell = landing_cell;
+      start_loc.hint = landing_cell;
+   }
    mx_subeq_vec(&end_loc.vec, &step_offset);
    mx_subeq_vec(&end_loc.vec, &step_offset);
+   SetHintFromLocation(&end_loc, &start_loc);
 
    // Cast downward
    #ifndef SHIP

@@ -1081,6 +1081,210 @@ static void SetCountryKeyboard()
    kb_set_country(lang);
 }
 
+#ifdef EDITOR
+struct sDefaultEditorBind
+{
+   const char *control;
+   const char *command;
+};
+
+// Retail Thief 2 installations do not normally contain the editor's
+// default.bnd.  Without it DromEd starts with an empty editor context, which
+// removes even the basic camera controls.  Keep the original editor defaults
+// available as a built-in fallback; an installed default.bnd still wins, and
+// edit-prefixed entries in user.bnd are loaded afterward as overrides.
+static void InstallDefaultEditorBindings()
+{
+   static const sDefaultEditorBind binds[] = {
+      {"f1", "help"},
+      {"f2", "cycle_mode"},
+      {"f3", "toggle_3d"},
+      {"f10", "mission_loop"},
+      {"a", "cam_rotate 2"},
+      {"c", "cam_slew 4"},
+      {"d", "cam_rotate 5"},
+      {"e", "cam_slew 5"},
+      {"f", "cam_level"},
+      {"h", "set_medium 0"},
+      {"j", "set_medium 1"},
+      {"k", "set_medium 2"},
+      {"l", "set_medium 3"},
+      {"m", "cycle_media 1"},
+      {"q", "cam_slew 2"},
+      {"r", "cam_rotate 4"},
+      {"s", "cam_slew 3"},
+      {"t", "cycle_tex 1"},
+      {"v", "cam_rotate 1"},
+      {"w", "cam_slew 0"},
+      {"x", "cam_slew 3"},
+      {"z", "cam_slew 1"},
+      {"o", "solo_toggle"},
+      {"tab", "cycle_brush 1"},
+      {"del", "delete_brush"},
+      {"end", "vBrush_EOT"},
+      {"ins", "insert_brush"},
+      {"keypad_end", "num_scroll 1"},
+      {"keypad_down", "num_scroll 2"},
+      {"keypad_pgdn", "num_scroll 3"},
+      {"keypad_left", "num_scroll 4"},
+      {"keypad_right", "num_scroll 6"},
+      {"keypad_home", "num_scroll 7"},
+      {"keypad_up", "num_scroll 8"},
+      {"keypad_pgup", "num_scroll 9"},
+      {"home", "move_game_camera 0.0,0.0,0.0"},
+      {"print_screen", "screen_dump"},
+      {":", "edit_command"},
+      {"1", "cam_rotate 3"},
+      {"2", "cam_unroll"},
+      {"3", "cam_rotate 0"},
+      {"+", "zoom_all 0.5"},
+      {",", "cycle_face -1"},
+      {"-", "zoom_all 2.0"},
+      {".", "cycle_face 1"},
+      {"/", "cam_spotlight"},
+      {"<", "global_scale 0"},
+      {"=", "zoom_all 0.5"},
+      {">", "global_scale 1"},
+      {"[", "cycle_view 0"},
+      {"]", "cycle_view 1"},
+
+      {"d+shift", "store_group"},
+      {"m+shift", "cycle_media -1"},
+      {"t+shift", "cycle_tex -1"},
+      {"s+shift", "set_grid"},
+      {"ins+shift", "brush_to_room 5"},
+      {"tab+shift", "cycle_brush -1"},
+      {"keypad_plus+shift", "brush_translate 5"},
+      {"keypad_minus+shift", "brush_translate 2"},
+      {"keypad_down+shift", "brush_translate 0"},
+      {"keypad_left+shift", "brush_translate 4"},
+      {"keypad_right+shift", "brush_translate 1"},
+      {"keypad_up+shift", "brush_translate 3"},
+
+      {"f1+alt", "mono_debug"},
+      {"b+alt", "edit_command save_group"},
+      {"c+alt", "edit_command clear_world"},
+      {"e+alt", "edit_mode"},
+      {"g+alt", "game_mode"},
+      {"l+alt", "edit_command load_file"},
+      {"o+alt", "edit_command edit_obj"},
+      {"p+alt", "auto_portalize"},
+      {"q+alt", "foot_sounds"},
+      {"r+alt", "reset_brush"},
+      {"s+alt", "eval world_file edit_command save_mission %s"},
+      {"t+alt", "texture_pal"},
+      {"v+alt", "edit_command load_group"},
+      {"space+alt", "quick_resynch"},
+      {"keypad_plus+alt", "brush_rotate 2"},
+      {"keypad_minus+alt", "brush_rotate 5"},
+      {"keypad_down+alt", "brush_rotate 0"},
+      {"keypad_left+alt", "brush_rotate 4"},
+      {"keypad_right+alt", "brush_rotate 1"},
+      {"keypad_up+alt", "brush_rotate 3"},
+      {"1+alt", "game_mode 320,240"},
+      {"2+alt", "game_mode 400,300"},
+      {"3+alt", "game_mode 512,384"},
+      {"4+alt", "game_mode 640,480"},
+      {"5+alt", "game_mode 800,600"},
+      {"6+alt", "show_poly_edges"},
+      {"7+alt", "show_all_edges"},
+      {"8+alt", "show_cell"},
+      {"9+alt", "show_mip"},
+      {"0+alt", "show_poly"},
+      {"?+alt", "render_info 30"},
+      {"++alt", "grid_scale 0.5"},
+      {"-+alt", "grid_scale 2.0"},
+      {"/+alt", "render_info 10"},
+      {"=+alt", "grid_scale 0.5"},
+      {"`+shift+alt", "screen_dump"},
+
+      {"d+ctrl", "dissolve_group"},
+      {"g+ctrl", "grid_toggle"},
+      {"l+ctrl", "raycast_light"},
+      {"o+ctrl", "lit_obj_toggle"},
+      {"p+ctrl", "history_cmd -1"},
+      {"q+ctrl", "brush_relative"},
+      {"r+ctrl", "relight_level 0"},
+      {"u+ctrl", "undo"},
+      {"w+ctrl", "cycle_group 0"},
+      {"x+ctrl", "xmouse"},
+      {"z+ctrl", "undo"},
+      {"space+ctrl", "redraw_all"},
+      {"ins+ctrl", "new_brush 1"},
+      {"keypad_plus+ctrl", "brush_stretch 5"},
+      {"keypad_minus+ctrl", "brush_stretch 2"},
+      {"keypad_down+ctrl", "brush_stretch 3"},
+      {"keypad_left+ctrl", "brush_stretch 4"},
+      {"keypad_right+ctrl", "brush_stretch 1"},
+      {"keypad_up+ctrl", "brush_stretch 0"},
+      {"tab+ctrl", "cycle_context 1"},
+      {"7+ctrl", "brush_color 1"},
+      {"8+ctrl", "brush_color 2"},
+      {"9+ctrl", "brush_color 3"},
+
+      {"d+alt+shift", "hello_debugger"},
+      {"e+alt+shift", "draw_paths"},
+      {"f+alt+shift", "follow_test"},
+      {"l+alt+shift", "draw_links"},
+      {"m+alt+shift", "merge_node"},
+      {"n+alt+shift", "patrol_test 2"},
+      {"o+alt+shift", "edit_command obj_tree"},
+      {"p+alt+shift", "ai_build_path_database"},
+      {"q+alt+shift", "draw_ais"},
+      {"r+alt+shift", "draw_path_cells"},
+      {"s+alt+shift", "show_stats"},
+      {"t+alt+shift", "draw_path_cell_links"},
+      {"u+alt+shift", "path_test"},
+      {"w+alt+shift", "draw_move_suggestions"},
+      {"x+alt+shift", "quit_game"},
+      {"y+alt+shift", "create_ai"},
+
+      {"p+ctrl+shift", "portalize"},
+      {"u+ctrl+shift", "redo"},
+      {"w+ctrl+shift", "cycle_group 1"},
+      {"tab+ctrl+shift", "cycle_context -1"},
+
+      {"f1+alt+ctrl", "edit_mode 640,480"},
+      {"f2+alt+ctrl", "edit_mode 800,600"},
+      {"f3+alt+ctrl", "edit_mode 1024,768"},
+      {"d+alt+ctrl", "dump_cmds cmd.txt"},
+      {"o+alt+ctrl", "rend_name_toggle 23"},
+      {"w+alt+ctrl", "cycle_group -1"},
+      {"p+alt+ctrl+shift", "fake_physics"},
+      {"s+alt+ctrl+shift", "stats_full"},
+      {"t+alt+ctrl+shift", "time_stats"},
+
+      // Original room-acoustics editing commands.  They remain visible even
+      // though the current mixer does not yet implement the EAX effect.
+      {"f1+ctrl", "set_room_type 1"},
+      {"f2+ctrl", "set_room_type 2"},
+      {"f3+ctrl", "set_room_type 3"},
+      {"f4+ctrl", "set_room_type 4"},
+      {"f5+ctrl", "set_room_type 5"},
+      {"f6+ctrl", "set_room_type 6"},
+      {"f7+ctrl", "set_room_type 7"},
+      {"f8+ctrl", "set_room_type 8"},
+      {"f9+ctrl", "set_room_type 9"},
+      {"f10+ctrl", "set_room_type 10"},
+      {"f11+ctrl", "set_room_type 11"},
+      {"f12+ctrl", "set_room_type 21"},
+      {"s+ctrl", "set_room_type 15"},
+      {"a+ctrl", "next_room"},
+   };
+
+   ulong oldContext;
+   g_pInputBinder->GetContext(&oldContext);
+   if (oldContext != HK_BRUSH_EDIT)
+      g_pInputBinder->SetContext(HK_BRUSH_EDIT, TRUE);
+
+   for (size_t i = 0; i < sizeof(binds) / sizeof(binds[0]); ++i)
+      g_pInputBinder->Bind(binds[i].control, binds[i].command);
+
+   if (oldContext != HK_BRUSH_EDIT)
+      g_pInputBinder->SetContext(oldContext, TRUE);
+}
+#endif
+
 void InitIBVars ()
 {
    g_pInputBinder->VarSet (g_gen_ib_vars);
@@ -1101,7 +1305,8 @@ void InitIBVars ()
    char gamebnd_path[256];
    Verify (find_file_in_config_path (gamebnd_path, gamebnd, "include_path")); 
    char def_path[256];
-   if (!find_file_in_config_path (def_path, "default.bnd", "include_path"))
+   BOOL have_default_binds = find_file_in_config_path (def_path, "default.bnd", "include_path");
+   if (!have_default_binds)
       strcpy(def_path, gamebnd_path);
    
    //creates the needed contexts
@@ -1118,6 +1323,8 @@ void InitIBVars ()
 #ifdef EDITOR
    //input binder will recognize brush edit as editor mode
    g_pInputBinder->LoadBndFile (def_path, HK_BRUSH_EDIT, "edit");
+   if (!have_default_binds)
+      InstallDefaultEditorBindings();
    g_pInputBinder->LoadBndFile ("user.bnd", HK_BRUSH_EDIT, "edit");
 #endif //EDITOR
    // if user.bnd exists, load it, else load the game specific bnd file

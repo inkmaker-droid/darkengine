@@ -22,6 +22,7 @@
 #include <editapp.h>
 #include <editmode.h>
 #include <gamemode.h>
+#include <gamescrn.h>
 #include <gameapp.h>
 #include <scrnmode.h>
 #include <cfgtool.h>
@@ -86,7 +87,26 @@ static void setup_edit_mode(void)
    sScrnMode mode = {0 };
 
    memset(&desc,0,sizeof(desc));
-   desc.scrnmode = ScrnModeGetConfig(&mode,"edit_");
+   ScrnModeGetConfig(&mode,"edit_");
+
+   // DromEd shares the modern renderer with the game executable.  Keep the
+   // legacy canvas at a layout the editor understands, but render its 3D
+   // views through lgd3d's D3D11 implementation and present them in a normal
+   // resizable desktop window.  An explicit edit_screen_size remains useful
+   // for choosing another editor layout.
+   if (!(mode.valid_fields & kScrnModeDimsValid))
+   {
+      mode.w = 1024;
+      mode.h = 768;
+      mode.valid_fields |= kScrnModeDimsValid;
+   }
+   mode.bitdepth = 16;
+   mode.valid_fields |= kScrnModeBitDepthValid;
+   mode.flags &= ~kScrnModeFullScreen;
+   mode.flags |= kScrnModeWindowed | kScrnMode2dDriver | kScrnMode3dDriver;
+   mode.valid_fields |= kScrnModeFlagsValid;
+
+   desc.scrnmode = &mode;
    gPrimordialMode = DescribeEditMode(mmEditDefault,&desc);
 }
 
@@ -98,6 +118,17 @@ static void setup_game_mode(void)
    memset(&desc,0,sizeof(desc));
    desc.scrnmode = ScrnModeGetConfig(&mode,"game_");
    gPrimordialMode = DescribeGameMode(mmGameDefault,&desc);
+}
+
+static void constrain_editor_game_mode(sScrnMode* mode)
+{
+   // Game mode is a preview hosted by DromEd, not a separate exclusive-mode
+   // application. Keep the legacy render canvas compatible with the D3D11
+   // presenter and retain the editor's normal resizable top-level window.
+   mode->bitdepth = 16;
+   mode->flags &= ~kScrnModeFullScreen;
+   mode->flags |= kScrnModeWindowed | kScrnMode2dDriver | kScrnMode3dDriver;
+   mode->valid_fields |= kScrnModeBitDepthValid | kScrnModeFlagsValid;
 }
 
 ////////////////////////////////////////
@@ -136,6 +167,9 @@ EXTERN void new_world(void);
 
 tResult LGAPI AppInit()
 {
+#ifndef THIEF2_GAME
+   ConstrainGameScreenMode(constrain_editor_game_mode);
+#endif
    CoreEngineAppInit();
 
 #ifdef THIEF2_GAME

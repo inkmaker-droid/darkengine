@@ -11,6 +11,7 @@
 #include <lg.h>
 #include <loopapi.h>
 #include <appagg.h>
+#include <gshelapi.h>
 #include <config.h>
 #include <uiapp.h>
 
@@ -137,8 +138,21 @@ static ScrnManContext _scrndata =
 // context for ui client
 static uiLoopContext _uidata = 
 {
-   "editor\\cursor",
+   NULL, // DromEd uses the native Windows arrow in its desktop window.
 };
+
+static void show_native_editor_cursor(BOOL show)
+{
+   IGameShell *shell = AppGetObj(IGameShell);
+   int flags = 0;
+   IGameShell_GetFlags(shell, &flags);
+   if (show)
+      flags |= kShowNativeCursor;
+   else
+      flags &= ~kShowNativeCursor;
+   IGameShell_SetFlags(shell, flags);
+   SafeRelease(shell);
+}
 
 // context for resource sys client
 static ResLoopContext _resdata =
@@ -306,6 +320,7 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
    {
       case kMsgResumeMode:
       case kMsgEnterMode:
+         show_native_editor_cursor(TRUE);
          pal_update();  // set the palette 
          EditorCreateGUI();
          // run the scripts
@@ -354,6 +369,7 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
          if (IsEqualGUID(info.mode->to.pID,&LOOPID_GameMode) ||
 			    GameToolIsToGameModeGUID(info.mode->to.pID))
          {
+            show_native_editor_cursor(FALSE);
             ISimManager* pSimMan = AppGetObj(ISimManager); 
             sDispatchMsg msg = { kSimInit}; 
 

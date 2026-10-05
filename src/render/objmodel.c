@@ -229,45 +229,37 @@ static void common_texture_load(ModelHandle *mh, ISearchPath *pPath,
       return;
    }
    
-   // Some textures may have their own palettes, which need to be
-   // dealt with. Get the storage information about this texture, to
-   // figure out whether it comes from a "16 bit" storage, which are
-   // the ones that need their palettes loaded.
+   // Preserve the palette authored with every palettized object texture.
+   // The old hardware path only did this for txt16 and assumed ordinary txt
+   // assets always matched mutable global palette slot zero.  Expanding those
+   // indices to RGBA on a modern backend makes that assumption observable:
+   // a texture cached across a palette/mode transition acquires unrelated
+   // colours.  Palette allocation deduplicates identical palettes, so stock
+   // assets that match the mission palette still reuse slot zero.
    if (allow_16bit_obj_textures) {
-      IStore *pCanonStore = IRes_GetCanonStore(pRes);
-      // If the bottom of the storage's path matches TXT_PATH_16, then
-      // we need it:
-      if (!stricmp(IStore_GetName(pCanonStore), TXT_PATH_16)) {
-         // Okay. Get the palette...
-         IResMan *pResMan = AppGetObj(IResMan);
-         IRes *pPallRes = IResMan_Retype(pResMan, pRes, RESTYPE_PALETTE, 0);
-         if (pPallRes) {
-            void *pPall = IRes_Lock(pPallRes);
-            grs_bitmap *pbm = (grs_bitmap *) IRes_Lock(pRes);
-            {
-               uchar b = pbm->align;
-               pbm->align = palmgr_alloc_pal(pPall);
+      IResMan *pResMan = AppGetObj(IResMan);
+      IRes *pPallRes = IResMan_Retype(pResMan, pRes, RESTYPE_PALETTE, 0);
+      if (pPallRes) {
+         void *pPall = IRes_Lock(pPallRes);
+         grs_bitmap *pbm = (grs_bitmap *) IRes_Lock(pRes);
+         uchar b = pbm->align;
+         pbm->align = palmgr_alloc_pal(pPall);
 #ifdef DBG_ON
-               if ((pbm->align==0) && (config_is_defined("wastedpalettes")))
-                 mprintf("Object %s uses txt16, but is in game palette for %s.\n",objName,name);
+         if ((pbm->align==0) && (config_is_defined("wastedpalettes")))
+           mprintf("Object %s uses the game palette for %s.\n",objName,name);
 #endif
-               if( b != pbm->align )
-                  if( (g_tmgr!=NULL)&&(pbm->flags&BMF_LOADED)){
-                     lgd3d_unload_texture(pbm);
-                     lgd3d_load_texture(pbm);
-                  }
+         if( b != pbm->align )
+            if( (g_tmgr!=NULL)&&(pbm->flags&BMF_LOADED)){
+               lgd3d_unload_texture(pbm);
+               lgd3d_load_texture(pbm);
             }
-            //pbm->align = palmgr_alloc_pal(pPall);
-            IRes_Unlock(pRes);
-            IRes_Unlock(pPallRes);
-            // We're done with the palette; the palette manager will now
-            // take charge of it. So we can drop it from memory.
-            IRes_Drop(pPallRes);
-            SafeRelease(pPallRes);
-         }
-         SafeRelease(pResMan);
+         IRes_Unlock(pRes);
+         IRes_Unlock(pPallRes);
+         // The palette manager owns its copy after allocation.
+         IRes_Drop(pPallRes);
+         SafeRelease(pPallRes);
       }
-      SafeRelease(pCanonStore);
+      SafeRelease(pResMan);
    }
    
    // Now, check whether this is an animated texture, and load up the

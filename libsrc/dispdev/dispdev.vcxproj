@@ -155,6 +155,7 @@
     <ClInclude Include="cbchain.h" />
     <ClInclude Include="dddynf.h" />
     <ClInclude Include="d3d11present.h" />
+    <ClInclude Include="d3d11legacy.h" />
     <ClInclude Include="dispbase.h" />
     <ClInclude Include="wdcreate.h" />
     <ClInclude Include="wddmode.h" />

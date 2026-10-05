@@ -133,6 +133,7 @@ cWinDisplayDevice::cWinDisplayDevice(IUnknown * pOuterUnknown,
     m_pDisplayProvider(NULL),
     m_pDDrawGuid(NULL),
     m_pDisplayModeOperations(NULL),
+    m_Gamma(1.0),
     m_IWinDisplayDeviceProxy(this, pOuterUnknown),
     m_MutexCount(0),
     m_iLock(0),
@@ -335,6 +336,9 @@ STDMETHODIMP cWinDisplayDevice::SetMode(eGrDispMode dispMode, int flags)
     if ((m_pDisplayModeOperations = m_pDisplayProvider->DoSetMode(EnumModeToModeInfo(dispMode), flags, m_pModeInfo)) != 0)
     {
         DebugMsgEx(SETMODE, "Created mode-specific operations");
+        // Mode changes replace the operations object. Reapply the gamma
+        // value owned by the display device to the newly created backend.
+        m_pDisplayModeOperations->DoSetGamma(m_Gamma);
         DebugMsg("SetMode() returns success");
 
         // @TBD (toml 09-10-96): Too much state retention m_CurrentDispMode and GetCurrentModeInfo() MUST be
@@ -665,8 +669,15 @@ STDMETHODIMP cWinDisplayDevice::GetRenderTargets(sGrRenderTargets *)
 STDMETHODIMP_(BOOL) cWinDisplayDevice::SetGamma(double gamma)
 {
     cAutoDisplayMutex mutex(this);
-    if (!m_pDisplayModeOperations)
+
+    if (gamma <= 0.0)
         return FALSE;
+
+    // Gamma is commonly loaded before a display mode has been created.
+    // Retain it at device scope so later mode creation cannot reset it.
+    m_Gamma = gamma;
+    if (!m_pDisplayModeOperations)
+        return TRUE;
     return m_pDisplayModeOperations->DoSetGamma(gamma);
 }
 

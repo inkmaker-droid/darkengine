@@ -19,6 +19,9 @@
 
 #include <gamemode.h>
 #include <basemode.h>
+#ifdef EDITOR
+#include <editmode.h>
+#endif
 #include <engfeat.h>
 #include <drkplinv.h>
 #include <darkai.h>
@@ -113,6 +116,9 @@ static STDMETHODIMP _InitFunc(IUnknown* goof)
    // Set up clients
    GameModeSetGameSpecClient(&LOOPID_DarkGameClients);
    BaseModeSetGameSpecClient(&LOOPID_DarkBaseClients);
+#ifdef EDITOR
+   EditModeSetGameSpecClient(&LOOPID_DarkBaseClients);
+#endif
    EngineFeaturesCreate();  // wooo wooo
 
    SafeRelease(pLoopManager);

@@ -46,6 +46,7 @@
 
 #include <command.h>
 #include <gamma.h>
+#include <init.h>
 #include <objmodel.h>
 #include <metasnd.h>
 
@@ -158,7 +159,6 @@ static void AddDisplayResolution(sDisplayResolution *resolutions, int capacity,
                                  int *count, int width, int height)
 {
    int i;
-   int registeredMode;
 
    if (*count >= capacity || width < MIN_RES_X || height < MIN_RES_Y ||
        width > 8191 || height > 8191)
@@ -168,11 +168,12 @@ static void AddDisplayResolution(sDisplayResolution *resolutions, int capacity,
       if (resolutions[i].w == width && resolutions[i].h == height)
          return;
 
-   registeredMode = gr_register_mode(width, height, 16);
-   if (registeredMode < 0)
+   // Runtime mode registration is completed during engine startup.  The
+   // options UI only reads that stable table; mutating it while creating UI
+   // regions made the submenu fragile and meant startup could not use native
+   // resolutions.
+   if (gr_mode_from_info(width, height, 16) < 0)
       return;
-
-   grd_mode_info[registeredMode].flags |= GRM_CAN_WINDOW;
    resolutions[*count].w = width;
    resolutions[*count].h = height;
    ++*count;
@@ -1042,6 +1043,18 @@ protected:
 
    void InitListOptions ()
    {
+      // LGad reads the draw elements while it constructs the list.  Give all
+      // rows a valid empty element before the first resolution submenu is
+      // created; FillVidResStrs replaces their data immediately afterward.
+      memset (mListButtonElems, 0, sizeof (mListButtonElems));
+      for (int i = 0; i < NUM_LIST; ++i)
+      {
+         mListButtonStrs[i] = "";
+         mListButtonElems[i].draw_data =
+            (void *)(const char *)mListButtonStrs[i];
+         mListButtonElems[i].draw_type = DRAWTYPE_TEXT;
+      }
+
       //description of back button
       {
          LGadButtonListDesc tmp_desc = {kNumListButts, (Rect *)&mSubPanelRects[(int)kListBack], 
@@ -2537,6 +2550,14 @@ protected:
          {
             if (mCurSub == kSubList)
                OnSubPanelButtonList (action, 0);
+
+            // Capture the final slider position even if this click arrives
+            // before another options-frame update, then save the selected
+            // gamma and display mode immediately.
+            TouchGamma ((((MAX_GAMMA - MIN_GAMMA) / 20.0) *
+                         (float)(20-m_gamma)) + MIN_GAMMA);
+            ScrnModeSetConfig (GetGameScreenMode (), "game_");
+            CoreEngineSaveVideoSettings();
 
             // The screen manager applies GetGameScreenMode() after the
             // Options panel has exited and its parent mode resumes. Replacing

@@ -146,7 +146,8 @@ BOOL cWinGameShell::DisplayIsExclusive()
 {
     sGrModeInfoEx info;
     m_pDisplayDevice->GetMode(&info);
-    return !(info.flags & (kGrModeIsWindowed | kGrModeNotSet));
+    return !(info.flags & (kGrModeIsWindowed | kGrModeIsBorderless |
+                           kGrModeNotSet));
 }
 
 ///////////////////////////////////////

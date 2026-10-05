@@ -258,7 +258,8 @@ BOOL ScrnSetModeRaw(const sScrnMode* mode)
         kind = (mode->flags & kScrnMode2dDriver) ? kDispFullScreen : kDispDebug;
     int modeflags = 0;
 
-    if (kind == kDispFullScreen && (mode->flags & kScrnMode3dDriver))
+    if ((kind == kDispFullScreen || kind == kDispWindowed) &&
+        (mode->flags & kScrnMode3dDriver))
     {
 
         //zb:
@@ -313,8 +314,14 @@ BOOL ScrnSetModeRaw(const sScrnMode* mode)
                     }
                 }
 
-                flags = kDispAttemptFlippable|kDispAttempt3D;
-                pDD = lgd3d_get_device_info(idx)->p_ddraw_guid;
+                flags = kDispAttempt3D;
+                if (kind == kDispFullScreen)
+                {
+                    flags |= kDispAttemptFlippable;
+                    pDD = lgd3d_get_device_info(idx)->p_ddraw_guid;
+                }
+                else
+                    pDD = NULL;
 
 #ifndef SHIP
                 if (config_is_defined("d3d_driver_index"))
@@ -469,17 +476,16 @@ sScrnMode* ScrnModeGetConfig(sScrnMode* targ, const char* prefix)
       targ->valid_fields |= kScrnModeFlagsValid;
 
       if (flag)
-         targ->flags |= kScrnModeFullScreen|kScrnMode2dDriver|kScrnMode3dDriver;
+         targ->flags |= kScrnMode2dDriver|kScrnMode3dDriver;
       else
          targ->flags &= ~(kScrnMode3dDriver);
    }
 
-   // Hardware used to imply exclusive fullscreen. Preserve an explicit
-   // windowed request after reading the legacy hardware setting so the
-   // modern presenter can use DirectDraw's off-screen canvas in a window.
+   // D3D11 supports hardware rendering in either windowed or fullscreen
+   // presentation. Preserve the separately selected display mode.
    if (fullScreenSetting == 0)
    {
-      targ->flags &= ~(kScrnModeFullScreen|kScrnMode3dDriver);
+      targ->flags &= ~kScrnModeFullScreen;
       targ->flags |= kScrnModeWindowed|kScrnMode2dDriver;
    }
 
@@ -526,10 +532,11 @@ void ScrnModeValidate(sScrnMode* targ)
          targ->flags &= ~kScrnMode3dDriver;
    }
 
-   // If you want 3d, you need 16 bit and 2d and fullscreen
+   // The legacy canvas remains 16-bit, but D3D11 works in both windowed and
+   // fullscreen presentation modes.
    if (VALID(targ,Flags) && (targ->flags & kScrnMode3dDriver))
    {
-      targ->flags |= kScrnMode2dDriver|kScrnModeFullScreen;
+      targ->flags |= kScrnMode2dDriver;
       if (VALID(targ,BitDepth))
       {
          if (targ->bitdepth < MIN_3D_BITDEPTH)
