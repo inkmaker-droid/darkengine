@@ -1,8 +1,8 @@
-# Dark Engine / Thief 2 runner
+# Dark Engine / Thief 2 and DromEd
 
 This repository restores the historical Dark Engine sources as a Visual
-Studio 2022 project and builds a Thief 2 executable with a small game-data
-runner and an in-game command console.
+Studio 2022 project. The shared executable project builds both a Thief 2
+runner with an in-game command console and the DromEd level editor.
 
 The repository does not include Thief 2 missions, movies, sounds, scripts, or
 other retail assets. A legally obtained installation of *Thief II: The Metal
@@ -10,10 +10,12 @@ Age* is required to run the game.
 
 ## Current status
 
-The Release/x86 solution builds successfully with the Visual Studio 2022 v143
-toolset. The executable can use an external retail Thief 2 installation and
-retains the standard startup sequence, mission loading, game UI, inventory,
-and automap.
+The Release/x86 Thief 2 and DromEd targets build successfully with the Visual
+Studio 2022 v143 toolset. Both use the modern D3D11 renderer and presentation
+path. Thief 2 can use an external retail installation and retains the standard
+startup sequence, mission loading, game UI, inventory, and automap. DromEd
+starts in a normal resizable 1024x768 window and can use another supported
+editor canvas size through its existing `edit_screen_size` setting.
 
 The runner currently provides:
 
@@ -42,7 +44,7 @@ swap chain and Windows Media Foundation. The build target is 32-bit x86.
 
 ## Build instructions
 
-### Visual Studio
+### Thief 2 in Visual Studio
 
 1. Open `thief2.sln` in Visual Studio 2022.
 2. Select the `Release` configuration and `x86` solution platform.
@@ -51,6 +53,8 @@ swap chain and Windows Media Foundation. The build target is 32-bit x86.
 
 `Directory.Build.props` selects the Thief 2 target by default and applies the
 packing and C-language compatibility settings required by the legacy code.
+The game and editor intentionally use the same `src\dromed.vcxproj`; the
+`BuildThief2` property selects which source set and executable name it emits.
 
 ### Developer Command Prompt
 
@@ -61,6 +65,20 @@ msbuild thief2.sln /m /t:Build /p:Configuration=Release /p:Platform=x86
 ```
 
 The command should finish with `Release\Thief2.exe`.
+
+To build DromEd from the same project, run:
+
+```bat
+msbuild thief2.sln /m /t:dromed /p:Configuration=Release /p:Platform=x86 /p:BuildThief2=false
+```
+
+The command should finish with `Release\DromEd.exe`. The editor switch also
+works for a direct project build; `Directory.Build.props` supplies the solution
+root needed by the legacy include and library paths:
+
+```bat
+msbuild src\dromed.vcxproj /m /t:Build /p:Configuration=Release /p:Platform=Win32 /p:BuildThief2=false
+```
 
 ## Run instructions
 
@@ -83,6 +101,34 @@ If the stored directory no longer contains valid game data, the runner asks
 for a new directory. To choose a different directory while the old one is
 still valid, remove the `GameDataPath` value with Registry Editor and launch
 the executable again.
+
+### Run DromEd
+
+DromEd uses the same Thief 2 data-directory selection as the game runner. Start
+it directly from the build output:
+
+```bat
+Release\DromEd.exe
+```
+
+The editor reuses the `GameDataPath` registry value shown above. If no valid
+directory has been selected yet, it prompts for the root of a legally installed
+Thief 2 data directory before loading its configuration and mission resources.
+
+The editor uses the same D3D11 scene renderer and swap-chain presenter as the
+game. Its legacy editor canvas remains 16-bit internally, while the D3D11
+presenter converts and scales it to the resizable 32-bit desktop window. Set
+`edit_screen_size 800 600`, `1024 768`, or `1280 1024` in `cam.cfg` to select
+one of the editor's native layouts; resizing or maximizing the window scales
+that canvas while preserving its aspect ratio. Game preview mode stays in the
+same resizable window and recreates the D3D11 render context for the preview;
+returning to edit mode restores the editor viewport and menu.
+
+Use **Help > Keyboard Shortcuts** to open a resizable, human-readable input
+reference. It includes every active editor binding (including the complete
+built-in fallback set), non-conflicting shortcut annotations from the loaded
+`menus.cfg`, and direct mouse/viewport gestures. Controls are grouped and
+ordered by purpose, with modifier keys shown before the base key.
 
 If `screen_size` or `game_screen_size` is already defined in `cam.cfg`, that
 size is retained when the display driver supports it. Otherwise, the game
@@ -171,10 +217,14 @@ repository.
 
 - The x64 solution configurations are not supported or validated. The working
   target is Release/x86.
-- Scene rasterization currently uses the engine's software renderer and a
-  D3D11 presentation backend. Porting polygon and texture submission directly
-  to D3D11 is still in progress; the unusable legacy Direct3D HAL is disabled
-  in the Thief 2 build.
+- Modern rendering is still exposed through the historical `lgd3d` API as a
+  compatibility facade over D3D11. The unusable legacy Direct3D device path is
+  disabled, but dormant D3D2-era branches, files, and build definitions remain
+  to be removed after the remaining texture, lightmap, and render-state
+  behavior has been ported and validated.
+- A native 64-bit build is not yet supported; the current target remains x86.
+  The renderer also still uses a 16-bit internal canvas despite presenting a
+  32-bit D3D11 image, so full 32-bit scene rendering remains to be implemented.
 - Native-resolution, high-DPI, window resizing, and ultrawide behavior need
   testing across more GPUs and display configurations.
 - Gamma correction is implemented in the D3D11 presentation path. Visual
@@ -186,7 +236,13 @@ repository.
 - NewDark data formats are not yet supported or validated.
 - Thief Gold and System Shock 2 game targets are not yet supported or
   validated by this runner and modern presentation path.
-- A supported DromEd editor build has not yet been restored and validated.
+- DromEd now builds and uses the shared D3D11 renderer in a resizable window.
+  Broader validation of complete mission-authoring workflows and the optional
+  legacy `darkdlgs.dll` property dialogs is still in progress.
+- The original EAX room-type controls are still present, but the current
+  DirectSound mixer backend does not implement EAX reverb or occlusion. Those
+  controls therefore have no audio effect until a modern environmental-audio
+  backend is added.
 - Squirrel scripting support required by NewDark-era fan missions and mods,
   including *The Black Parade*, is not implemented.
 - Broader NewDark mod compatibility remains to be implemented and tested,
@@ -208,10 +264,17 @@ repository.
 - Automated runtime tests are limited because licensed retail data cannot be
   included in the repository or continuous-integration environment.
 
-## Provenance and asset policy
+## Preservation and open access
 
-The Dark Engine was developed by Looking Glass Studios and powered Thief,
-Thief II, and System Shock 2. This source history originates from the publicly
-circulated historical source release. Review the applicable rights and
-licenses before distributing binaries. Do not use this project to distribute
-copyrighted game assets.
+This repository contains and modifies Dark Engine source code originating from
+the unauthorized 2010 source leak. The historical source remains copyrighted
+and was never released under an open-source license.
+
+The repository exists for preservation, research, and modernization of the
+engine. It does not include retail game assets. Contributors are expected to
+use game data from their own lawfully acquired copies of the relevant Dark
+Engine games when testing their code contributions.
+
+Contributors freely license only their own original additions and modifications.
+No rights are claimed in the underlying Dark Engine source or other third-party
+material, and no license to that material is express or implied.
