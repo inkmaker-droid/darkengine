@@ -183,6 +183,12 @@ repository.
   displays.
 - The first-run picker and startup path need clean-machine testing against the
   common CD, GOG, and Steam directory layouts.
+- NewDark data formats are not yet supported or validated.
+- A supported DromEd editor build has not yet been restored and validated.
+- Squirrel scripting support required by NewDark-era fan missions and mods,
+  including *The Black Parade*, is not implemented.
+- Broader NewDark mod compatibility remains to be implemented and tested,
+  including replacement models, textures, and other art assets.
 - There is no installer or redistributable package. The executable is run
   directly from the build output and uses separately installed retail data.
 - Console scrollback retains the latest 4,096 output lines; command recall is
