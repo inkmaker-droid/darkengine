@@ -962,10 +962,12 @@ int LGadEraseBox(LGadBox *vb, bool free_self)
 #ifdef OLD_LGAD_BUTTONS
 
 #pragma off(unreferenced)
-bool ButtonMouseHandler(short x, short y, short action, LGadBox *vb)
+bool ButtonMouseHandler(short x, short y, short action, short wheel, LGadBox *vb)
 {
    bool retval=FALSE; // return value of our callback, if any
    LGadButton *vbutt = (LGadButton *)vb;  // our actual button, cast from the LGadBox param
+
+   (void)wheel;
 
 
    if (vbutt == NULL)
@@ -1169,10 +1171,12 @@ the pointer, and keep the value in the range of 0 to max_val-1.  As the button c
 each click, it passes in the contents of the variable as the data parameter. */
 
 #pragma off(unreferenced)
-bool ToggleMouseHandler(short x, short y, short action, LGadBox *vb)
+bool ToggleMouseHandler(short x, short y, short action, short wheel, LGadBox *vb)
 {
    bool retval=FALSE; // return value of our callback, if any
    LGadToggle *vt = (LGadToggle *)vb;  // our actual toggle, cast from the LGadBox param
+
+   (void)wheel;
 
    if (vt == NULL)
    {
@@ -1352,13 +1356,15 @@ bool ScaleMotionHandler(short x, short y, LGadBox *vb)
    return(retval);
 }
 
-bool ScaleMouseHandler(short x, short y, short action, LGadBox *vb)
+bool ScaleMouseHandler(short x, short y, short action, short wheel, LGadBox *vb)
 {
    LGadScale *vs;
    Rect *r = (BOX_RECT(vb));
    bool retval = TRUE;
    bool use_scale;
    short tw,th; // temp width and height
+
+   (void)wheel;
 
    vs = (LGadScale *)vb;
    if (vs->scale_flags & SCALE_READONLY)
@@ -1396,7 +1402,7 @@ bool ScaleMouseHandler(short x, short y, short action, LGadBox *vb)
    if (action & (MOUSE_LUP|MOUSE_RUP))
    {
       if ((!vs->down) && !(vs->scale_flags & SCALE_NOTOGGLE))
-         retval = ToggleMouseHandler(x,y,action,vb); // otherwise, act like a toggle
+         retval = ToggleMouseHandler(x,y,action,wheel,vb); // otherwise, act like a toggle
       else
       {
          if (vs->buttonfunc)
@@ -1798,7 +1804,7 @@ static void defer_menu_destroy(LGadMenu* menu)
    uiDefer(do_deferred_menu_destroy,menu);
 }
 
-bool MenuMouseHandler(short x, short y, short action, LGadBox *vb)
+bool MenuMouseHandler(short x, short y, short action, short wheel, LGadBox *vb)
 {
    LGadMenu *vm = (LGadMenu *)vb; // the menu, duh
    Region* reg = LGadBoxRegion(vb);
@@ -1806,6 +1812,8 @@ bool MenuMouseHandler(short x, short y, short action, LGadBox *vb)
    short w,h; // elem sizes
    short tw, th; // temp w and h
    int i; // iterator
+
+   (void)wheel;
 
    // relativize point to region coordinates
    x -= reg->abs_x - r->ul.x;

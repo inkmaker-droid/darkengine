@@ -16,6 +16,8 @@
 #include <appagg.h>
 #include <loopapi.h>
 #include <config.h>
+#include <d3d11present.h>
+#include <d3d11legacy.h>
 #include <stdlib.h>
 
 #include <init.h>
@@ -167,6 +169,15 @@ EXTERN void new_world(void);
 
 tResult LGAPI AppInit()
 {
+   D3D11LegacyTraceReset();
+#ifndef THIEF2_GAME
+   // DromEd's render canvas tracks its resizable client area. Keep the
+   // presenter pixel-aligned; the game executable retains the default
+   // aspect-fit scaling for its fixed-resolution menus and gameplay canvas.
+   D3D11SetScaleToWindow(FALSE);
+   D3D11SetPreserveLegacyCanvas(TRUE);
+#endif
+
 #ifndef THIEF2_GAME
    ConstrainGameScreenMode(constrain_editor_game_mode);
 #endif
@@ -184,19 +195,27 @@ tResult LGAPI AppInit()
 #ifdef THIEF2_GAME
       setup_game_mode();
 #else
-      if (config_is_defined("start_game_mode"))
-         setup_game_mode();
-      else
-         setup_edit_mode();
+      // DromEd must enter its normal editor mode before starting a playtest.
+      // Making game mode primordial skips the editor-to-game handoff (mission
+      // backup, simulation setup, UI teardown, etc.) and can start AI work
+      // while simulation time is already advancing.  The editor loop consumes
+      // start_game_mode after its first fully initialized frame instead.
+      setup_edit_mode();
 #endif
    }
 
    load_dlg_lib();
 
-   char buf[80];
-   if (config_get_raw("file",buf,80))
-      dbLoad(buf,kFiletypeAll);
-   else new_world();
+   char buf[260];
+   const char *load_var = config_is_defined("render_test") ? "render_test" : "file";
+   if (config_get_raw(load_var,buf,sizeof(buf)))
+   {
+      edbFiletype loaded = dbLoad(buf,kFiletypeAll);
+      D3D11LegacyTrace("database-load var=%s file=%s result=0x%x",
+                       load_var,buf,loaded);
+   }
+   else
+      new_world();
 
 
    return NOERROR;

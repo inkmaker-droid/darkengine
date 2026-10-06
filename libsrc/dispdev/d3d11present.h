@@ -4,6 +4,16 @@
 struct IDirectDrawSurface;
 struct sD3D11LegacyVertex;
 
+// Games scale their fixed render canvas to the application window. DromEd
+// disables that policy because its canvas follows the editor client area and
+// must remain pixel-aligned while the window is being resized.
+void D3D11SetScaleToWindow(BOOL enabled);
+
+// DromEd incrementally redraws a shared 2D canvas around its hardware
+// viewport. Games instead rebuild their overlay every hardware frame and
+// must discard stale software pixels before compositing the D3D11 scene.
+void D3D11SetPreserveLegacyCanvas(BOOL enabled);
+
 // Presents the engine's legacy CPU canvas through a native D3D11 swap chain.
 // Keeping this at the display boundary lets the 2D UI, movies, and software
 // rasterizer continue to use their existing 16-bit canvas while Windows sees
@@ -39,6 +49,12 @@ public:
 private:
   struct sImpl;
   static HRESULT CreateRenderTarget(sImpl *impl);
+  static HRESULT CreateSceneResources(sImpl *impl, DWORD width, DWORD height);
+  BOOL EnsureSourceCapacity(DWORD width, DWORD height);
+  BOOL ConfigureLogicalSource(DWORD sourceWidth, DWORD sourceHeight,
+                              IDirectDrawSurface *surface);
+  BOOL EnsureOutputSize();
+  BOOL ResizeOutput(DWORD width, DWORD height);
   BOOL FlushHardwareCommands();
   sImpl *m_pImpl;
 

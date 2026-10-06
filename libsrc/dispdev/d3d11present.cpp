@@ -1,8 +1,12 @@
 #include "d3d11present.h"
 #include "d3d11legacy.h"
+#include "d3d11scene.h"
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <ddraw.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <vector>
 #include <windows.h>
@@ -19,7 +23,8 @@ template <class T> static void ReleaseInterface(T *&p) {
 }
 
 struct sCompositeConstants {
-  float gamma, hasScene, padding[2];
+  float gamma, hasScene, pointSample, padding0;
+  float sourceScale[2], padding[2];
 };
 struct sSceneConstants {
   float width, height, fogEnabled, useTexture1;
@@ -42,9 +47,125 @@ struct sD3D11LegacyCommand {
   ID3D11SamplerState *samplers[2];
 };
 
+static BOOL g_D3D11ScaleToWindow = TRUE;
+static BOOL g_D3D11PreserveLegacyCanvas = FALSE;
+static char g_D3D11CapturePath[MAX_PATH] = "";
+static int g_D3D11CaptureFrame = 1;
+static int g_D3D11HardwareFrameCount = 0;
+static BOOL g_D3D11CaptureConfigured = FALSE;
+static BOOL g_D3D11CaptureComplete = FALSE;
+
+static BOOL TraceEnabled(void) {
+  static int enabled = -1;
+  if (enabled < 0)
+    enabled = GetEnvironmentVariableA("DARK_RENDER_TRACE", NULL, 0) > 0;
+  return enabled != 0;
+}
+
+static void ConfigureFrameCapture(void) {
+  char frame[32];
+  if (g_D3D11CaptureConfigured)
+    return;
+  g_D3D11CaptureConfigured = TRUE;
+  GetEnvironmentVariableA("DARK_RENDER_CAPTURE", g_D3D11CapturePath,
+                          ARRAYSIZE(g_D3D11CapturePath));
+  if (GetEnvironmentVariableA("DARK_RENDER_CAPTURE_FRAME", frame,
+                              ARRAYSIZE(frame))) {
+    g_D3D11CaptureFrame = atoi(frame);
+    if (g_D3D11CaptureFrame < 1)
+      g_D3D11CaptureFrame = 1;
+  }
+}
+
+static BOOL CaptureTextureBmp(ID3D11Device *device,
+                              ID3D11DeviceContext *context,
+                              ID3D11Texture2D *source, const char *path) {
+  D3D11_TEXTURE2D_DESC desc;
+  D3D11_MAPPED_SUBRESOURCE mapped;
+  ID3D11Texture2D *staging = NULL;
+  BITMAPFILEHEADER fileHeader;
+  BITMAPINFOHEADER infoHeader;
+  FILE *file = NULL;
+  UINT x, y;
+  BOOL result = FALSE;
+  if (!device || !context || !source || !path || !*path)
+    return FALSE;
+  source->GetDesc(&desc);
+  desc.Usage = D3D11_USAGE_STAGING;
+  desc.BindFlags = 0;
+  desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+  desc.MiscFlags = 0;
+  if (FAILED(device->CreateTexture2D(&desc, NULL, &staging)))
+    return FALSE;
+  context->CopyResource(staging, source);
+  if (FAILED(context->Map(staging, 0, D3D11_MAP_READ, 0, &mapped)))
+    goto done;
+  ZeroMemory(&fileHeader, sizeof(fileHeader));
+  ZeroMemory(&infoHeader, sizeof(infoHeader));
+  fileHeader.bfType = 0x4d42;
+  fileHeader.bfOffBits = sizeof(fileHeader) + sizeof(infoHeader);
+  fileHeader.bfSize = fileHeader.bfOffBits + desc.Width * desc.Height * 4;
+  infoHeader.biSize = sizeof(infoHeader);
+  infoHeader.biWidth = desc.Width;
+  infoHeader.biHeight = -(LONG)desc.Height;
+  infoHeader.biPlanes = 1;
+  infoHeader.biBitCount = 32;
+  infoHeader.biCompression = BI_RGB;
+  infoHeader.biSizeImage = desc.Width * desc.Height * 4;
+  file = fopen(path, "wb");
+  if (!file)
+    goto unmap;
+  fwrite(&fileHeader, sizeof(fileHeader), 1, file);
+  fwrite(&infoHeader, sizeof(infoHeader), 1, file);
+  for (y = 0; y < desc.Height; ++y) {
+    const BYTE *row = (const BYTE *)mapped.pData + y * mapped.RowPitch;
+    for (x = 0; x < desc.Width; ++x) {
+      BYTE bgra[4] = {row[x * 4 + 2], row[x * 4 + 1], row[x * 4],
+                      row[x * 4 + 3]};
+      fwrite(bgra, sizeof(bgra), 1, file);
+    }
+  }
+  result = TRUE;
+  fclose(file);
+  file = NULL;
+unmap:
+  context->Unmap(staging, 0);
+done:
+  if (file)
+    fclose(file);
+  ReleaseInterface(staging);
+  return result;
+}
+
+extern "C" void D3D11LegacyTraceReset(void) {
+  if (TraceEnabled())
+    DeleteFileA("modern_render_trace.log");
+}
+
+extern "C" void D3D11LegacyTrace(const char *format, ...) {
+  FILE *file;
+  va_list args;
+  if (!TraceEnabled())
+    return;
+  file = fopen("modern_render_trace.log", "a");
+  if (!file)
+    return;
+  va_start(args, format);
+  vfprintf(file, format, args);
+  va_end(args);
+  fputc('\n', file);
+  fclose(file);
+}
+
+extern "C" BOOL D3D11LegacyCaptureComplete(void) {
+  return g_D3D11CaptureComplete;
+}
+
 struct cD3D11Presenter::sImpl {
   HWND hwnd;
   DWORD sourceWidth, sourceHeight, targetWidth, targetHeight;
+  DWORD backBufferWidth, backBufferHeight;
+  DWORD sourceTextureWidth, sourceTextureHeight;
   IDirectDrawSurface *legacySurface;
   ID3D11Device *device;
   ID3D11DeviceContext *context;
@@ -70,21 +191,23 @@ struct cD3D11Presenter::sImpl {
   std::vector<DWORD> overlayPixels;
   float gamma;
   BOOL hardwareFrame, sceneActive, sceneOpen, depthCompare, depthWrite,
-      fogEnabled, alphaTest;
+      fogEnabled, alphaTest, sourceNeedsFullUpload;
   int blendMode;
   DWORD fogColor;
   sImpl()
       : hwnd(NULL), sourceWidth(0), sourceHeight(0), targetWidth(0),
-        targetHeight(0), legacySurface(NULL), device(NULL), context(NULL),
-        swapChain(NULL), renderTarget(NULL), sourceTexture(NULL),
-        sceneTexture(NULL), depthTexture(NULL), sourceView(NULL),
-        sceneView(NULL), sceneTarget(NULL), depthView(NULL), compositeVS(NULL),
-        sceneVS(NULL), compositePS(NULL), scenePS(NULL), compositeSampler(NULL),
-        compositeConstants(NULL), sceneConstants(NULL), sceneVertices(NULL),
-        sceneLayout(NULL), sceneVertexCapacity(0), rasterizer(NULL), gamma(1),
-        hardwareFrame(FALSE), sceneActive(FALSE), sceneOpen(FALSE),
-        depthCompare(FALSE), depthWrite(FALSE), fogEnabled(FALSE),
-        alphaTest(FALSE), blendMode(kD3D11LegacyBlendOpaque), fogColor(0) {
+        targetHeight(0), backBufferWidth(0), backBufferHeight(0),
+        sourceTextureWidth(0), sourceTextureHeight(0), legacySurface(NULL),
+        device(NULL), context(NULL), swapChain(NULL), renderTarget(NULL),
+        sourceTexture(NULL), sceneTexture(NULL), depthTexture(NULL),
+        sourceView(NULL), sceneView(NULL), sceneTarget(NULL), depthView(NULL),
+        compositeVS(NULL), sceneVS(NULL), compositePS(NULL), scenePS(NULL),
+        compositeSampler(NULL), compositeConstants(NULL), sceneConstants(NULL),
+        sceneVertices(NULL), sceneLayout(NULL), sceneVertexCapacity(0),
+        rasterizer(NULL), gamma(1), hardwareFrame(FALSE), sceneActive(FALSE),
+        sceneOpen(FALSE), depthCompare(FALSE), depthWrite(FALSE),
+        fogEnabled(FALSE), alphaTest(FALSE), sourceNeedsFullUpload(FALSE),
+        blendMode(kD3D11LegacyBlendOpaque), fogColor(0) {
     ZeroMemory(samplers, sizeof(samplers));
     ZeroMemory(blendStates, sizeof(blendStates));
     ZeroMemory(depthStates, sizeof(depthStates));
@@ -168,7 +291,10 @@ void cD3D11Presenter::Stop() {
   m_pImpl->hwnd = NULL;
   m_pImpl->sourceWidth = m_pImpl->sourceHeight = 0;
   m_pImpl->targetWidth = m_pImpl->targetHeight = 0;
+  m_pImpl->backBufferWidth = m_pImpl->backBufferHeight = 0;
+  m_pImpl->sourceTextureWidth = m_pImpl->sourceTextureHeight = 0;
   m_pImpl->hardwareFrame = m_pImpl->sceneActive = m_pImpl->sceneOpen = FALSE;
+  m_pImpl->sourceNeedsFullUpload = FALSE;
   m_pImpl->sceneVertexCapacity = 0;
   m_pImpl->overlayPixels.clear();
   m_pImpl->depthCompare = m_pImpl->depthWrite = FALSE;
@@ -180,12 +306,189 @@ void cD3D11Presenter::Stop() {
 }
 HRESULT cD3D11Presenter::CreateRenderTarget(sImpl *p) {
   ID3D11Texture2D *b = NULL;
+  D3D11_TEXTURE2D_DESC desc;
   HRESULT hr =
       p->swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&b);
-  if (SUCCEEDED(hr))
+  if (SUCCEEDED(hr)) {
+    b->GetDesc(&desc);
+    p->backBufferWidth = desc.Width;
+    p->backBufferHeight = desc.Height;
     hr = p->device->CreateRenderTargetView(b, NULL, &p->renderTarget);
+  }
   ReleaseInterface(b);
   return hr;
+}
+
+HRESULT cD3D11Presenter::CreateSceneResources(sImpl *p, DWORD width,
+                                              DWORD height) {
+  ID3D11Texture2D *sceneTexture = NULL;
+  ID3D11RenderTargetView *sceneTarget = NULL;
+  ID3D11ShaderResourceView *sceneView = NULL;
+  ID3D11Texture2D *depthTexture = NULL;
+  ID3D11DepthStencilView *depthView = NULL;
+  D3D11_TEXTURE2D_DESC td;
+  HRESULT hr = E_FAIL;
+
+  if (!p || !p->device || !width || !height)
+    return E_INVALIDARG;
+
+  ZeroMemory(&td, sizeof(td));
+  td.Width = width;
+  td.Height = height;
+  td.MipLevels = td.ArraySize = 1;
+  td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+  td.SampleDesc.Count = 1;
+  td.Usage = D3D11_USAGE_DEFAULT;
+  td.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+  if (FAILED(hr = p->device->CreateTexture2D(&td, NULL, &sceneTexture)) ||
+      FAILED(hr = p->device->CreateRenderTargetView(sceneTexture, NULL,
+                                                    &sceneTarget)) ||
+      FAILED(hr = p->device->CreateShaderResourceView(sceneTexture, NULL,
+                                                      &sceneView)))
+    goto fail;
+
+  td.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+  td.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+  if (FAILED(hr = p->device->CreateTexture2D(&td, NULL, &depthTexture)) ||
+      FAILED(hr = p->device->CreateDepthStencilView(depthTexture, NULL,
+                                                    &depthView)))
+    goto fail;
+
+  p->sceneTexture = sceneTexture;
+  p->sceneTarget = sceneTarget;
+  p->sceneView = sceneView;
+  p->depthTexture = depthTexture;
+  p->depthView = depthView;
+  return S_OK;
+
+fail:
+  ReleaseInterface(depthView);
+  ReleaseInterface(depthTexture);
+  ReleaseInterface(sceneView);
+  ReleaseInterface(sceneTarget);
+  ReleaseInterface(sceneTexture);
+  return hr;
+}
+
+BOOL cD3D11Presenter::EnsureSourceCapacity(DWORD width, DWORD height) {
+  ID3D11Texture2D *sourceTexture = NULL;
+  ID3D11ShaderResourceView *sourceView = NULL;
+  ID3D11ShaderResourceView *nulls[2] = {NULL, NULL};
+  D3D11_TEXTURE2D_DESC td;
+
+  if (!m_pImpl || !m_pImpl->device || !width || !height)
+    return FALSE;
+  width = max(width, m_pImpl->sourceTextureWidth);
+  height = max(height, m_pImpl->sourceTextureHeight);
+  if (m_pImpl->sourceTexture && width == m_pImpl->sourceTextureWidth &&
+      height == m_pImpl->sourceTextureHeight)
+    return TRUE;
+
+  ZeroMemory(&td, sizeof(td));
+  td.Width = width;
+  td.Height = height;
+  td.MipLevels = td.ArraySize = 1;
+  td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+  td.SampleDesc.Count = 1;
+  td.Usage = D3D11_USAGE_DEFAULT;
+  td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+  if (FAILED(m_pImpl->device->CreateTexture2D(&td, NULL, &sourceTexture)) ||
+      FAILED(m_pImpl->device->CreateShaderResourceView(sourceTexture, NULL,
+                                                       &sourceView)))
+    goto fail;
+
+  m_pImpl->context->PSSetShaderResources(0, 2, nulls);
+  ReleaseInterface(m_pImpl->sourceView);
+  ReleaseInterface(m_pImpl->sourceTexture);
+  m_pImpl->sourceTexture = sourceTexture;
+  m_pImpl->sourceView = sourceView;
+  m_pImpl->sourceTextureWidth = width;
+  m_pImpl->sourceTextureHeight = height;
+  m_pImpl->sourceNeedsFullUpload = TRUE;
+  return TRUE;
+
+fail:
+  ReleaseInterface(sourceView);
+  ReleaseInterface(sourceTexture);
+  return FALSE;
+}
+
+BOOL cD3D11Presenter::ConfigureLogicalSource(DWORD sw, DWORD sh,
+                                             IDirectDrawSurface *surface) {
+  std::vector<DWORD> overlayPixels;
+
+  if (!m_pImpl || !m_pImpl->device || !surface || !sw || !sh)
+    return FALSE;
+  if (!EnsureSourceCapacity(sw, sh))
+    return FALSE;
+
+  overlayPixels.assign(sw * sh, 0);
+  m_pImpl->ReleaseQueuedCommands();
+  ReleaseInterface(m_pImpl->legacySurface);
+  m_pImpl->legacySurface = surface;
+  surface->AddRef();
+  m_pImpl->sourceWidth = sw;
+  m_pImpl->sourceHeight = sh;
+  m_pImpl->overlayPixels.swap(overlayPixels);
+  m_pImpl->hardwareFrame = FALSE;
+  m_pImpl->sceneActive = FALSE;
+  m_pImpl->sceneOpen = FALSE;
+  m_pImpl->sourceNeedsFullUpload = TRUE;
+  D3D11LegacyTrace("logical-source %lux%lu output=%lux%lu scale=%d preserve=%d",
+                   sw, sh, m_pImpl->backBufferWidth,
+                   m_pImpl->backBufferHeight, g_D3D11ScaleToWindow,
+                   g_D3D11PreserveLegacyCanvas);
+  // Logical canvas changes do not invalidate model textures.  Keep the
+  // desired bindings in sync with lgd3d's texture-id cache; clearing them
+  // here makes the first objects after a menu-to-game transition sample a
+  // null SRV when lgd3d correctly decides the texture ID has not changed.
+  return TRUE;
+}
+
+BOOL cD3D11Presenter::ResizeOutput(DWORD width, DWORD height) {
+  ID3D11ShaderResourceView *nulls[2] = {NULL, NULL};
+  HRESULT hr;
+
+  if (!m_pImpl || !m_pImpl->swapChain || !width || !height)
+    return FALSE;
+  if (width == m_pImpl->targetWidth && height == m_pImpl->targetHeight)
+    return TRUE;
+
+  m_pImpl->ReleaseQueuedCommands();
+  m_pImpl->context->PSSetShaderResources(0, 2, nulls);
+  m_pImpl->context->OMSetRenderTargets(0, NULL, NULL);
+  ReleaseInterface(m_pImpl->depthView);
+  ReleaseInterface(m_pImpl->depthTexture);
+  ReleaseInterface(m_pImpl->sceneTarget);
+  ReleaseInterface(m_pImpl->sceneView);
+  ReleaseInterface(m_pImpl->sceneTexture);
+  ReleaseInterface(m_pImpl->renderTarget);
+
+  hr = m_pImpl->swapChain->ResizeBuffers(1, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+  if (FAILED(hr) || FAILED(CreateRenderTarget(m_pImpl)) ||
+      FAILED(CreateSceneResources(m_pImpl, m_pImpl->backBufferWidth,
+                                  m_pImpl->backBufferHeight)) ||
+      !EnsureSourceCapacity(m_pImpl->backBufferWidth,
+                            m_pImpl->backBufferHeight))
+    return FALSE;
+
+  m_pImpl->targetWidth = width;
+  m_pImpl->targetHeight = height;
+  m_pImpl->hardwareFrame = FALSE;
+  m_pImpl->sceneActive = FALSE;
+  m_pImpl->sceneOpen = FALSE;
+  return TRUE;
+}
+
+BOOL cD3D11Presenter::EnsureOutputSize() {
+  RECT rc;
+  DWORD width, height;
+  if (!m_pImpl || !m_pImpl->hwnd)
+    return FALSE;
+  GetClientRect(m_pImpl->hwnd, &rc);
+  width = rc.right - rc.left;
+  height = rc.bottom - rc.top;
+  return width && height && ResizeOutput(width, height);
 }
 
 BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
@@ -195,41 +498,20 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
       "i:SV_VertexID){O o;float2 "
       "u=float2((i<<1)&2,i&2);o.p=float4(u.x*2-1,1-u.y*2,0,1);o.u=u;return o;}";
   static const char cps[] =
-      "cbuffer C:register(b0){float g;float hs;float2 z;}Texture2D "
+      "cbuffer C:register(b0){float g;float hs;float pp;float z;float2 us;"
+      "float2 zz;}Texture2D "
       "ui:register(t0);Texture2D sc:register(t1);SamplerState "
       "s:register(s0);float4 main(float4 p:SV_Position,float2 "
-      "u:TEXCOORD0):SV_Target{float4 a=ui.Sample(s,u);float3 "
-      "c=a.rgb;if(hs>.5)c=lerp(sc.Sample(s,u).rgb,a.rgb,a.a);return "
+      "u:TEXCOORD0):SV_Target{float4 a;float3 b;if(pp>.5){int3 "
+      "q=int3(int2(p.xy),0);a=ui.Load(q);b=sc.Load(q).rgb;}else{"
+      "a=ui.Sample(s,u*us);b=sc.Sample(s,u).rgb;}float3 "
+      "c=a.rgb;if(hs>.5)c=lerp(b,a.rgb,a.a);return "
       "float4(pow(saturate(c),g),1);}";
-  static const char svs[] =
-      "cbuffer C:register(b0){float w;float h;float fe;float ut;float4 "
-      "fc;float at;float3 pad;}struct I{float4 p:POSITION;float4 "
-      "c:COLOR0;float f:FOG;float2 "
-      "u:TEXCOORD0;float2 v:TEXCOORD1;};struct O{float4 "
-      "p:SV_Position;noperspective float4 "
-      "c:COLOR0;noperspective float f:FOG;float2 u:TEXCOORD0;float2 "
-      "v:TEXCOORD1;};O main(I "
-      "i){O o;float "
-      "q=1/max(i.p.w,.000001);o.p=float4((i.p.x/w*2-1)*q,(1-i.p.y/"
-      "h*2)*q,i.p.z*q,q);o.c=i.c;o.f=i.f;o.u=i.u;o.v=i.v;return o;}";
-  static const char sps[] =
-      "cbuffer C:register(b0){float w;float h;float fe;float ut;float4 "
-      "fc;float at;float3 pad;}Texture2D a:register(t0);Texture2D "
-      "b:register(t1);SamplerState "
-      "x:register(s0);SamplerState y:register(s1);struct I{float4 "
-      "p:SV_Position;noperspective float4 c:COLOR0;noperspective float "
-      "f:FOG;float2 u:TEXCOORD0;float2 "
-      "v:TEXCOORD1;};float4 main(I i):SV_Target{float4 "
-      "c=i.c*a.Sample(x,i.u);if(ut>.5)c*=b.Sample(y,i.v);if(at>.5)clip(c.a-.5);"
-      "if(fe>.5)c.rgb=lerp("
-      "fc.rgb,c.rgb,saturate(i.f));return c;}";
   RECT rc;
   DXGI_SWAP_CHAIN_DESC sd;
   D3D_FEATURE_LEVEL levels[] = {D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1,
                                 D3D_FEATURE_LEVEL_10_0},
                     got;
-  D3D11_TEXTURE2D_DESC td;
-  D3D11_SUBRESOURCE_DATA sourceData;
   D3D11_SAMPLER_DESC samp;
   D3D11_BUFFER_DESC bd;
   D3D11_BLEND_DESC bl;
@@ -237,6 +519,7 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
   D3D11_RASTERIZER_DESC rs;
   ID3DBlob *vb = NULL, *pb = NULL;
   HRESULT hr;
+  DWORD clientWidth, clientHeight;
   int i;
   D3D11_INPUT_ELEMENT_DESC il[] = {
       {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
@@ -248,9 +531,19 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
        D3D11_INPUT_PER_VERTEX_DATA, 0},
       {"TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, 44,
        D3D11_INPUT_PER_VERTEX_DATA, 0}};
-  Stop();
   if (!hwnd || !sw || !sh || !surface)
     return FALSE;
+  // A menu/movie/game resolution is only a logical canvas change.  Keep the
+  // output-sized scene/depth targets and swap chain alive; replace only the
+  // CPU-canvas upload texture and its DirectDraw-compatible backing surface.
+  if (m_pImpl->device && m_pImpl->swapChain && m_pImpl->hwnd == hwnd) {
+    if (ConfigureLogicalSource(sw, sh, surface))
+      return TRUE;
+  }
+  D3D11LegacyTrace("presenter-start requested=%lux%lu scale=%d preserve=%d",
+                   sw, sh, g_D3D11ScaleToWindow,
+                   g_D3D11PreserveLegacyCanvas);
+  Stop();
   m_pImpl->overlayPixels.assign(sw * sh, 0);
   // A typical mission produces tens of thousands of expanded triangle
   // vertices.  Retain that storage between frames instead of repeatedly
@@ -258,9 +551,14 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
   m_pImpl->queuedVertices.reserve(65536);
   m_pImpl->queuedCommands.reserve(2048);
   GetClientRect(hwnd, &rc);
+  clientWidth = rc.right - rc.left;
+  clientHeight = rc.bottom - rc.top;
   ZeroMemory(&sd, sizeof(sd));
-  sd.BufferDesc.Width = rc.right - rc.left;
-  sd.BufferDesc.Height = rc.bottom - rc.top;
+  // Zero dimensions tell DXGI to create the swap-chain buffers at the HWND's
+  // actual client-pixel size.  Passing legacy/logical dimensions here can
+  // create an undersized render target on a scaled desktop.
+  sd.BufferDesc.Width = 0;
+  sd.BufferDesc.Height = 0;
   sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
   sd.SampleDesc.Count = 1;
   sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -277,41 +575,11 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
         NULL, D3D_DRIVER_TYPE_WARP, NULL, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
         levels, 3, D3D11_SDK_VERSION, &sd, &m_pImpl->swapChain,
         &m_pImpl->device, &got, &m_pImpl->context);
-  if (FAILED(hr) || FAILED(CreateRenderTarget(m_pImpl)))
-    goto fail;
-  ZeroMemory(&td, sizeof(td));
-  td.Width = sw;
-  td.Height = sh;
-  td.MipLevels = td.ArraySize = 1;
-  td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-  td.SampleDesc.Count = 1;
-  td.Usage = D3D11_USAGE_DEFAULT;
-  td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-  td.CPUAccessFlags = 0;
-  ZeroMemory(&sourceData, sizeof(sourceData));
-  sourceData.pSysMem = &m_pImpl->overlayPixels[0];
-  sourceData.SysMemPitch = sw * sizeof(DWORD);
-  if (FAILED(m_pImpl->device->CreateTexture2D(&td, &sourceData,
-                                              &m_pImpl->sourceTexture)) ||
-      FAILED(m_pImpl->device->CreateShaderResourceView(
-          m_pImpl->sourceTexture, NULL, &m_pImpl->sourceView)))
-    goto fail;
-  td.Usage = D3D11_USAGE_DEFAULT;
-  td.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-  td.CPUAccessFlags = 0;
-  if (FAILED(m_pImpl->device->CreateTexture2D(&td, NULL,
-                                              &m_pImpl->sceneTexture)) ||
-      FAILED(m_pImpl->device->CreateRenderTargetView(
-          m_pImpl->sceneTexture, NULL, &m_pImpl->sceneTarget)) ||
-      FAILED(m_pImpl->device->CreateShaderResourceView(
-          m_pImpl->sceneTexture, NULL, &m_pImpl->sceneView)))
-    goto fail;
-  td.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-  td.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-  if (FAILED(m_pImpl->device->CreateTexture2D(&td, NULL,
-                                              &m_pImpl->depthTexture)) ||
-      FAILED(m_pImpl->device->CreateDepthStencilView(
-          m_pImpl->depthTexture, NULL, &m_pImpl->depthView)))
+  if (FAILED(hr) || FAILED(CreateRenderTarget(m_pImpl)) ||
+      FAILED(CreateSceneResources(m_pImpl, m_pImpl->backBufferWidth,
+                                  m_pImpl->backBufferHeight)) ||
+      !EnsureSourceCapacity(max(sw, m_pImpl->backBufferWidth),
+                            max(sh, m_pImpl->backBufferHeight)))
     goto fail;
   if (FAILED(CompileShader(cvs, "main", "vs_4_0", &vb)) ||
       FAILED(m_pImpl->device->CreateVertexShader(vb->GetBufferPointer(),
@@ -325,7 +593,7 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
                                                 &m_pImpl->compositePS)))
     goto fail;
   ReleaseInterface(pb);
-  if (FAILED(CompileShader(svs, "main", "vs_4_0", &vb)) ||
+  if (FAILED(CompileShader(kD3D11LegacySceneVS, "main", "vs_4_0", &vb)) ||
       FAILED(m_pImpl->device->CreateVertexShader(vb->GetBufferPointer(),
                                                  vb->GetBufferSize(), NULL,
                                                  &m_pImpl->sceneVS)) ||
@@ -334,7 +602,7 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
                                                 &m_pImpl->sceneLayout)))
     goto fail;
   ReleaseInterface(vb);
-  if (FAILED(CompileShader(sps, "main", "ps_4_0", &pb)) ||
+  if (FAILED(CompileShader(kD3D11LegacyScenePS, "main", "ps_4_0", &pb)) ||
       FAILED(m_pImpl->device->CreatePixelShader(pb->GetBufferPointer(),
                                                 pb->GetBufferSize(), NULL,
                                                 &m_pImpl->scenePS)))
@@ -358,31 +626,12 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
     goto fail;
   m_pImpl->boundSamplers[0] = m_pImpl->samplers[1];
   m_pImpl->boundSamplers[1] = m_pImpl->samplers[1];
-  ZeroMemory(&bl, sizeof(bl));
-  bl.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-  if (FAILED(m_pImpl->device->CreateBlendState(&bl, &m_pImpl->blendStates[0])))
-    goto fail;
-  bl.RenderTarget[0].BlendEnable = TRUE;
-  bl.RenderTarget[0].BlendOp = bl.RenderTarget[0].BlendOpAlpha =
-      D3D11_BLEND_OP_ADD;
-  bl.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-  bl.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-  bl.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-  bl.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
-  if (FAILED(m_pImpl->device->CreateBlendState(&bl, &m_pImpl->blendStates[1])))
-    goto fail;
-  bl.RenderTarget[0].SrcBlend = D3D11_BLEND_DEST_COLOR;
-  bl.RenderTarget[0].DestBlend = D3D11_BLEND_ZERO;
-  bl.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-  bl.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-  if (FAILED(m_pImpl->device->CreateBlendState(&bl, &m_pImpl->blendStates[2])))
-    goto fail;
-  bl.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-  bl.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
-  bl.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-  bl.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
-  if (FAILED(m_pImpl->device->CreateBlendState(&bl, &m_pImpl->blendStates[3])))
-    goto fail;
+  for (i = 0; i < 4; ++i) {
+    D3D11LegacyDescribeBlend(i, &bl);
+    if (FAILED(m_pImpl->device->CreateBlendState(&bl,
+                                                 &m_pImpl->blendStates[i])))
+      goto fail;
+  }
   for (i = 0; i < 4; ++i) {
     ZeroMemory(&ds, sizeof(ds));
     ds.DepthEnable = i != 0;
@@ -420,10 +669,19 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
   m_pImpl->hwnd = hwnd;
   m_pImpl->sourceWidth = sw;
   m_pImpl->sourceHeight = sh;
-  m_pImpl->targetWidth = sd.BufferDesc.Width;
-  m_pImpl->targetHeight = sd.BufferDesc.Height;
+  m_pImpl->targetWidth = clientWidth;
+  m_pImpl->targetHeight = clientHeight;
   m_pImpl->legacySurface = surface;
   surface->AddRef();
+  // The main window is still hidden on initial startup.  Give DWM a defined
+  // black swap-chain image before the display provider reveals the HWND, so
+  // no class/default surface can appear between desktop and the first movie.
+  {
+    float black[4] = {0, 0, 0, 1};
+    m_pImpl->context->OMSetRenderTargets(1, &m_pImpl->renderTarget, NULL);
+    m_pImpl->context->ClearRenderTargetView(m_pImpl->renderTarget, black);
+    m_pImpl->swapChain->Present(0, 0);
+  }
   g_pPresenter = this;
   return TRUE;
 fail:
@@ -454,16 +712,17 @@ BOOL cD3D11Presenter::BeginHardwareFrame() {
   D3D11_VIEWPORT v;
   ID3D11ShaderResourceView *nulls[2] = {NULL, NULL};
   float c[4] = {0, 0, 0, 1};
-  if (!m_pImpl || !m_pImpl->device)
+  if (!m_pImpl || !m_pImpl->device || !EnsureOutputSize())
     return FALSE;
   if (!m_pImpl->hardwareFrame) {
     m_pImpl->ReleaseQueuedCommands();
-    DDBLTFX f;
-    ZeroMemory(&f, sizeof(f));
-    f.dwSize = sizeof(f);
-    if (m_pImpl->legacySurface)
+    if (!g_D3D11PreserveLegacyCanvas && m_pImpl->legacySurface) {
+      DDBLTFX f;
+      ZeroMemory(&f, sizeof(f));
+      f.dwSize = sizeof(f);
       m_pImpl->legacySurface->Blt(NULL, NULL, NULL,
                                   DDBLT_COLORFILL | DDBLT_WAIT, &f);
+    }
     m_pImpl->context->PSSetShaderResources(0, 2, nulls);
     m_pImpl->context->ClearRenderTargetView(m_pImpl->sceneTarget, c);
     m_pImpl->context->ClearDepthStencilView(
@@ -472,8 +731,11 @@ BOOL cD3D11Presenter::BeginHardwareFrame() {
     m_pImpl->sceneActive = TRUE;
   }
   ZeroMemory(&v, sizeof(v));
-  v.Width = (float)m_pImpl->sourceWidth;
-  v.Height = (float)m_pImpl->sourceHeight;
+  // The scene/depth pair is output-sized and persists across all logical
+  // modes.  Vertex coordinates remain in the active logical canvas; the
+  // viewport performs the scale without reallocating render surfaces.
+  v.Width = (float)m_pImpl->backBufferWidth;
+  v.Height = (float)m_pImpl->backBufferHeight;
   v.MaxDepth = 1;
   m_pImpl->context->OMSetRenderTargets(1, &m_pImpl->sceneTarget,
                                        m_pImpl->depthView);
@@ -728,16 +990,29 @@ BOOL cD3D11Presenter::Present(IDirectDrawSurface *surface, int x0, int y0,
   DDSURFACEDESC sd;
   D3D11_BOX uploadBox;
   D3D11_VIEWPORT v;
-  RECT rc;
-  DWORD cw, ch;
+  DWORD cw, ch, bw, bh;
   int x, y;
   BOOL transparentOverlay;
+  BOOL tracePresentation;
   HRESULT hr;
   float black[4] = {0, 0, 0, 1}, sa, ca;
   sCompositeConstants c;
   ID3D11ShaderResourceView *views[2];
   if (!m_pImpl || !m_pImpl->device || !surface)
     return FALSE;
+  ConfigureFrameCapture();
+  tracePresentation = m_pImpl->sourceNeedsFullUpload;
+  // Dark's menu panels animate across the retained canvas even when the
+  // legacy caller submits only a dirty rectangle.  Always refresh the whole
+  // source for non-3D presentation so stale/cleared regions cannot flicker or
+  // make button feedback disappear. Hardware gameplay keeps its single
+  // frame-boundary upload path.
+  if (tracePresentation || !m_pImpl->sceneActive) {
+    x0 = 0;
+    y0 = 0;
+    x1 = (int)m_pImpl->sourceWidth;
+    y1 = (int)m_pImpl->sourceHeight;
+  }
   x0 = max(0, min(x0, (int)m_pImpl->sourceWidth));
   y0 = max(0, min(y0, (int)m_pImpl->sourceHeight));
   x1 = max(x0, min(x1, (int)m_pImpl->sourceWidth));
@@ -805,38 +1080,54 @@ BOOL cD3D11Presenter::Present(IDirectDrawSurface *surface, int x0, int y0,
       m_pImpl->sourceTexture, 0, &uploadBox,
       &m_pImpl->overlayPixels[y0 * m_pImpl->sourceWidth + x0],
       m_pImpl->sourceWidth * sizeof(DWORD), 0);
-  GetClientRect(m_pImpl->hwnd, &rc);
-  cw = rc.right - rc.left;
-  ch = rc.bottom - rc.top;
-  if (!cw || !ch)
+  m_pImpl->sourceNeedsFullUpload = FALSE;
+  if (!EnsureOutputSize())
     return FALSE;
-  if (cw != m_pImpl->targetWidth || ch != m_pImpl->targetHeight) {
-    m_pImpl->context->OMSetRenderTargets(0, NULL, NULL);
-    ReleaseInterface(m_pImpl->renderTarget);
-    hr = m_pImpl->swapChain->ResizeBuffers(1, cw, ch, DXGI_FORMAT_UNKNOWN, 0);
-    if (FAILED(hr) || FAILED(CreateRenderTarget(m_pImpl)))
-      return FALSE;
-    m_pImpl->targetWidth = cw;
-    m_pImpl->targetHeight = ch;
-  }
-  sa = (float)m_pImpl->sourceWidth / m_pImpl->sourceHeight;
-  ca = (float)cw / ch;
+  cw = m_pImpl->targetWidth;
+  ch = m_pImpl->targetHeight;
+  bw = m_pImpl->backBufferWidth ? m_pImpl->backBufferWidth : cw;
+  bh = m_pImpl->backBufferHeight ? m_pImpl->backBufferHeight : ch;
   ZeroMemory(&v, sizeof(v));
-  if (ca > sa) {
-    v.Height = (float)ch;
-    v.Width = v.Height * sa;
-    v.TopLeftX = (cw - v.Width) * .5f;
+  if (g_D3D11ScaleToWindow) {
+    // Thief's menus and game canvas use the selected logical resolution. Fit
+    // that canvas to the actual window/display while preserving its aspect.
+    sa = (float)m_pImpl->sourceWidth / m_pImpl->sourceHeight;
+    ca = (float)bw / bh;
+    if (ca > sa) {
+      v.Height = (float)bh;
+      v.Width = v.Height * sa;
+      v.TopLeftX = (bw - v.Width) * .5f;
+    } else {
+      v.Width = (float)bw;
+      v.Height = v.Width / sa;
+      v.TopLeftY = (bh - v.Height) * .5f;
+    }
   } else {
-    v.Width = (float)cw;
-    v.Height = v.Width / sa;
-    v.TopLeftY = (ch - v.Height) * .5f;
+    // DromEd recreates its canvas at the client size after WM_SIZE. During
+    // that transition, retain one source pixel per output pixel and leave the
+    // not-yet-available edge black instead of distorting editor geometry.
+    v.Width = (float)min(m_pImpl->sourceWidth, bw);
+    v.Height = (float)min(m_pImpl->sourceHeight, bh);
   }
   v.MaxDepth = 1;
+  if (tracePresentation)
+    D3D11LegacyTrace(
+        "present source=%lux%lu texture=%lux%lu output=%lux%lu viewport=%.1f,%.1f %.1fx%.1f scale=%d scene=%d gamma=%.4f",
+        m_pImpl->sourceWidth, m_pImpl->sourceHeight,
+        m_pImpl->sourceTextureWidth, m_pImpl->sourceTextureHeight, bw, bh,
+        v.TopLeftX, v.TopLeftY, v.Width, v.Height, g_D3D11ScaleToWindow,
+        m_pImpl->sceneActive, m_pImpl->gamma);
   m_pImpl->context->OMSetRenderTargets(1, &m_pImpl->renderTarget, NULL);
   m_pImpl->context->ClearRenderTargetView(m_pImpl->renderTarget, black);
   m_pImpl->context->RSSetViewports(1, &v);
   c.gamma = m_pImpl->gamma;
   c.hasScene = m_pImpl->sceneActive ? 1.0f : 0.0f;
+  c.pointSample = g_D3D11ScaleToWindow ? 0.0f : 1.0f;
+  c.padding0 = 0;
+  c.sourceScale[0] = (float)m_pImpl->sourceWidth /
+                     m_pImpl->sourceTextureWidth;
+  c.sourceScale[1] = (float)m_pImpl->sourceHeight /
+                     m_pImpl->sourceTextureHeight;
   c.padding[0] = c.padding[1] = 0;
   m_pImpl->context->UpdateSubresource(m_pImpl->compositeConstants, 0, NULL, &c,
                                       0, 0);
@@ -851,6 +1142,20 @@ BOOL cD3D11Presenter::Present(IDirectDrawSurface *surface, int x0, int y0,
   m_pImpl->context->PSSetShaderResources(0, 2, views);
   m_pImpl->context->PSSetSamplers(0, 1, &m_pImpl->compositeSampler);
   m_pImpl->context->Draw(3, 0);
+  if (m_pImpl->sceneActive && !g_D3D11CaptureComplete &&
+      g_D3D11CapturePath[0] &&
+      ++g_D3D11HardwareFrameCount >= g_D3D11CaptureFrame) {
+    ID3D11Texture2D *backBuffer = NULL;
+    if (SUCCEEDED(m_pImpl->swapChain->GetBuffer(
+            0, __uuidof(ID3D11Texture2D), (void **)&backBuffer))) {
+      g_D3D11CaptureComplete = CaptureTextureBmp(
+          m_pImpl->device, m_pImpl->context, backBuffer, g_D3D11CapturePath);
+      ReleaseInterface(backBuffer);
+      D3D11LegacyTrace("frame-capture frame=%d result=%d path=%s",
+                       g_D3D11HardwareFrameCount, g_D3D11CaptureComplete,
+                       g_D3D11CapturePath);
+    }
+  }
   // The engine owns frame pacing. Do not block each legacy display flush on
   // the desktop refresh interval.
   hr = m_pImpl->swapChain->Present(0, 0);
@@ -858,7 +1163,24 @@ BOOL cD3D11Presenter::Present(IDirectDrawSurface *surface, int x0, int y0,
   return SUCCEEDED(hr);
 }
 
+void D3D11SetScaleToWindow(BOOL enabled) {
+  g_D3D11ScaleToWindow = enabled;
+}
+
+void D3D11SetPreserveLegacyCanvas(BOOL enabled) {
+  g_D3D11PreserveLegacyCanvas = enabled;
+}
+
 extern "C" BOOL D3D11LegacyAvailable(void) { return g_pPresenter != NULL; }
+extern "C" void D3D11LegacySetScaleToWindow(BOOL enabled) {
+  D3D11SetScaleToWindow(enabled);
+}
+extern "C" void D3D11LegacySetPreserveCanvas(BOOL enabled) {
+  g_D3D11PreserveLegacyCanvas = enabled;
+}
+extern "C" BOOL D3D11LegacyPreserveCanvas(void) {
+  return g_D3D11PreserveLegacyCanvas;
+}
 extern "C" BOOL D3D11LegacyBeginFrame(void) {
   return g_pPresenter && g_pPresenter->BeginHardwareFrame();
 }

@@ -1,8 +1,9 @@
-# Dark Engine / Thief 2 and DromEd
+# Dark Engine / Thief 2 runner and DromEd viewer
 
 This repository restores the historical Dark Engine sources as a Visual
 Studio 2022 project. The shared executable project builds both a Thief 2
-runner with an in-game command console and the DromEd level editor.
+runner with an in-game command console and a preliminary DromEd mission
+viewer.
 
 The repository does not include Thief 2 missions, movies, sounds, scripts, or
 other retail assets. A legally obtained installation of *Thief II: The Metal
@@ -13,9 +14,12 @@ Age* is required to run the game.
 The Release/x86 Thief 2 and DromEd targets build successfully with the Visual
 Studio 2022 v143 toolset. Both use the modern D3D11 renderer and presentation
 path. Thief 2 can use an external retail installation and retains the standard
-startup sequence, mission loading, game UI, inventory, and automap. DromEd
-starts in a normal resizable 1024x768 window and can use another supported
-editor canvas size through its existing `edit_screen_size` setting.
+startup sequence, mission loading, game UI, inventory, and automap. The DromEd
+build can load, inspect, and playtest legacy Thief 2 missions in a normal
+resizable window, using the full client area when the window size changes.
+Treat it as a viewer, not a reliable editor: editing and saving workflows are
+not yet stable or comprehensively validated, and NewDark formats and features
+are not supported.
 
 The runner currently provides:
 
@@ -102,7 +106,7 @@ for a new directory. To choose a different directory while the old one is
 still valid, remove the `GameDataPath` value with Registry Editor and launch
 the executable again.
 
-### Run DromEd
+### Run the DromEd viewer
 
 DromEd uses the same Thief 2 data-directory selection as the game runner. Start
 it directly from the build output:
@@ -111,24 +115,31 @@ it directly from the build output:
 Release\DromEd.exe
 ```
 
-The editor reuses the `GameDataPath` registry value shown above. If no valid
+The viewer reuses the `GameDataPath` registry value shown above. If no valid
 directory has been selected yet, it prompts for the root of a legally installed
 Thief 2 data directory before loading its configuration and mission resources.
 
-The editor uses the same D3D11 scene renderer and swap-chain presenter as the
-game. Its legacy editor canvas remains 16-bit internally, while the D3D11
-presenter converts and scales it to the resizable 32-bit desktop window. Set
-`edit_screen_size 800 600`, `1024 768`, or `1280 1024` in `cam.cfg` to select
-one of the editor's native layouts; resizing or maximizing the window scales
-that canvas while preserving its aspect ratio. Game preview mode stays in the
-same resizable window and recreates the D3D11 render context for the preview;
-returning to edit mode restores the editor viewport and menu.
+The DromEd viewer uses the same D3D11 scene renderer and swap-chain presenter
+as the game. Its legacy editor canvas remains 16-bit internally, while the D3D11
+presenter converts it to the resizable 32-bit desktop window. When an editor
+window resize finishes, DromEd recreates that canvas at the client area's
+actual dimensions and scales the four viewports, console, status bar, and
+brush controls independently in each axis. This fills widescreen and portrait
+windows without imposing a 4:3 aspect ratio. `edit_screen_size` in `cam.cfg`
+still selects the initial canvas size. Game preview mode stays in the same
+window and recreates the D3D11 render context for the preview; returning to
+edit mode restores the editor viewport and menu.
 
 Use **Help > Keyboard Shortcuts** to open a resizable, human-readable input
 reference. It includes every active editor binding (including the complete
 built-in fallback set), non-conflicting shortcut annotations from the loaded
 `menus.cfg`, and direct mouse/viewport gestures. Controls are grouped and
 ordered by purpose, with modifier keys shown before the base key.
+
+The historical editing commands are present, but this build is not yet a
+dependable mission-authoring environment. Work from backups and do not rely on
+it as the only editor or copy of a mission. In particular, it cannot load or
+save NewDark-specific mission and data formats.
 
 If `screen_size` or `game_screen_size` is already defined in `cam.cfg`, that
 size is retained when the display driver supports it. Otherwise, the game
@@ -233,12 +244,16 @@ repository.
   displays.
 - The first-run picker and startup path need clean-machine testing against the
   common CD, GOG, and Steam directory layouts.
-- NewDark data formats are not yet supported or validated.
+- NewDark data formats are not supported. This affects both the runner's mod
+  compatibility and the DromEd viewer's ability to open or preserve
+  NewDark-specific mission data.
 - Thief Gold and System Shock 2 game targets are not yet supported or
   validated by this runner and modern presentation path.
-- DromEd now builds and uses the shared D3D11 renderer in a resizable window.
-  Broader validation of complete mission-authoring workflows and the optional
-  legacy `darkdlgs.dll` property dialogs is still in progress.
+- DromEd is currently a viewer and playtest tool, not a reliable editor. It
+  builds with the shared D3D11 renderer in a resizable window, but stability,
+  editing and save integrity, complete mission-authoring workflows, and the
+  optional legacy `darkdlgs.dll` property dialogs still require substantial
+  validation. NewDark missions and data are not supported.
 - The original EAX room-type controls are still present, but the current
   DirectSound mixer backend does not implement EAX reverb or occlusion. Those
   controls therefore have no audio effect until a modern environmental-audio

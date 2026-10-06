@@ -59,6 +59,13 @@ typedef struct
    ulong contexts;
 } Command;
 
+// Enumerate the registered command definitions without disturbing the
+// command-completion iterator used by the command entry box.  Returning FALSE
+// from the callback stops enumeration early.
+typedef BOOL (LGAPI *CommandIterateCallback)(const Command *command,
+                                              void *data);
+EXTERN void CommandForEach(CommandIterateCallback callback, void *data);
+
 EXTERN bool CommandParse(const char *inp, Command **res_1, const char **res_2);
 EXTERN void CommandExecuteParsed(Command *, char *parms);
 EXTERN bool CommandExecuteParam(const char *cmd, char *param);

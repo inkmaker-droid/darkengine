@@ -13,6 +13,8 @@
 #include <memall.h>
 #include <dbmem.h>   // must be last header! 
 
+#define MAX_RENDERED_GRID_LINES 100
+
 static mxs_real quantize_point(mxs_real pt, mxs_real scale)
 {
    // We want to compute a*scale+b = pt
@@ -128,7 +130,7 @@ void gedit_render_grid(Grid *g, int prime_axis, mxs_real height,
 
    limit = e.el[a0] + g->line_spacing/2;
 
-   if ((limit - s.el[a0])/g->line_spacing < 100) {
+   if ((limit - s.el[a0])/g->line_spacing < MAX_RENDERED_GRID_LINES) {
       for (x=s.el[a0]; x <= limit; x += g->line_spacing) {
          pt1.el[a0] = x;     
          pt2.el[a0] = x;     
@@ -143,7 +145,7 @@ void gedit_render_grid(Grid *g, int prime_axis, mxs_real height,
 
    limit = e.el[a1] + g->line_spacing/2;
 
-   if ((limit - s.el[a1])/g->line_spacing < 100) {
+   if ((limit - s.el[a1])/g->line_spacing < MAX_RENDERED_GRID_LINES) {
       for (x=s.el[a1]; x <= limit; x += g->line_spacing) {
          pt1.el[a1] = x;
          pt2.el[a1] = x;

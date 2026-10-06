@@ -150,7 +150,11 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(BuildThief2)'=='true'">
+  <!-- Both the game and DromEd load OSM modules built against the modern
+       MSVC runtime.  They must therefore expose the same CRT-backed allocator;
+       making this depend on BuildThief2 made the shared lgalloc.lib silently
+       change ABI according to whichever target happened to build it last. -->
+  <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>DARKENGINE_MODERN_CRT_ALLOCATOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>

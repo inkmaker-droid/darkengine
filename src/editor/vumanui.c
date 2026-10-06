@@ -15,6 +15,12 @@
 #include <gcompose.h>
 #include <config.h>
 #include <cfgdbg.h>
+#include <comtools.h>
+#include <wappapi.h>
+#include <appagg.h>
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 #include <command.h>
 #include <vumanui.h>
@@ -81,11 +87,6 @@ bool vm_mouse_handler(uiEvent* _ev, Region* reg, void* _data)
 }
 
 
-DrawElement titledraw = { DRAWTYPE_TEXT, "My Title", 0, 6, 1 };
-
-static LGadMenu vmpop;
-static int popup_cam;
-static char **popup_commands;
 extern bool vm_display_enable;
 
 // is this a fuckup, or what - global state for menus in vm
@@ -96,62 +97,57 @@ BOOL vm_menu_camera_lock=FALSE;
 // will have mouse coordinates
 int vm_menu_click_x, vm_menu_click_y;
 
-static bool vm_popup_select(int res, LGadMenu *men)
-{
-   if (res >= 0) {
-      int oc = vm_current_camera();
-      vm_set_cur_camera(popup_cam);  // hmm, why isnt this happening
-      vm_menu_inprog=TRUE; vm_menu_camera_lock=FALSE;
-      CommandExecute(popup_commands[res]);
-      vm_menu_inprog=FALSE;
-      if (!vm_menu_camera_lock)
-         vm_set_cur_camera(oc);
-   }
-   vm_display_enable = TRUE;
-   return TRUE;
-}
-
 void vm_popup_menu(uiMouseEvent *ev, int c)
 {
    extern void vm_get_popup_menu(int c, char ***, char ***, int *, int, int);
-   DrawElement *elems;
    char **names, **commands;
    Region *reg=vmGetRegion(camera_to_region_mapping[c]);  // this is stupid
-   int x,y, count, i;
+   IWinApp *app;
+   HWND window;
+   HMENU menu;
+   POINT screen_pos;
+   UINT selection;
+   int count, i;
 
-   popup_cam = c;
    vm_menu_click_x=ev->pos.x-reg->abs_x;
    vm_menu_click_y=ev->pos.y-reg->abs_y;
 
-   x = ev->pos.x - 20;
-   y = ev->pos.y - 20;
-
-   if (x + 40 > grd_bm.w) x = grd_bm.w - 60;
-   if (y + 120 > grd_bm.h) y = grd_bm.h - 120;
-
-   if (x < 0) x = 0;
-   if (y < 0) y = 0;
-
-   vm_display_enable = FALSE;
-
    vm_get_popup_menu(c, &names, &commands, &count, ev->pos.x, ev->pos.y);
-
-   popup_commands = commands;
-
-   elems = Malloc(sizeof(DrawElement) * count);
-
-   for (i=0; i < count; ++i) 
+   app=AppGetObj(IWinApp);
+   window=IWinApp_GetMainWnd(app);
+   SafeRelease(app);
+   menu=CreatePopupMenu();
+   if (window==NULL || menu==NULL)
    {
-      ElementClear(&elems[i]);
-      elems[i].draw_type = DRAWTYPE_TEXT;
-      elems[i].draw_data = names[i];
+      if (menu!=NULL)
+         DestroyMenu(menu);
+      return;
    }
 
-   LGadCreateMenuArgs(&vmpop, LGadCurrentRoot(), (short)x, (short)y, -1, -1,
-       (short)count, (short)count, elems, vm_popup_select, 0,
-       MENU_GRAB_FOCUS | MENU_OUTER_DISMISS | MENU_ALLOC_ELEMS,
-       BORDER(DRAWFLAG_BORDER_OUTLINE), &titledraw, 0);
-   Free(elems);
+   for (i=0; i<count; ++i)
+      AppendMenuA(menu,MF_STRING,(UINT_PTR)(i+1),names[i]);
+
+   screen_pos.x=ev->pos.x;
+   screen_pos.y=ev->pos.y;
+   ClientToScreen(window,&screen_pos);
+   vm_display_enable=FALSE;
+   selection=TrackPopupMenu(menu,TPM_RETURNCMD|TPM_NONOTIFY|TPM_RIGHTBUTTON,
+                            screen_pos.x,screen_pos.y,0,window,NULL);
+   DestroyMenu(menu);
+
+   if (selection>0 && selection<=(UINT)count)
+   {
+      int old_camera=vm_current_camera();
+      vm_set_cur_camera(c);
+      vm_menu_inprog=TRUE;
+      vm_menu_camera_lock=FALSE;
+      CommandExecute(commands[selection-1]);
+      vm_menu_inprog=FALSE;
+      if (!vm_menu_camera_lock)
+         vm_set_cur_camera(old_camera);
+   }
+   vm_display_enable=TRUE;
+   vm_redraw();
 }
 
 void vm_mouse_relativize(int c, int *x, int *y)

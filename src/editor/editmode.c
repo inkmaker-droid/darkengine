@@ -14,12 +14,14 @@
 #include <gshelapi.h>
 #include <config.h>
 #include <uiapp.h>
+#include <mode.h>
 
 #include <hotkey.h>
 #include <menus.h>
 
 #include <editmode.h>
 #include <gamemode.h>
+#include <gameapp.h>
 
 #include <cfgtool.h>
 #include <brushgfh.h>
@@ -57,11 +59,14 @@
 #include <palette.h>
 #include <rendprop.h>
 #include <pgrpprop.h>
+#include <d3d11legacy.h>
 
 // stuff for camera synch
 #include <dbasemsg.h>
 #include <dispbase.h>
 #include <playrobj.h>
+#include <objpos.h>
+#include <iobjsys.h>
 #include <camera.h>
 
 // So that we can know whether we're switching into a cDarkPanel
@@ -75,6 +80,7 @@
 // convienience, since doug is lazy, and gedit.h uses vectors and stuff
 // these are in gedit.h, but i dont want to need editbr and such in editmode
 extern void gedit_enter(void), gedit_exit(void);
+extern struct Position* PlayerPositionForRenderTest(void);
 
 extern void UpdateMenuCheckmarks(void);
 
@@ -241,6 +247,59 @@ typedef struct _StateRecord
    BOOL in_mode; 
 } StateRecord;
 
+static mxs_ang degrees_to_ang(float degrees)
+{
+   return (mxs_ang)(degrees * (65536.0 / 360.0));
+}
+
+static void configure_render_test_view(void)
+{
+   char value[160];
+   mxs_vector position = { 0, 0, 0 };
+   mxs_angvec facing = { 0, 0, 0 };
+   Position *player_start = NULL;
+   IObjectSystem *object_system = AppGetObj(IObjectSystem);
+   ObjID start_object = IObjectSystem_GetObjectNamed(object_system,
+                                                     "Starting Point");
+   float pitch = -35.0;
+   float heading = 0.0;
+   float roll = 0.0;
+
+   if (start_object != OBJ_NULL)
+      player_start = ObjPosGet(start_object);
+   if (!player_start)
+      player_start = PlayerPositionForRenderTest();
+   if (player_start)
+   {
+      position = player_start->loc.vec;
+      facing = player_start->fac;
+      heading = (float)facing.tz * (360.0 / 65536.0);
+   }
+   SafeRelease(object_system);
+
+   if (config_get_raw("render_test_pos",value,sizeof(value)))
+      sscanf(value,"%f,%f,%f",&position.x,&position.y,&position.z);
+
+   // User-facing order is pitch, heading, roll in degrees. Dark stores those
+   // axes as ty, tz, tx respectively.
+   if (config_get_raw("render_test_angles",value,sizeof(value)))
+      sscanf(value,"%f,%f,%f",&pitch,&heading,&roll);
+   facing.tx = degrees_to_ang(roll);
+   facing.ty = degrees_to_ang(pitch);
+   facing.tz = degrees_to_ang(heading);
+
+   vm_set_cur_region(0);
+   vm_set_cur_camera(0);
+   vm_set_3d(0,TRUE);
+   vm_set_render_mode(0,RM_SOLID_PORTAL);
+   vm_set_location(0,&position);
+   vm_set_facing(0,&facing);
+   vm_redraw();
+   D3D11LegacyTrace(
+      "render-test-view pos=%.3f,%.3f,%.3f angles=%.3f,%.3f,%.3f",
+      position.x,position.y,position.z,pitch,heading,roll);
+}
+
 ////////////////////////////////////////
 // Database message handler
 //
@@ -313,6 +372,8 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
    struct tm time_of_day;
    time_t ltime;
    static bool once = FALSE;
+   static bool start_game_mode_consumed = FALSE;
+   static bool render_test_configured = FALSE;
 
    info.raw = hdata;
 
@@ -320,6 +381,10 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
    {
       case kMsgResumeMode:
       case kMsgEnterMode:
+         // Editor view panes use incremental CPU-canvas redraws.  Game mode
+         // restores aspect-fit scaling when DromEd switches into play preview.
+         D3D11LegacySetScaleToWindow(FALSE);
+         D3D11LegacySetPreserveCanvas(TRUE);
          show_native_editor_cursor(TRUE);
          pal_update();  // set the palette 
          EditorCreateGUI();
@@ -340,6 +405,13 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
             synch_edit_camera();
          SetMainMenu("edit");
          UpdateMenuCheckmarks();
+         // Legacy mode setup sizes the frame while the editor menu is
+         // detached. Restore the user's exact outer rectangle after putting
+         // the menu back so the new canvas and final client area still match.
+         EditorRestoreWindowRect();
+         // Installing the hook after the menu is in place prevents the
+         // menu's client-area adjustment from masquerading as a user resize.
+         EditorStartWindowResizeTracking();
          state->from_game = IsEqualGUID(info.mode->from.pID,&LOOPID_GameMode);
 
          if (state->from_game)
@@ -361,6 +433,11 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
          ParticleGroupExitMode(); 
          if(g_InMotionEditor)
             MotEditClose();
+         // A resize rebuild removes the menu and screen mode before entering
+         // the editor again.  Stop tracking first so those internal WM_SIZE
+         // messages cannot schedule another rebuild and create an endless
+         // resize/flicker loop.
+         EditorStopWindowResizeTracking();
          SetMainMenu(NULL);
          EditorDestroyGUI();
          StatusDisable();
@@ -396,6 +473,34 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
          break;
 
       case kMsgNormalFrame:
+         if (config_is_defined("render_test") &&
+             D3D11LegacyCaptureComplete())
+         {
+            quit_game();
+            break;
+         }
+         {
+            int width,height;
+
+            if (EditorGetPendingWindowSize(&width,&height))
+            {
+               sScrnMode current;
+               ScrnModeGet(&current);
+               if (!(current.valid_fields&kScrnModeDimsValid) ||
+                   current.w!=width || current.h!=height)
+               {
+                  int mode=gr_register_mode(width,height,16);
+                  if (mode>=0)
+                  {
+                     char dimensions[32];
+                     grd_mode_info[mode].flags|=GRM_CAN_WINDOW;
+                     sprintf(dimensions,"%d,%d",width,height);
+                     enter_edit_mode(dimensions);
+                     break;
+                  }
+               }
+            }
+         }
          time(&ltime);
          memcpy(&time_of_day, localtime(&ltime), sizeof(struct tm));
          StatusField(SF_TIME,asctime(&time_of_day));
@@ -419,6 +524,24 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
             }
 
             state->first_frame = FALSE;
+
+            if (!render_test_configured && config_is_defined("render_test"))
+            {
+               render_test_configured = TRUE;
+               configure_render_test_view();
+               vm_render_cameras();
+            }
+
+            // A command-line playtest must use the same transition as the
+            // editor's Game Mode command.  Waiting until this point ensures
+            // the mission, editor loop, screen manager, and simulation handoff
+            // are initialized before the mode switch is requested.
+            if (!state->from_game && !start_game_mode_consumed &&
+                config_is_defined("start_game_mode"))
+            {
+               start_game_mode_consumed = TRUE;
+               do_game_switch_loud("");
+            }
 
          }
 

@@ -267,7 +267,8 @@ static void build_cmd_term(LGadRoot* root)
    // Give the larger in-game message font enough room for useful scrollback.
    // A proportional height also remains usable across the supported modes.
    r.lr.y = (short)(r.ul.y + RectHeight(&r) / 3);
-   CreateCommandTerminal(root,&r,kCmdTermHideUnfocused);
+   CreateCommandTerminal(root,&r,
+                         kCmdTermHideUnfocused | kCmdTermScrollable);
 
    r = *LGadBoxRect(root);
    r.lr.y = h * NUM_BUG_TERM_LINES + CMD_Y_MARGIN;

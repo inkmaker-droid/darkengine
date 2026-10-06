@@ -131,7 +131,7 @@ protected:
                          monitorInfo.rcMonitor.top,
                          monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
                          monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top,
-                         SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOCOPYBITS |
+                         SWP_FRAMECHANGED | SWP_NOCOPYBITS |
                          SWP_NOACTIVATE);
         }
     }

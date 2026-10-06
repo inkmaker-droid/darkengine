@@ -102,6 +102,7 @@ static void db_message(DispatchData* msg)
       case kDatabaseReset:
          EdMedMoClearMediumMotion();
          brushClearAll();
+         editor_ResetBrushDataState();
          AreaPnP_Names_Reset();
          vBrushReset();
          break;

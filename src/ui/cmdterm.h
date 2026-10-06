@@ -23,6 +23,7 @@ enum CmdTermFlags
    kCmdTermNoFlags = 0, 
    kCmdTermHideUnfocused = (1 << 0), 
    kCmdTermBeginFocused = (1 << 1), 
+   kCmdTermScrollable = (1 << 2),
 };
 
 

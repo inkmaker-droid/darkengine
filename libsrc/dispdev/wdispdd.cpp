@@ -533,6 +533,9 @@ cDDProvider::DoSetMode(const sGrModeInfo & modeInfo,
 
     HRESULT result = S_OK;
     LPDIRECTDRAWPALETTE pPalette = NULL;
+    BOOL reuseModernMode = FALSE;
+    BOOL preserveHostWindow = FALSE;
+    BOOL showMainWindowAfterModeStart = FALSE;
 
     ///////////////////////////////////
 
@@ -574,58 +577,72 @@ cDDProvider::DoSetMode(const sGrModeInfo & modeInfo,
     if ((flags & kGrSetWindowed) && !(modeInfo.flags & kGrModeCanWindow))
         flags &= ~kGrSetWindowed;
 
-    // Set proper DirectDraw cooperative level
-    
-    YieldDisplay(m_pDisplayDevice);
-    
-    if (flags & kGrSetWindowed)
+    reuseModernMode = m_pModeOps && m_pModeOps->HandlesWindowResize() &&
+                      modeInfo.bitDepth <= 16 && modeInfo.w != 512;
+    if (reuseModernMode)
     {
-        const LONG windowedStyle = m_NormalWindowStyle |
-                                   WS_THICKFRAME | WS_MAXIMIZEBOX;
-        if (m_DDCoopFlags != kDDWindowedCoopFlags)
-        {
-            m_DDCoopFlags = kDDWindowedCoopFlags;
-            m_pDD->RestoreDisplayMode();
-            result = SetCooperativeLevel(m_DDCoopFlags);
-        }
-        SetWindowLong(GetMainWnd(), GWL_STYLE, windowedStyle);
-        SetWindowPos(GetMainWnd(), HWND_NOTOPMOST, 0, 0, 0, 0,
-                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE |
-                     SWP_FRAMECHANGED);
+        const BOOL wasWindowed =
+            !!(m_pModeOps->GetModeInfoEx().flags & kGrModeIsWindowed);
+        const BOOL wantsWindowed = !!(flags & kGrSetWindowed);
+        preserveHostWindow = wasWindowed == wantsWindowed;
     }
-    else
-    {
-        const int pixelSize = (modeInfo.bitDepth == 15) ? 16 :
-                                                           modeInfo.bitDepth;
 
-        // The modern presenter implements the legacy 15/16-bit modes as a
-        // borderless desktop window.  Never enter DirectDraw exclusive mode
-        // for that path: doing so steals focus during mode changes and makes
-        // the shell treat Alt-Tab as an error that must be corrected.
-        if (pixelSize <= 16)
+    // Set proper DirectDraw cooperative level
+
+    // A logical canvas switch must not touch the HWND.  Restyling a
+    // borderless window with SWP_FRAMECHANGED briefly uncovers the shell and
+    // is the taskbar/desktop flash seen between menus, movies, and gameplay.
+    if (!preserveHostWindow)
+    {
+        YieldDisplay(m_pDisplayDevice);
+
+        if (flags & kGrSetWindowed)
         {
-            SetWindowLong(GetMainWnd(), GWL_STYLE, WS_POPUP);
+            const LONG windowedStyle = m_NormalWindowStyle |
+                                       WS_THICKFRAME | WS_MAXIMIZEBOX;
             if (m_DDCoopFlags != kDDWindowedCoopFlags)
             {
                 m_DDCoopFlags = kDDWindowedCoopFlags;
                 m_pDD->RestoreDisplayMode();
                 result = SetCooperativeLevel(m_DDCoopFlags);
             }
+            SetWindowLong(GetMainWnd(), GWL_STYLE, windowedStyle);
             SetWindowPos(GetMainWnd(), HWND_NOTOPMOST, 0, 0, 0, 0,
                          SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE |
                          SWP_FRAMECHANGED);
         }
-        else if (m_DDCoopFlags != kDDFullScreenCoopFlags)
+        else
         {
-            SetWindowLong(GetMainWnd(), GWL_STYLE, WS_POPUP);
-            SetForegroundWindow(GetMainWnd());
+            const int pixelSize = (modeInfo.bitDepth == 15) ? 16 :
+                                                               modeInfo.bitDepth;
 
-            m_DDCoopFlags = kDDFullScreenCoopFlags;
-            result = SetCooperativeLevel(m_DDCoopFlags);
+            // The modern presenter implements the legacy 15/16-bit modes as
+            // a borderless desktop window, never DirectDraw exclusive mode.
+            if (pixelSize <= 16)
+            {
+                SetWindowLong(GetMainWnd(), GWL_STYLE, WS_POPUP);
+                if (m_DDCoopFlags != kDDWindowedCoopFlags)
+                {
+                    m_DDCoopFlags = kDDWindowedCoopFlags;
+                    m_pDD->RestoreDisplayMode();
+                    result = SetCooperativeLevel(m_DDCoopFlags);
+                }
+                SetWindowPos(GetMainWnd(), HWND_NOTOPMOST, 0, 0, 0, 0,
+                             SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE |
+                             SWP_FRAMECHANGED);
+            }
+            else if (m_DDCoopFlags != kDDFullScreenCoopFlags)
+            {
+                SetWindowLong(GetMainWnd(), GWL_STYLE, WS_POPUP);
+                SetForegroundWindow(GetMainWnd());
+
+                m_DDCoopFlags = kDDFullScreenCoopFlags;
+                result = SetCooperativeLevel(m_DDCoopFlags);
+            }
         }
+
+        RegainDisplay(m_pDisplayDevice);
     }
-    
-    RegainDisplay(m_pDisplayDevice);
     
     DebugMsgIfErr("SetCooperativeLevel", result);
 
@@ -635,7 +652,7 @@ cDDProvider::DoSetMode(const sGrModeInfo & modeInfo,
     ///////////////////////////////////
 
     // detach the existing palette and destroy the present mode operations
-    if (m_pModeOps)
+    if (m_pModeOps && !reuseModernMode)
     {
         DebugMsgEx(SETMODE, "Detaching existing palette and destroying old mode operations...");
         pPalette = m_pModeOps->GetPalette();
@@ -674,7 +691,11 @@ cDDProvider::DoSetMode(const sGrModeInfo & modeInfo,
                          (m_Flags & kAlwaysEmulate) || !fModeIsNative ||
                          (!(flags & kGrSetWindowed) && modeInfo.w < 400);
 
-    if (modeInfo.w == 512 && !fModeIsNative) // @Note (toml 12-09-96): hack for Dark.  Need real support for direct-faked subregion modes
+    if (m_pModeOps)
+    {
+        DebugMsgEx(SETMODE, "Reusing modern display mode operations");
+    }
+    else if (modeInfo.w == 512 && !fModeIsNative) // @Note (toml 12-09-96): hack for Dark.  Need real support for direct-faked subregion modes
     {
         DebugMsg("New mode is an emulated mode");
         m_pModeOps = new cPhoney512ModeOps(m_pDisplayDevice, this, pPalette);
@@ -696,9 +717,13 @@ cDDProvider::DoSetMode(const sGrModeInfo & modeInfo,
     // Release our lock on palette now that mode ops has it
     SafeRelease(pPalette);
 
-    // Make sure the main window is visible
+    // Size a hidden startup window before creating the swap chain, but do not
+    // expose it until StartMode has initialized and primed the modern back
+    // buffer.  Showing it here exposes an undefined window surface for one
+    // compositor frame -- the white flash before the intro movie.
     if (!IsWindowVisible(GetMainWnd()))
     {
+        showMainWindowAfterModeStart = TRUE;
         YieldDisplay(m_pDisplayDevice);
 
         m_pModeOps->SetScaleFactor(
@@ -707,8 +732,6 @@ cDDProvider::DoSetMode(const sGrModeInfo & modeInfo,
                          modeInfo.h,
                          TRUE)
             );
-
-        ShowMainWnd();
 
         RegainDisplay(m_pDisplayDevice);
     }
@@ -756,26 +779,40 @@ cDDProvider::DoSetMode(const sGrModeInfo & modeInfo,
     // If we succeeded...
     if (m_pModeOps)
     {
-        YieldDisplay(m_pDisplayDevice);
-
-        // ... and windowed, adjust the outer frame
-        if (m_pModeOps->GetModeInfoEx().flags & kGrModeIsWindowed)
+        if (!preserveHostWindow)
         {
-            m_pModeOps->SetScaleFactor(
-                AdjustWindow(GetMainWnd(),
-                             m_pModeOps->GetModeInfoEx().width,
-                             m_pModeOps->GetModeInfoEx().height,
-                             TRUE)
-                );
+            YieldDisplay(m_pDisplayDevice);
+
+            // ... and windowed, adjust the outer frame
+            if (m_pModeOps->GetModeInfoEx().flags & kGrModeIsWindowed)
+            {
+                if (m_pModeOps->HandlesWindowResize())
+                {
+                    m_pModeOps->SetScaleFactor(0);
+                }
+                else
+                {
+                    m_pModeOps->SetScaleFactor(
+                        AdjustWindow(GetMainWnd(),
+                                     m_pModeOps->GetModeInfoEx().width,
+                                     m_pModeOps->GetModeInfoEx().height,
+                                     TRUE)
+                        );
+                }
+            }
+            else
+            {
+                m_pModeOps->SetScaleFactor(0);
+            }
+
+            WinDispBringToFront();
+            RegainDisplay(m_pDisplayDevice);
         }
-        // ... otherwise, make sure we obscure all other windows
         else
-        {
             m_pModeOps->SetScaleFactor(0);
-        }
 
-        WinDispBringToFront();
-        RegainDisplay(m_pDisplayDevice);
+        if (showMainWindowAfterModeStart)
+            ShowMainWnd();
     }
 
     return m_pModeOps;

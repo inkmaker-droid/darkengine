@@ -1484,7 +1484,11 @@ void cCloudDeck::Render()
    bRestoreZCompare = lgd3d_is_zcompare_on();
    lgd3d_set_zwrite(FALSE);
    lgd3d_set_zcompare(FALSE);
-   lgd3d_set_alpha(1);
+   // The texture supplies the cloud mask; the mission value controls the
+   // opacity of the whole deck.  Keeping this as global alpha avoids feeding
+   // the legacy clipper a new per-vertex channel while still matching the
+   // intended texture-alpha * mission-alpha blend.
+   lgd3d_set_alpha(g_CloudObj.fAlpha);
 
    lgd3d_set_fog_enable(portal_fog_on && g_CloudObj.bEnableFog);
 
@@ -1614,6 +1618,7 @@ void cCloudDeck::Render()
    gr_set_fill_type(FILL_NORM);
    r3_set_prim();
    lgd3d_set_blend(FALSE);
+   lgd3d_set_alpha(1);
    lgd3d_set_zwrite(bRestoreZWrite);
    lgd3d_set_zcompare(bRestoreZCompare);
    lgd3d_enable_palette();

@@ -76,6 +76,11 @@ static char CmdTermLines[CMDTERM_MAX_LINES][CMDTERM_LINE_LENGTH];
 static int CmdTermLineCount = 0;
 static int CmdTermNextLine = 0;
 
+static BOOL cmdterm_is_scrollable(void)
+{
+   return (CmdTerm.flags & kCmdTermScrollable) != 0;
+}
+
 static int cmdterm_max_scroll(void)
 {
    int max_scroll = CmdTermLineCount - CmdTerm.visiblelines;
@@ -233,8 +238,17 @@ void cmdterm_print(const char* text)
 
 void cmdterm_redraw(void)
 {
-   if ((CmdTerm.statebits & (kStateInUse | kStateVisible)) !=
-       (kStateInUse | kStateVisible))
+   if (!(CmdTerm.statebits & kStateInUse))
+      return;
+
+   if (!cmdterm_is_scrollable())
+   {
+      LGadUpdateTextBox(&CmdTerm.textbox);
+      LGadDrawBox(VB(&CmdTerm.textbox),NULL);
+      return;
+   }
+
+   if (!(CmdTerm.statebits & kStateVisible))
       return;
 
    LGadUpdateTextBox(&CmdTerm.outputbox);
@@ -718,6 +732,30 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
       switch(evdata)
       {
       case KB_FLAG_DOWN|KEY_ENTER:
+         if (!cmdterm_is_scrollable())
+         {
+            Status("");
+
+            if (CmdTerm.statebits & kStatePaused)
+            {
+               SimStateUnpause();
+               CmdTerm.statebits &= ~kStatePaused;
+            }
+
+            IInputBinder_GetContext (g_pInputBinder, &context);
+            if (context == HK_COMMAND_MODE && HotkeyContext == HK_GAME_MODE)
+               IInputBinder_SetContext (g_pInputBinder, HK_GAME_MODE, TRUE);
+
+            if ((ret = IInputBinder_ProcessCmd (g_pInputBinder, text)) != NULL)
+               Status(ret);
+            else
+               history_add(text);
+            *text = '\0';
+            update = TRUE;
+            clear = TRUE;
+            break;
+         }
+
          if (text && *text)
          {
             char entered[sizeof(CmdTerm.cmdbuf) + 3];
@@ -786,27 +824,39 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
          break;
       case KB_FLAG_DOWN|KEY_PGUP:
       case KB_FLAG_DOWN|KEY_PAD_PGUP:
-         cmdterm_scroll_by(CmdTerm.visiblelines);
-         cmdterm_rebuild_output();
-         update = TRUE;
+         if (cmdterm_is_scrollable())
+         {
+            cmdterm_scroll_by(CmdTerm.visiblelines);
+            cmdterm_rebuild_output();
+            update = TRUE;
+         }
          break;
       case KB_FLAG_DOWN|KEY_PGDN:
       case KB_FLAG_DOWN|KEY_PAD_PGDN:
-         cmdterm_scroll_by(-CmdTerm.visiblelines);
-         cmdterm_rebuild_output();
-         update = TRUE;
+         if (cmdterm_is_scrollable())
+         {
+            cmdterm_scroll_by(-CmdTerm.visiblelines);
+            cmdterm_rebuild_output();
+            update = TRUE;
+         }
          break;
       case KB_FLAG_DOWN|KEY_HOME:
       case KB_FLAG_DOWN|KEY_PAD_HOME:
-         cmdterm_set_scroll(cmdterm_max_scroll());
-         cmdterm_rebuild_output();
-         update = TRUE;
+         if (cmdterm_is_scrollable())
+         {
+            cmdterm_set_scroll(cmdterm_max_scroll());
+            cmdterm_rebuild_output();
+            update = TRUE;
+         }
          break;
       case KB_FLAG_DOWN|KEY_END:
       case KB_FLAG_DOWN|KEY_PAD_END:
-         cmdterm_set_scroll(0);
-         cmdterm_rebuild_output();
-         update = TRUE;
+         if (cmdterm_is_scrollable())
+         {
+            cmdterm_set_scroll(0);
+            cmdterm_rebuild_output();
+            update = TRUE;
+         }
          break;
       case KB_FLAG_DOWN|KEY_TAB:
          text[LGadTextBoxCursor(box)] = '\0';
@@ -849,12 +899,15 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
       LGadUpdateTextBox(box);
       if (clear)
       {
-         CmdTerm.statebits &= ~kStateVisible;
-         if (CmdTerm.scrolldragging)
+         if (cmdterm_is_scrollable())
          {
-            uiReleaseFocus(LGadBoxRegion(&CmdTerm.scrollbar),
-                           UI_EVENT_MOUSE | UI_EVENT_MOUSE_MOVE);
-            CmdTerm.scrolldragging = FALSE;
+            CmdTerm.statebits &= ~kStateVisible;
+            if (CmdTerm.scrolldragging)
+            {
+               uiReleaseFocus(LGadBoxRegion(&CmdTerm.scrollbar),
+                              UI_EVENT_MOUSE | UI_EVENT_MOUSE_MOVE);
+               CmdTerm.scrolldragging = FALSE;
+            }
          }
          LGadUnfocusTextBox(box);
          if (CmdTerm.flags & kCmdTermHideUnfocused)
@@ -864,7 +917,8 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
             SimStateUnpause();
             CmdTerm.statebits &= ~kStatePaused;
          }
-         cmdterm_restore_canvas();
+         if (cmdterm_is_scrollable())
+            cmdterm_restore_canvas();
       }
       else if (!(CmdTerm.statebits & kStatePaused))
       {
@@ -872,7 +926,7 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
          CmdTerm.statebits |= kStatePaused;
       }
 
-      if (!clear)
+      if (!clear && cmdterm_is_scrollable())
          cmdterm_draw();
    }
    return update;
@@ -892,6 +946,40 @@ void CreateCommandTerminal(LGadRoot* root, Rect* bounds, ulong flags)
    if (CmdTerm.statebits & kStateInUse)
       DestroyCommandTerminal();
    memset(&CmdTerm,0,sizeof(CmdTerm));
+   CmdTerm.flags = flags;
+
+   // DromEd owns a compact, permanently embedded command-entry pane.  Keep
+   // that legacy presentation separate from the optional in-game overlay.
+   if (!cmdterm_is_scrollable())
+   {
+      LGadTextBoxDesc tdesc;
+
+      LGadSetupSubRoot(&CmdTerm.root,root,bounds->ul.x,bounds->ul.y,
+                       (short)RectWidth(bounds),(short)RectHeight(bounds));
+
+      memset(&tdesc,0,sizeof(tdesc));
+      tdesc.bounds.lr = MakePoint(RectWidth(bounds),RectHeight(bounds));
+      tdesc.bounds.ul = MakePoint(0,0);
+      tdesc.editbuf = CmdTerm.cmdbuf;
+      tdesc.editbuflen = sizeof(CmdTerm.cmdbuf);
+      CmdTerm.cmdbuf[0] = '\0';
+      tdesc.flags = TEXTBOX_BORDER_FLAG|TEXTBOX_FOCUS_FLAG;
+      tdesc.cb = cmdterm_textbox_cb;
+
+      LGadCreateTextBoxDesc(&CmdTerm.textbox,&CmdTerm.root,&tdesc);
+      LGadTextBoxSetSpecialKeys(&CmdTerm.textbox,speckeys);
+      LGadBoxSetFlags(&CmdTerm.textbox,
+         LGadBoxFlags(&CmdTerm.textbox)|BOXFLAG_FLIP);
+
+      CmdTerm.statebits = kStateInUse;
+      if (flags & kCmdTermBeginFocused)
+         cmdterm_focus("");
+      else if (flags & kCmdTermHideUnfocused)
+         region_set_invisible(LGadBoxRegion(&CmdTerm.root),TRUE);
+      LGadDrawBox(VB(&CmdTerm.root),NULL);
+      cmdterm_setup_cmds();
+      return;
+   }
 
    // Use the same larger bitmap font as Thief's in-game messages. The normal
    // UI font was designed for the low-resolution menus and is hard to read
@@ -1006,7 +1094,6 @@ void CreateCommandTerminal(LGadRoot* root, Rect* bounds, ulong flags)
          LGadBoxFlags(&CmdTerm.textbox)|BOXFLAG_FLIP);
    }
    CmdTerm.statebits = kStateInUse;
-   CmdTerm.flags = flags;
    if (!CmdTermLineCount)
       cmdterm_print("Thief 2 console ready. Type help for commands.");
    else
@@ -1035,10 +1122,11 @@ void DestroyCommandTerminal(void)
    IInputBinder_GetContext (g_pInputBinder, &context);
    if (context == HK_COMMAND_MODE && HotkeyContext == HK_GAME_MODE)
       IInputBinder_SetContext (g_pInputBinder, HK_GAME_MODE, TRUE);
-   cmdterm_restore_canvas();
+   if (cmdterm_is_scrollable())
+      cmdterm_restore_canvas();
 
    CmdTerm.statebits &= ~kStateInUse;
-   if (CmdTerm.scrolldragging)
+   if (cmdterm_is_scrollable() && CmdTerm.scrolldragging)
    {
       uiReleaseFocus(LGadBoxRegion(&CmdTerm.scrollbar),
                      UI_EVENT_MOUSE | UI_EVENT_MOUSE_MOVE);
@@ -1051,9 +1139,12 @@ void DestroyCommandTerminal(void)
       CmdTerm.mousehandlerinstalled = FALSE;
    }
    LGadDestroyTextBox(&CmdTerm.textbox);
-   LGadDestroyBox(&CmdTerm.scrollbar, FALSE);
-   LGadDestroyTextBox(&CmdTerm.outputbox);
-   LGadDestroyTextBox(&CmdTerm.titlebox);
+   if (cmdterm_is_scrollable())
+   {
+      LGadDestroyBox(&CmdTerm.scrollbar, FALSE);
+      LGadDestroyTextBox(&CmdTerm.outputbox);
+      LGadDestroyTextBox(&CmdTerm.titlebox);
+   }
    LGadDestroyRoot(&CmdTerm.root);
    SafeRelease(CmdTerm.fontres);
    
@@ -1076,12 +1167,15 @@ void cmdterm_focus(char* prefix)
    buf[bufsiz-1] = '\0';
    // make the region visible, if necessary
    region_set_invisible(LGadBoxRegion(&CmdTerm.root),FALSE);
-   CmdTerm.statebits |= kStateVisible;
-   if (!CmdTerm.canvasredirected)
+   if (cmdterm_is_scrollable())
    {
-      CmdTerm.previousguicanvas = DefaultGUIcanvas;
-      DefaultGUIcanvas = ScrnGetDrawCanvas();
-      CmdTerm.canvasredirected = TRUE;
+      CmdTerm.statebits |= kStateVisible;
+      if (!CmdTerm.canvasredirected)
+      {
+         CmdTerm.previousguicanvas = DefaultGUIcanvas;
+         DefaultGUIcanvas = ScrnGetDrawCanvas();
+         CmdTerm.canvasredirected = TRUE;
+      }
    }
    cursor_pos=move_cursor_into_command(buf,bufsiz);
 
@@ -1089,8 +1183,13 @@ void cmdterm_focus(char* prefix)
    LGadUpdateTextBox(&CmdTerm.textbox);
    LGadFocusTextBox(&CmdTerm.textbox);
    LGadTextBoxClrFlag(&CmdTerm.textbox,TEXTBOX_EDIT_BRANDNEW);
-   cmdterm_rebuild_output();
-   cmdterm_draw();
+   if (cmdterm_is_scrollable())
+   {
+      cmdterm_rebuild_output();
+      cmdterm_draw();
+   }
+   else
+      LGadDrawBox(VB(&CmdTerm.textbox),NULL);
    // pause the sim state
    SimStatePause();
    

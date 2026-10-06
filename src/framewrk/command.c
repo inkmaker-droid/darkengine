@@ -82,6 +82,19 @@ Command *CommandFindString(const char *s)
    return CommandFind(s, strlen(s));
 }
 
+void CommandForEach(CommandIterateCallback callback, void *data)
+{
+   int i, j;
+
+   if (!callback)
+      return;
+
+   for (j=0; j < command_list_size; ++j)
+      for (i=0; i < command_count[j]; ++i)
+         if (!callback(&command_list[j][i], data))
+            return;
+}
+
 bool CommandParse(const char *inp, Command **res_1, const char **res_2)
 {
    // parse out to the first blank

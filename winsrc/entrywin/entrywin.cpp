@@ -163,19 +163,32 @@ static BOOL PrepareThief2DataDirectory(void)
 static void WriteCrashLine(HANDLE output, const char* text)
 {
     DWORD written;
-    WriteFile(output, text, (DWORD)strlen(text), &written, NULL);
+    if (output && output != INVALID_HANDLE_VALUE)
+        WriteFile(output, text, (DWORD)strlen(text), &written, NULL);
 }
 
 static LONG WINAPI DarkUnhandledExceptionFilter(EXCEPTION_POINTERS* exceptionInfo)
 {
     HANDLE process = GetCurrentProcess();
     HANDLE output = GetStdHandle(STD_ERROR_HANDLE);
+    HANDLE log = CreateFileA("darkengine-crash.log", FILE_APPEND_DATA,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                             OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     char line[1024];
+
+    SYSTEMTIME now;
+    GetLocalTime(&now);
+    wsprintfA(line, "\r\n[%04u-%02u-%02u %02u:%02u:%02u] ",
+              now.wYear, now.wMonth, now.wDay,
+              now.wHour, now.wMinute, now.wSecond);
+    WriteCrashLine(output, line);
+    WriteCrashLine(log, line);
 
     wsprintfA(line, "Unhandled exception %08X at %08X\r\n",
               exceptionInfo->ExceptionRecord->ExceptionCode,
               exceptionInfo->ExceptionRecord->ExceptionAddress);
     WriteCrashLine(output, line);
+    WriteCrashLine(log, line);
     if (exceptionInfo->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION &&
         exceptionInfo->ExceptionRecord->NumberParameters >= 2)
     {
@@ -188,6 +201,7 @@ static LONG WINAPI DarkUnhandledExceptionFilter(EXCEPTION_POINTERS* exceptionInf
                   exceptionInfo->ContextRecord->Esp,
                   exceptionInfo->ContextRecord->Ebp);
         WriteCrashLine(output, line);
+        WriteCrashLine(log, line);
     }
 
     SymSetOptions(SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
@@ -224,6 +238,7 @@ static LONG WINAPI DarkUnhandledExceptionFilter(EXCEPTION_POINTERS* exceptionInf
             else
                 wsprintfA(line, "  #%02d %08X\r\n", depth, (DWORD)frame.AddrPC.Offset);
             WriteCrashLine(output, line);
+            WriteCrashLine(log, line);
 
             if (!StackWalk64(IMAGE_FILE_MACHINE_I386, process, GetCurrentThread(),
                              &frame, &context, NULL, SymFunctionTableAccess64,
@@ -232,6 +247,9 @@ static LONG WINAPI DarkUnhandledExceptionFilter(EXCEPTION_POINTERS* exceptionInf
         }
         SymCleanup(process);
     }
+
+    if (log != INVALID_HANDLE_VALUE)
+        CloseHandle(log);
 
     return EXCEPTION_CONTINUE_SEARCH;
 }

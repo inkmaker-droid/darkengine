@@ -91,6 +91,7 @@ static void setup_game_mode(void)
 
 tResult LGAPI AppInit()
 {
+   const BOOL quickstart = config_is_defined("quickstart");
 
    CoreEngineAppInit();
 
@@ -101,11 +102,16 @@ tResult LGAPI AppInit()
       MotionManagerInit();
 #endif
 
-   if (!gPrimordialMode)
+   // quickstart=<mission> is a deterministic developer path: bypass the
+   // mission loop, movies, and menus and make gameplay the primordial mode.
+   if (quickstart)
+      setup_game_mode();
+   else if (!gPrimordialMode)
       setup_game_mode();   
 
-   char buf[80];
-   if (config_get_raw("file",buf,80))
+   char buf[260];
+   const char *load_var = quickstart ? "quickstart" : "file";
+   if (config_get_raw(load_var,buf,sizeof(buf)))
       dbLoad(buf,kFiletypeAll);
    else
       dbBuildDefault();

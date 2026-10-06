@@ -8,6 +8,7 @@
 #include <wrtype.h>
 #include <portal.h>
 #include <lgd3d.h>
+#include <d3d11legacy.h>
 #include <render.h>
 #include <simstate.h>
 #include <simflags.h>
@@ -98,6 +99,17 @@ EXTERN void set_hardware_gamma_level(float level)
 {
    new_gamma = TRUE;
    gamma_level = level;
+
+   // The old renderer deferred hardware-ramp changes while simulation was
+   // rendering to avoid crashing early D3D devices.  D3D11 gamma is only a
+   // composite-shader constant, so changing it is safe at any time.  Apply it
+   // immediately so a paused/in-game options menu responds while its slider
+   // is moving instead of waiting for gameplay rendering to resume.
+   if (D3D11LegacyAvailable())
+   {
+      do_set_gamma();
+      return;
+   }
 
    // if we're rendering, wait until the right moment so we don't
    // crash the @#$%%!@ riva128

@@ -16,6 +16,11 @@
 
 #include "mfmovie.h"
 #include "mfaudio.h"
+#include <d3d11legacy.h>
+
+// Implemented by the application's screen manager.  Keeping the declaration
+// here avoids making the reusable movie library depend on src/render headers.
+extern "C" void ScrnBlacken(void);
 
 #pragma comment(lib, "mf.lib")
 #pragma comment(lib, "mfplat.lib")
@@ -238,6 +243,8 @@ private:
     HRESULT m_result;
 };
 
+static const char kMovieHostClass[] = "DarkEngineMovieHost";
+
 static LRESULT CALLBACK MovieHostWindowProc(HWND hwnd, UINT message,
                                             WPARAM wParam, LPARAM lParam)
 {
@@ -251,6 +258,8 @@ static LRESULT CALLBACK MovieHostWindowProc(HWND hwnd, UINT message,
     {
         PAINTSTRUCT paint;
         BeginPaint(hwnd, &paint);
+        FillRect(paint.hdc, &paint.rcPaint,
+                 (HBRUSH)GetStockObject(BLACK_BRUSH));
         EndPaint(hwnd, &paint);
         if (player)
             player->UpdateVideo();
@@ -266,12 +275,9 @@ static LRESULT CALLBACK MovieHostWindowProc(HWND hwnd, UINT message,
     return DefWindowProc(hwnd, message, wParam, lParam);
 }
 
-static HWND CreateMovieHostWindow(HWND parent)
+static BOOL EnsureMovieHostWindowClass()
 {
-    static const char movieHostClass[] = "DarkEngineMovieHost";
     static BOOL classRegistered = FALSE;
-    RECT clientRect;
-    POINT upperLeft = { 0, 0 };
 
     if (!classRegistered)
     {
@@ -280,19 +286,29 @@ static HWND CreateMovieHostWindow(HWND parent)
         windowClass.lpfnWndProc = MovieHostWindowProc;
         windowClass.hInstance = GetModuleHandle(NULL);
         windowClass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
-        windowClass.lpszClassName = movieHostClass;
+        windowClass.lpszClassName = kMovieHostClass;
         if (!RegisterClassA(&windowClass) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
-            return NULL;
+            return FALSE;
         classRegistered = TRUE;
     }
+    return TRUE;
+}
+
+static HWND CreateMovieHostWindow(HWND parent)
+{
+    RECT clientRect;
+    POINT upperLeft = { 0, 0 };
+
+    if (!EnsureMovieHostWindowClass())
+        return NULL;
 
     if (!GetClientRect(parent, &clientRect) ||
         !ClientToScreen(parent, &upperLeft))
         return NULL;
 
     HWND host = CreateWindowExA(
-        WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, movieHostClass, "",
-        WS_POPUP | WS_VISIBLE,
+        WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, kMovieHostClass, "",
+        WS_POPUP,
         upperLeft.x, upperLeft.y,
         clientRect.right - clientRect.left,
         clientRect.bottom - clientRect.top,
@@ -302,10 +318,33 @@ static HWND CreateMovieHostWindow(HWND parent)
         SetWindowPos(host, HWND_TOP, upperLeft.x, upperLeft.y,
                      clientRect.right - clientRect.left,
                      clientRect.bottom - clientRect.top,
-                     SWP_NOACTIVATE | SWP_SHOWWINDOW);
-        UpdateWindow(host);
+                     SWP_NOACTIVATE);
     }
     return host;
+}
+
+static HWND CreateMovieBlackCover(HWND parent)
+{
+    RECT clientRect;
+    if (!EnsureMovieHostWindowClass() || !GetClientRect(parent, &clientRect))
+        return NULL;
+
+    HWND cover = CreateWindowExA(
+        WS_EX_NOPARENTNOTIFY | WS_EX_NOACTIVATE, kMovieHostClass, "",
+        WS_CHILD | WS_CLIPSIBLINGS,
+        0, 0, clientRect.right - clientRect.left,
+        clientRect.bottom - clientRect.top, parent, NULL,
+        GetModuleHandle(NULL), NULL);
+    if (cover)
+    {
+        SetWindowPos(cover, HWND_TOP, 0, 0,
+                     clientRect.right - clientRect.left,
+                     clientRect.bottom - clientRect.top,
+                     SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        RedrawWindow(cover, NULL, NULL,
+                     RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW);
+    }
+    return cover;
 }
 
 // MFPlay is Windows' high-level, clocked playback API.  It owns demuxing,
@@ -340,6 +379,8 @@ static BOOL PlayMFPlayMovie(const WCHAR *moviePath, HWND hwnd, int volume)
         player->SetBorderColor(RGB(0, 0, 0));
         SetWindowLongPtr(hwnd, GWLP_USERDATA,
                          reinterpret_cast<LONG_PTR>(player));
+        ShowWindow(hwnd, SW_SHOWNA);
+        UpdateWindow(hwnd);
         player->UpdateVideo();
 
         for (;;)
@@ -427,6 +468,11 @@ static BOOL PlayDirectShowMovie(const WCHAR *moviePath, HWND hwnd, int volume)
         result = video->put_Visible(-1L);
     if (SUCCEEDED(result) && audio)
         audio->put_Volume(volume);
+    if (SUCCEEDED(result))
+    {
+        ShowWindow(hwnd, SW_SHOWNA);
+        UpdateWindow(hwnd);
+    }
     if (SUCCEEDED(result))
         result = control->Run();
 
@@ -520,7 +566,7 @@ static HRESULT WaitForTopology(IMFMediaSession *session)
     return result;
 }
 
-static HRESULT RunSession(IMFMediaSession *session, HWND hwnd,
+static HRESULT RunSession(IMFMediaSession *session, HWND hwnd, HWND blackCover,
                           cMFMovieAudio *movieAudio)
 {
     IMFVideoDisplayControl *video = NULL;
@@ -583,8 +629,41 @@ static HRESULT RunSession(IMFMediaSession *session, HWND hwnd,
         Sleep(5);
     }
 
-    ShowWindow(hwnd, SW_SHOWNA);
-    UpdateWindow(hwnd);
+    // EVR can expose its newly visible swap surface before its first decoded
+    // frame has reached the compositor. Keep an independent black child above
+    // it while revealing the video HWND.  Showing the EVR child first and
+    // raising the cover afterward leaves a one-refresh gap containing the
+    // renderer's default grey surface.
+    if (blackCover)
+    {
+        RECT coverRect;
+        GetClientRect(GetParent(hwnd), &coverRect);
+        SetWindowPos(blackCover, HWND_TOP, 0, 0, coverRect.right,
+                     coverRect.bottom, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        UpdateWindow(blackCover);
+        SetWindowPos(hwnd, blackCover, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE |
+                     SWP_SHOWWINDOW);
+        UpdateWindow(hwnd);
+        DWORD coverStart = GetTickCount();
+        while (GetTickCount() - coverStart < 100)
+        {
+            if (!PumpMovieMessages())
+            {
+                session->Stop();
+                ShowWindow(blackCover, SW_HIDE);
+                ReleaseInterface(video);
+                return S_OK;
+            }
+            Sleep(5);
+        }
+        ShowWindow(blackCover, SW_HIDE);
+    }
+    else
+    {
+        ShowWindow(hwnd, SW_SHOWNA);
+        UpdateWindow(hwnd);
+    }
     if (movieAudio)
         movieAudio->Play();
 
@@ -638,6 +717,7 @@ static BOOL PlayMediaFoundationMovie(const WCHAR *moviePath, int volume)
     cMFMovieAudio movieAudio;
     HWND parentWindow;
     HWND videoWindow = NULL;
+    HWND blackCover = NULL;
     RECT clientRect;
 
     AutoAppIPtr(WinApp);
@@ -646,9 +726,11 @@ static BOOL PlayMediaFoundationMovie(const WCHAR *moviePath, int volume)
 
     parentWindow = pWinApp->GetMainWnd();
     GetClientRect(parentWindow, &clientRect);
+    if (!EnsureMovieHostWindowClass())
+        return FALSE;
     videoWindow = CreateWindowExA(
-        WS_EX_NOPARENTNOTIFY | WS_EX_NOACTIVATE, "STATIC", "",
-        WS_CHILD | WS_CLIPSIBLINGS | SS_BLACKRECT,
+        WS_EX_NOPARENTNOTIFY | WS_EX_NOACTIVATE, kMovieHostClass, "",
+        WS_CHILD | WS_CLIPSIBLINGS,
         0, 0, clientRect.right - clientRect.left,
         clientRect.bottom - clientRect.top, parentWindow, NULL,
         GetModuleHandle(NULL), NULL);
@@ -658,6 +740,7 @@ static BOOL PlayMediaFoundationMovie(const WCHAR *moviePath, int volume)
                  clientRect.right - clientRect.left,
                  clientRect.bottom - clientRect.top,
                  SWP_NOACTIVATE | SWP_NOREDRAW);
+    blackCover = CreateMovieBlackCover(parentWindow);
 
     result = MFStartup(MF_VERSION);
     if (SUCCEEDED(result))
@@ -680,7 +763,7 @@ static BOOL PlayMediaFoundationMovie(const WCHAR *moviePath, int volume)
     if (SUCCEEDED(result))
     {
         audioPrepared = movieAudio.Prepare(moviePath, volume);
-        result = RunSession(session, videoWindow,
+        result = RunSession(session, videoWindow, blackCover,
                             audioPrepared ? &movieAudio : NULL);
         played = SUCCEEDED(result);
     }
@@ -705,6 +788,8 @@ static BOOL PlayMediaFoundationMovie(const WCHAR *moviePath, int volume)
     if (mediaFoundationStarted)
         MFShutdown();
     DestroyWindow(videoWindow);
+    if (blackCover)
+        DestroyWindow(blackCover);
     InvalidateRect(parentWindow, NULL, FALSE);
     return played;
 }
@@ -719,6 +804,13 @@ BOOL ModernMoviePlaySynchronous(const char *legacyPath, int volume)
     if (!pWinApp || !legacyPath)
         return FALSE;
 
+    // Commit an explicit black frame before decoder/topology setup.  Loading
+    // may take several refresh intervals; retaining a menu, an unpainted
+    // control background, or the desktop during that delay is never useful.
+    ScrnBlacken();
+
+    D3D11LegacyTrace("movie requested=%s", legacyPath);
+
     // Prefer a modern sibling when one is installed.  MFPlay owns the native
     // MP4/H.264 clock, decoder, and EVR presentation without copying frames
     // through Dark's legacy canvas.  Keep the other system renderers as
@@ -730,15 +822,20 @@ BOOL ModernMoviePlaySynchronous(const char *legacyPath, int volume)
         // MFPlay and a combined audio/video MF session both inherit the broken
         // audio-renderer clock on affected systems and visibly run at ~1 fps.
         played = PlayMediaFoundationMovie(moviePath, volume);
+        D3D11LegacyTrace("movie backend=media-session played=%d", played);
         if (!played)
         {
             movieHost = CreateMovieHostWindow(pWinApp->GetMainWnd());
             if (!movieHost)
                 return FALSE;
             played = PlayMFPlayMovie(moviePath, movieHost, volume);
+            D3D11LegacyTrace("movie backend=mfplay played=%d", played);
         }
         if (!played)
+        {
             played = PlayDirectShowMovie(moviePath, movieHost, volume);
+            D3D11LegacyTrace("movie backend=directshow-mp4 played=%d", played);
+        }
         if (movieHost)
             DestroyWindow(movieHost);
         InvalidateRect(pWinApp->GetMainWnd(), NULL, FALSE);
@@ -753,6 +850,7 @@ BOOL ModernMoviePlaySynchronous(const char *legacyPath, int volume)
     if (!movieHost)
         return FALSE;
     played = PlayDirectShowMovie(moviePath, movieHost, volume);
+    D3D11LegacyTrace("movie backend=directshow-legacy played=%d", played);
     DestroyWindow(movieHost);
     InvalidateRect(pWinApp->GetMainWnd(), NULL, FALSE);
     return played;

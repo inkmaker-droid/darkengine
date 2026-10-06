@@ -1096,7 +1096,7 @@ struct sDefaultEditorBind
 static void InstallDefaultEditorBindings()
 {
    static const sDefaultEditorBind binds[] = {
-      {"f1", "help"},
+      {"f1", "show_command_help"},
       {"f2", "cycle_mode"},
       {"f3", "toggle_3d"},
       {"f10", "mission_loop"},

@@ -219,6 +219,7 @@ do { \
 static BOOL lgd3d_blend = FALSE;
 static BOOL lgd3d_trans = BMF_TRANS;
 static int lgd3d_alpha = 255;
+static BOOL lgd3d_iterated_alpha = FALSE;
 
 void lgd3d_set_alpha(float alpha)
 {
@@ -228,6 +229,24 @@ void lgd3d_set_alpha(float alpha)
       lgd3d_alpha = 255;
    if (lgd3d_alpha < 0)
       lgd3d_alpha = 0;
+}
+
+void lgd3d_set_iterated_alpha(BOOL enabled)
+{
+   lgd3d_iterated_alpha = enabled;
+}
+
+static int get_vertex_alpha(const g2s_point *point)
+{
+   float alpha = lgd3d_alpha;
+
+   if (lgd3d_iterated_alpha)
+      alpha *= point->a;
+   if (alpha > 255.0)
+      return 255;
+   if (alpha < 0.0)
+      return 0;
+   return (int)alpha;
 }
 
 static BOOL use_palette = TRUE;
@@ -412,7 +431,12 @@ void lgd3d_set_zwrite(BOOL val)
 
    put_mono('c');
    Flush();
-   SetRenderState(D3DRENDERSTATE_ZWRITEENABLE, zwrite=val);
+   // MODERN_D3D11 defines SetRenderState as a no-op compatibility macro, so
+   // an assignment hidden inside its argument is not evaluated.  Keep the
+   // renderer's state authoritative independently of the legacy API call;
+   // otherwise every D3D11 draw is submitted with depth writes disabled.
+   zwrite=val;
+   SetRenderState(D3DRENDERSTATE_ZWRITEENABLE, zwrite);
 #ifdef MODERN_D3D11
    D3D11LegacySetDepth(zcompare, zwrite);
 #endif
@@ -642,6 +666,16 @@ static void SetTransparent(int trans)
 {
    DWORD filter;
 
+#ifdef MODERN_D3D11
+   // BMF_TRANS is a binary color key. FILL_BLEND textures instead carry
+   // continuous alpha (cloud masks, water, overlays), so applying the
+   // color-key alpha test to them discards valid values below 0.5. Do this
+   // before the legacy state-cache early-out because fill type can change
+   // while the bitmap flags remain identical.
+   D3D11LegacySetAlphaTest((trans & BMF_TRANS) != 0 &&
+                           gr_get_fill_type() != FILL_BLEND);
+#endif
+
    if (lgd3d_trans == (int )trans)
       return;
 
@@ -653,7 +687,6 @@ static void SetTransparent(int trans)
                          lgd3d_get_texture_wrapping(0),
                          filter == D3DFILTER_LINEAR);
    D3D11LegacySetBlend((trans || lgd3d_blend) ? kD3D11LegacyBlendAlpha : kD3D11LegacyBlendOpaque);
-   D3D11LegacySetAlphaTest((trans & BMF_TRANS) != 0);
 #endif
 
 #ifdef USE_D3D2_API
@@ -1440,7 +1473,7 @@ static int lgd3d_rgb_poly(int n, r3s_point **ppl)
       r = rc*g2p->i; if (r>255) r = 255;
       g = gc*g2p->h; if (g>255) g = 255;
       b = bc*g2p->d; if (b>255) b = 255;
-      vlist[j].color = RGBA_MAKE(r,g,b,lgd3d_alpha);
+      vlist[j].color = RGBA_MAKE(r,g,b,get_vertex_alpha(g2p));
       vlist[j].specular = fog_specular;
       setxyz(&vlist[j], ppl[j]);
    }
@@ -1496,7 +1529,7 @@ static int lgd3d_rgblit_trifan(int n, r3s_point **ppl)
       r = 255*g2p->i; if (r>255) r = 255; else if (r<0) r = 0;
       g = 255*g2p->h; if (g>255) g = 255; else if (g<0) g = 0;
       b = 255*g2p->d; if (b>255) b = 255; else if (b<0) b = 0;
-      vlist[j].color = RGBA_MAKE(r,g,b,lgd3d_alpha);
+      vlist[j].color = RGBA_MAKE(r,g,b,get_vertex_alpha(g2p));
       vlist[j].specular = fog_specular;
       setxyz(&vlist[j], ppl[j]);
    }

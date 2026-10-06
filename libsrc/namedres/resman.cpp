@@ -829,12 +829,19 @@ void TryNameWithExt(const char* pExt, IResType*, void* pClientData)
 {
 	auto* foundTyped = reinterpret_cast<sFoundTypedStream*>(pClientData);
 
-	if (strlen(foundTyped->pFoundName) == 0)
+	// EnumerateExts calls us once for every legal type extension.  The old
+	// callback filled pFoundName before checking whether the first candidate
+	// existed, which prevented all later extensions from ever being tried.
+	// That made extensionless names such as Moon07a stop at Moon07a.pcx and
+	// never discover the shipped Moon07a.tga.
+	if (!foundTyped->pStore)
 	{
 		strcpy(foundTyped->pFoundName, foundTyped->pName);
 		strcat(foundTyped->pFoundName, pExt);
 
 		foundTyped->pStore = foundTyped->pPath->Find(foundTyped->pFoundName, 0, &foundTyped->pFoundCanonStore, foundTyped->pRelPath);
+		if (!foundTyped->pStore)
+			foundTyped->pFoundName[0] = '\0';
 	}
 }
 

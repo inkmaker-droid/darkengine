@@ -83,6 +83,7 @@
 #include <appapi.h>
 #include <crwpnlup.h>
 #include <missrend.h>
+#include <d3d11legacy.h>
 
 // yes, this is gross, when we structure the key bind handling better we can get rid of this
 ///#include <drkwswd.h>
@@ -105,6 +106,22 @@ static SimState gameSimState =
 {
    0xFFFFFFFF,  // All flags set
 };
+
+#ifdef EDITOR
+static BOOL gExitGameModeToEditor = FALSE;
+
+void GameModeExitToEditor(void)
+{
+   ILoop* looper = AppGetObj(ILoop);
+
+   // The sim menu is pushed on top of game mode.  Pop it now; game mode's
+   // resume handler will consume this request and switch the underlying mode
+   // to DromEd instead of leaving a suspended game below the editor.
+   gExitGameModeToEditor = TRUE;
+   ILoop_EndMode(looper,0);
+   SafeRelease(looper);
+}
+#endif
 
 #include <fixtime.h>
 #include <memall.h>
@@ -528,6 +545,11 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
 
       case kMsgEnterMode:
       {
+         // DromEd and the retail game share this loop client.  Once either
+         // enters gameplay, its fixed logical canvas must be aspect-fitted to
+         // the host window and its CPU canvas is only a HUD overlay.
+         D3D11LegacySetScaleToWindow(TRUE);
+         D3D11LegacySetPreserveCanvas(FALSE);
 #ifdef HISTO
          ILoop * pLoop = AppGetObj(ILoop);
          int profile = 0; 
@@ -562,6 +584,23 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
       // Fall through
       case kMsgResumeMode:
       {
+         D3D11LegacySetScaleToWindow(TRUE);
+         D3D11LegacySetPreserveCanvas(FALSE);
+
+#ifdef EDITOR
+         if (gExitGameModeToEditor)
+         {
+            gExitGameModeToEditor = FALSE;
+            enter_edit_mode("");
+            break;
+         }
+
+         // A DromEd panel pauses by replacing the active SimState with the
+         // zero-flag paused state.  Reassert the play-preview state when the
+         // panel is popped; otherwise kSimRender remains clear and the newly
+         // restored game canvas is presented with no D3D scene (black).
+         SimStateSet(&gameSimState);
+#endif
 
          {
             // Make sure the sim is running...

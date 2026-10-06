@@ -60,6 +60,7 @@
 #include <mnamprop.h>
 
 #include <mprintf.h>
+#include <stdio.h>
 
 // Must be last header 
 #include <dbmem.h>
@@ -323,6 +324,14 @@ struct Position* PlayerPosition()
    return NULL; 
 }
 
+// C entry point used by the editor's command-line render regression mode.
+// Keep the normal C++ API untouched while allowing editmode.c to obtain the
+// exact mission starting transform without duplicating PlayerFactory lookup.
+extern "C" struct Position* PlayerPositionForRenderTest()
+{
+   return PlayerPosition();
+}
+
 ////////////////////////////////////////////////////////////
 // PLAYER TAG FILE
 //
@@ -427,6 +436,49 @@ static void reset_player_position(void)
    PhysSetVelocity(gPlayerObj, &zero);
 }
 
+#ifdef THIEF2_GAME
+static mxs_ang quickstart_degrees_to_ang(float degrees)
+{
+   return (mxs_ang)(degrees * (65536.0 / 360.0));
+}
+
+static void apply_quickstart_transform(void)
+{
+   static BOOL applied = FALSE;
+   char value[160];
+   ObjPos *pos;
+   mxs_vector location;
+   mxs_angvec facing;
+   float pitch, heading, roll;
+
+   if (applied || !config_is_defined("quickstart") || gPlayerObj == OBJ_NULL)
+      return;
+
+   pos = ObjPosGet(gPlayerObj);
+   if (!pos)
+      return;
+
+   location = pos->loc.vec;
+   facing = pos->fac;
+   pitch = (float)facing.ty * (360.0 / 65536.0);
+   heading = (float)facing.tz * (360.0 / 65536.0);
+   roll = (float)facing.tx * (360.0 / 65536.0);
+
+   if (config_get_raw("quickstart_pos", value, sizeof(value)))
+      sscanf(value, "%f,%f,%f", &location.x, &location.y, &location.z);
+   if (config_get_raw("quickstart_angles", value, sizeof(value)))
+      sscanf(value, "%f,%f,%f", &pitch, &heading, &roll);
+
+   // User-facing order is pitch, heading, roll. Dark stores those axes as
+   // ty, tz, tx respectively.
+   facing.tx = quickstart_degrees_to_ang(roll);
+   facing.ty = quickstart_degrees_to_ang(pitch);
+   facing.tz = quickstart_degrees_to_ang(heading);
+   ObjPosUpdate(gPlayerObj, &location, &facing);
+   applied = TRUE;
+}
+#endif
+
 
 ////////////////////////////////////////////////////////////
 // SIM LISTENER
@@ -442,6 +494,9 @@ static void sim_msg(const sDispatchMsg* msg, const sDispatchListenerDesc* )
       case kSimResume:
          if (gPlayerObj == OBJ_NULL)
             PlayerCreate();
+#ifdef THIEF2_GAME
+         apply_quickstart_transform();
+#endif
          init_player_cam(); 
 #ifdef EDITOR
          if (!persistent_player_pos)

@@ -22,6 +22,7 @@
 #include <cursors.h>
 #include <curdat.h>
 #include <lgd3d.h>
+#include <d3d11legacy.h>
 #include <r3d.h>
 
 #include <appagg.h>
@@ -73,6 +74,36 @@ ScrnMode ScrnFindModeFlags(short w, short h, ubyte depth,ulong flags)
    i=gr_find_mode_flags(w,h,depth,flags|GRM_IS_SUPPORTED);
    if (i!=-1)
       return i;
+
+   // The D3D11 path renders into an emulated off-screen surface, so it can
+   // use canvas dimensions that DirectDraw did not advertise as physical
+   // display modes. gr_register_mode() adds those dimensions to the global
+   // mode table, but the legacy lookup above only searches the display
+   // provider's startup list. Make a registered 15/16-bit mode available to
+   // that lookup on demand. This is what lets DromEd recreate its canvas at
+   // the native window client size instead of silently retaining 640x480.
+   if (g_lgd3d && depth<=16)
+   {
+      int known=gr_mode_from_info(w,h,depth);
+      if (known>=0 &&
+          (grd_mode_info[known].flags&(flags|GRM_IS_SUPPORTED))==
+             (flags|GRM_IS_SUPPORTED))
+      {
+         int count=0;
+         while (count<GRD_MODES && grd_info.modes[count]!=-1)
+         {
+            if (grd_info.modes[count]==known)
+               return known;
+            ++count;
+         }
+         if (count<GRD_MODES)
+         {
+            grd_info.modes[count]=(short)known;
+            grd_info.modes[count+1]=-1;
+            return known;
+         }
+      }
+   }
 
    {
       int count = 0;
@@ -212,6 +243,16 @@ static void make_draw_canvas(void)
    {    // FullScreen, not page flipping...
       _off_screen = gr_alloc_canvas(grd_bm.type,grd_bm.w,grd_bm.h); // Was always BMT_FLAT8
       _draw_canv = _off_screen; 
+      // gr_alloc_canvas() does not initialize its pixel storage.  In the
+      // modern hardware path zero is the transparent overlay key, so random
+      // 16-bit heap contents otherwise appear as colored speckles over every
+      // 3D surface on the first frame.
+      if (_off_screen != NULL)
+      {
+         gr_push_canvas(_off_screen);
+         gr_clear(0);
+         gr_pop_canvas();
+      }
    }
    else // windowed or page flipping, no backing canvas
    {
@@ -258,6 +299,13 @@ static BOOL doMiscSetResStuff(int new_mode, ulong flags)
    grs_mode_info* info;
    info = gr_mode_info_from_mode(new_mode); 
 
+   // The original renderer derives a pixel aspect from the assumption that
+   // every display is physically 4:3.  That makes horizontal and vertical
+   // units differ in arbitrary-sized D3D11 windows (circles become ovals).
+   // Modern swap-chain pixels are square regardless of the window's aspect.
+   if (g_lgd3d)
+      grd_cap->aspect = FIX_UNIT;
+
    if (grd_screen == NULL)
    {
       grs_screen* screen = gr_alloc_screen(info->w,info->h);
@@ -277,7 +325,11 @@ static BOOL doMiscSetResStuff(int new_mode, ulong flags)
    if (flags & kScrnPreservePal) 
    {
       ScrnUsePalette();
-      ScrnClear(); 
+      // Do not present an intermediate blank canvas while changing loop
+      // modes. New modes are already created with MODE_CLEAR_BIT, and an
+      // unchanged mode will be completely redrawn before its next end-frame.
+      // Keeping the previous composited frame visible prevents transition
+      // flashes between menus, movies, and gameplay.
    }
    else 
       ScrnBlacken();
@@ -330,6 +382,13 @@ BOOL ScrnSetRes(ScrnMode mode,ulong flags)
             // Success! Now we just need to make the draw canvas, etc.
             goto ScrnSetResMisc;
 
+         // The D3D11 off-screen path intentionally presents on Flush and
+         // therefore never reports a legacy flip chain.  Treat that as the
+         // already-configured modern mode instead of tearing it down and
+         // rebuilding it on every repeated resolution request.
+         if (try_flip && D3D11LegacyAvailable())
+            goto ScrnSetResMisc;
+
          // Couldn't do it, fall through to old way...
       }
 
@@ -352,9 +411,18 @@ BOOL ScrnSetRes(ScrnMode mode,ulong flags)
       g_page_flip = SET_FLIP(pDispDev, TRUE);
       if (!g_page_flip)
       {
-         strcpy(g_last_set_res_error, "The display driver could not enable page flipping.");
-         // fail!
-         goto ScrnSetResDone;
+         // The D3D11 presenter deliberately uses a lockable compatibility
+         // canvas, not a DirectDraw flipping pair.  Hardware 3D remains
+         // active and Flush composites that canvas over the GPU scene.  Do
+         // not reject the hardware mode merely because legacy page flipping
+         // is unavailable; aliasing the draw canvas to the replaceable
+         // DirectDraw surface leaves stale pointers across logical mode
+         // changes and crashes in flat16_memset.
+         if (!D3D11LegacyAvailable())
+         {
+            strcpy(g_last_set_res_error, "The display driver could not enable page flipping.");
+            goto ScrnSetResDone;
+         }
       }
    }
    else
@@ -675,6 +743,13 @@ void ScrnBlacken(void)
    BOOL have_canv = grd_visible_canvas != NULL;
    IDisplayDevice* pDisp = NULL; 
 
+   // A zero-valued compatibility pixel is transparent while a retained D3D11
+   // scene is active.  An explicit blacken operation must discard that scene
+   // first or the cleared canvas simply reveals the previous menu/game frame
+   // during movie and mode transitions.
+   if (D3D11LegacyAvailable())
+      D3D11LegacyDeactivateScene();
+
    if (have_canv)
    {
       pDisp = AppGetObj(IDisplayDevice); 
@@ -723,6 +798,18 @@ void ScrnStartFrame(void)
       _curback = NULL;
    }
    _in_frame = TRUE;
+}
+
+void ScrnClearHardwareOverlay(void)
+{
+   // Called only by lgd3d_start_frame().  Menus use ScrnStartFrame too, but
+   // repaint incrementally and must retain their canvas between ticks.
+   if (_off_screen != NULL && !D3D11LegacyPreserveCanvas())
+   {
+      gr_push_canvas(_off_screen);
+      gr_clear(0);
+      gr_pop_canvas();
+   }
 }
 
 // compose cursor onto/off of back canvas

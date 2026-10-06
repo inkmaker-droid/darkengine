@@ -79,6 +79,27 @@ IBoolProperty *gFromBriefcaseProp;
 // Brushes:
 static TagVersion BrushVer={1,0};
 static TagFileTag BrushTag={"BRLIST"};
+static BOOL g_EditorBrushDataPresent=TRUE;
+static ulong g_EditorBrushDataGeneration=1;
+
+BOOL editor_BrushDataPresent(void)
+{
+   return g_EditorBrushDataPresent;
+}
+
+void editor_ResetBrushDataState(void)
+{
+   // A new/empty editor database has valid source state, even though it does
+   // not contain a brush yet.  Only a map load which lacks BRLIST is treated
+   // as stripped data.
+   g_EditorBrushDataPresent=TRUE;
+   ++g_EditorBrushDataGeneration;
+}
+
+ulong editor_BrushDataGeneration(void)
+{
+   return g_EditorBrushDataGeneration;
+}
 
 // SAVE
 // callback for brush save
@@ -612,11 +633,17 @@ BOOL editor_SaveCow(ITagFile *file)
 BOOL editor_LoadCow(ITagFile *file)
 {
    BOOL rv = TRUE;
+   BOOL brushes_loaded;
    rv |= AreaPnP_Names_Load(file);
    rv |= vBrush_NameLoad(file);
-   rv |= _loadAllBrushes(file, TRUE);
+   brushes_loaded = _loadAllBrushes(file, TRUE);
+   g_EditorBrushDataPresent = brushes_loaded;
+   ++g_EditorBrushDataGeneration;
+   rv |= brushes_loaded;
    rv |= _loadBrushHeader(file);
    rv |= _loadFlowTextureIndices(file);
+   if (!g_EditorBrushDataPresent)
+      Status("Source brush data missing; wireframe views use a non-editable compiled-geometry fallback.");
    if (!rv)
       Warning(("Some component of the COW file loaded incorrectly"));
    return rv;

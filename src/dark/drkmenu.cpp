@@ -26,6 +26,7 @@
 #include <mprintf.h>
 #include <campaign.h>
 #include <metasnd.h>
+#include <gamemode.h>
 
 #include <command.h>
 #include <uiamov.h>
@@ -273,8 +274,15 @@ protected:
 
          case kQuit:
          {
+#ifdef EDITOR
+            // In DromEd this is "leave play preview", not "quit the editor".
+            // Pop the menu first and let game mode switch cleanly back to the
+            // editor so no suspended gameplay mode remains on the loop stack.
+            GameModeExitToEditor();
+#else
             MissionLoopReset(kMissLoopMainMenu); 
             UnwindToMissionLoop(); 
+#endif
          }
          break;
             

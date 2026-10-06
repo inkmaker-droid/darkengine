@@ -189,6 +189,9 @@ extern "C" {
     extern int lgd3d_is_alpha_blending_on(void);
 
     extern void lgd3d_set_alpha(float alpha);             // 0.0 <= alpha <= 1.0
+    // Modulate the global alpha by the alpha stored in each g2s_point.  Most
+    // geometry does not initialize that field, so callers must opt in.
+    extern void lgd3d_set_iterated_alpha(BOOL enabled);
     extern void lgd3d_set_blend(BOOL do_blend);
     extern void lgd3d_blend_normal(void);
 

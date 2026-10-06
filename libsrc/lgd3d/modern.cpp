@@ -46,6 +46,7 @@ extern void lgd3d_render_end_frame(void);
 extern void lgd3d_render_flush(void);
 extern void lgd3d_modern_reset_texture_state(void);
 extern void lgd3d_set_znearfar(double znear, double zfar);
+extern void ScrnClearHardwareOverlay(void);
 }
 
 static void Decode16(ushort p, ushort flags, uchar *r, uchar *g, uchar *b,
@@ -267,10 +268,15 @@ extern "C" BOOL lgd3d_init(lgd3ds_device_info *info) {
   D3D11LegacyBeginFrame();
   lgd3d_render_init(info);
   D3D11LegacyEndFrame();
+  // Renderer initialization needs a temporary hardware frame for state
+  // setup, but it is not a rendered scene.  Leaving it active makes menu
+  // canvases composite as transparent overlays over an empty/stale scene.
+  D3D11LegacyDeactivateScene();
   return TRUE;
 }
 extern "C" void lgd3d_shutdown(void) {
   int i;
+  D3D11LegacyDeactivateScene();
   lgd3d_render_shutdown();
   if (g_tmgr) {
     g_tmgr->shutdown();
@@ -287,6 +293,7 @@ extern "C" void lgd3d_shutdown(void) {
 }
 extern "C" void lgd3d_start_frame(int frame) {
   g_ModernTextureLevel = 0;
+  ScrnClearHardwareOverlay();
   D3D11LegacyBeginFrame();
   lgd3d_render_start_frame();
   if (g_tmgr)

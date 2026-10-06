@@ -805,25 +805,34 @@ BOOL cOffVideoDDModeOps::DoSetGamma(double gamma)
 BOOL cOffVideoDDModeOps::StartMode(const sGrModeInfo & modeInfo, int flags, sGrModeCap * pReturnModeInfo)
 {
     HRESULT result;
+    const BOOL wasDesktopPresentation = m_UseDesktopPresentation;
+    const BOOL wasD3D11Presentation = m_UseD3D11Presentation;
     BEGIN_DEBUG_MSG("cOffVideoDDModeOps::StartMode()");
 
     const int realBitsPerPixel = (modeInfo.bitDepth != 15) ? modeInfo.bitDepth : 16;
 
     // Release the previous mode, if any
     DebugMsgEx(SETMODE, "Releasing previous surfaces, if any...");
-    SafeRelease(m_pPrimarySurface);          // Sets m_pPrimarySurface to null
+    // The desktop primary is not the modern renderer's output. Keep the one
+    // compatibility object alive across logical mode changes; only the
+    // lockable CPU canvas below needs dimensions matching the new mode.
+    if (!wasD3D11Presentation)
+        SafeRelease(m_pPrimarySurface);
     SafeRelease(m_pSecondarySurface);
     m_UseDesktopPresentation = FALSE;
     m_UseD3D11Presentation = FALSE;
-    if (m_pPresenter)
-        m_pPresenter->Stop();
 
     // The engine still renders its legacy 16-bit canvas, but modern Windows
     // presents it through a normal 32-bit desktop swap chain. Do not request
     // obsolete exclusive 16-bit display modes from the OS.
     if (!(flags & kGrSetWindowed) && realBitsPerPixel <= 16)
     {
-        EnableDesktopPresentation();
+        // The HWND and swap chain already cover the monitor when only the
+        // engine's logical canvas size changes (for example 640x480 menu to
+        // native-resolution gameplay). Avoid restyling/repositioning the
+        // window and invalidating its retained frame during that transition.
+        if (!wasDesktopPresentation)
+            EnableDesktopPresentation();
         m_UseDesktopPresentation = TRUE;
     }
     else if (!(GetCoopFlags() & DDSCL_NORMAL))
@@ -885,11 +894,14 @@ BOOL cOffVideoDDModeOps::StartMode(const sGrModeInfo & modeInfo, int flags, sGrM
     surfaceDesc.dwFlags = DDSD_CAPS;
     surfaceDesc.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;
 
-    result = GetDD()->CreateSurface(&surfaceDesc, &m_pPrimarySurface, NULL);
-    if (result != DD_OK)
+    if (!m_pPrimarySurface)
     {
-        DebugMsgIfErr("DoSetMode::CreateSurface (primary)", result);
-        return FALSE;
+        result = GetDD()->CreateSurface(&surfaceDesc, &m_pPrimarySurface, NULL);
+        if (result != DD_OK)
+        {
+            DebugMsgIfErr("DoSetMode::CreateSurface (primary)", result);
+            return FALSE;
+        }
     }
 
     // Get the primary descriptor
@@ -1013,7 +1025,7 @@ BOOL cOffVideoDDModeOps::StartMode(const sGrModeInfo & modeInfo, int flags, sGrM
     // surface. But that's ok here.
     if (!(m_ModeInfoEx.flags & kGrModeIsWindowed))
     {
-        if (!IsModeX())
+        if (!m_UseD3D11Presentation && !IsModeX())
             WipeSurface(m_pPrimarySurface);
         WipeSurface(m_pSecondarySurface);
     }

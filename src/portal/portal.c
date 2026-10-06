@@ -68,7 +68,11 @@ static FILE *trav_file;
 #endif
 
   // max object fragments visible onscreen at once
-#define MAX_VISIBLE_OBJECTS 4096
+// In hardware mode an object is rendered once, but the portal walk still
+// allocates one visibility record for every visible cell reference to it.
+// A wide editor viewport can therefore exhaust the original 4096 records
+// even though there are far fewer than 4096 distinct objects in the mission.
+#define MAX_VISIBLE_OBJECTS 16384
 
   // does lighting compute light maps or at vertices?
   // We probably don't really support vertex lighting anymore
@@ -338,8 +342,10 @@ int need_testing_count;
 STATIC
 int get_visobj(ObjID o, int fragment)
 {
-   ObjVisibleID his = num_visible_objects++;
-   if (his >= MAX_VISIBLE_OBJECTS) return VISOBJ_NULL;
+   ObjVisibleID his;
+   if (num_visible_objects >= MAX_VISIBLE_OBJECTS)
+      return VISOBJ_NULL;
+   his = num_visible_objects++;
    vis_objs[his].obj = o;
 hack_fragment[his] = TRUE;
    vis_objs[his].fragment = fragment;
@@ -362,7 +368,10 @@ void queue_object_fragment_in_cell(PortalCell *r, int visobj)
 STATIC
 void queue_object_fragment_for_obj(PortalCell *r, int visobj)
 {
-   int o = vis_objs[visobj].obj;
+   int o;
+   if (visobj < 0) return;
+
+   o = vis_objs[visobj].obj;
 hack_fragment[visobj] = FALSE;
    vis_objs[visobj].cell = r;
    vis_objs[visobj].next_visobj = obj_fragment_list[o];
@@ -1740,8 +1749,20 @@ void portal_render_scene(Position *pos, float zoom)
 
       if (portal_obj_fixup)
          check_for_extra_object_splitting();
-   } else
+   } else {
+#ifdef EDITOR
+      // Hardware rendering already clips objects against the viewport and
+      // resolves them against terrain with the depth buffer.  The legacy
+      // screen-octagon test is based on portal-local projected bounds and is
+      // unreliable when DromEd renders into an offset sub-viewport: objects
+      // are rejected as the camera moves across the pane, often surviving
+      // only near its left or right edge.  Objects reach this point only when
+      // they are referenced by a visible portal cell, so queue them and let
+      // the GPU perform the final clip/depth test.
+#else
       check_for_object_hiding();
+#endif
+   }
 
 #ifdef STATS_ON
    stat_num_sort_ms = portal_get_time() - stat_num_sort_ms;

@@ -44,6 +44,126 @@
 
 extern guiStyle editStyle;   // at the bottom
 
+static HWND editorMainWindow;
+static WNDPROC editorPreviousWindowProc;
+static BOOL editorInSizeMove;
+static BOOL editorResizePending;
+static int editorPendingWidth;
+static int editorPendingHeight;
+static RECT editorPendingWindowRect;
+static BOOL editorWindowRectPending;
+static BOOL editorPendingMaximized;
+
+static void remember_editor_window_size(HWND window)
+{
+   RECT client;
+
+   if (GetClientRect(window,&client))
+   {
+      int width=client.right-client.left;
+      int height=client.bottom-client.top;
+
+      // Smaller surfaces are not useful to the legacy editor and cannot be
+      // represented by all of its fixed-size controls.
+      if (width>=400 && height>=300)
+      {
+         editorPendingWidth=width;
+         editorPendingHeight=height;
+         editorResizePending=TRUE;
+         if (GetWindowRect(window,&editorPendingWindowRect))
+         {
+            editorWindowRectPending=TRUE;
+            editorPendingMaximized=IsZoomed(window);
+         }
+      }
+   }
+}
+
+static LRESULT CALLBACK editor_window_proc(HWND window,UINT message,
+                                           WPARAM wParam,LPARAM lParam)
+{
+   switch (message)
+   {
+      case WM_ENTERSIZEMOVE:
+         editorInSizeMove=TRUE;
+         break;
+
+      case WM_SIZE:
+         if (wParam!=SIZE_MINIMIZED && !editorInSizeMove)
+            remember_editor_window_size(window);
+         break;
+
+      case WM_EXITSIZEMOVE:
+         editorInSizeMove=FALSE;
+         remember_editor_window_size(window);
+         break;
+   }
+
+   return CallWindowProc(editorPreviousWindowProc,window,message,wParam,lParam);
+}
+
+void EditorStartWindowResizeTracking(void)
+{
+   IWinApp* app=AppGetObj(IWinApp);
+   HWND window=IWinApp_GetMainWnd(app);
+   SafeRelease(app);
+
+   if (window && !editorPreviousWindowProc)
+   {
+      editorMainWindow=window;
+      editorPreviousWindowProc=(WNDPROC)SetWindowLongPtr(window,GWLP_WNDPROC,
+                                             (LONG_PTR)editor_window_proc);
+   }
+}
+
+void EditorStopWindowResizeTracking(void)
+{
+   if (editorMainWindow && editorPreviousWindowProc &&
+       (WNDPROC)GetWindowLongPtr(editorMainWindow,GWLP_WNDPROC)==editor_window_proc)
+      SetWindowLongPtr(editorMainWindow,GWLP_WNDPROC,
+                       (LONG_PTR)editorPreviousWindowProc);
+
+   editorMainWindow=NULL;
+   editorPreviousWindowProc=NULL;
+   editorInSizeMove=FALSE;
+   editorResizePending=FALSE;
+}
+
+void EditorRestoreWindowRect(void)
+{
+   IWinApp* app=AppGetObj(IWinApp);
+   HWND window=IWinApp_GetMainWnd(app);
+   SafeRelease(app);
+
+   if (window && editorWindowRectPending)
+   {
+      if (editorPendingMaximized)
+      {
+         if (!IsZoomed(window))
+            ShowWindow(window,SW_MAXIMIZE);
+      }
+      else
+         SetWindowPos(window,NULL,
+                      editorPendingWindowRect.left,
+                      editorPendingWindowRect.top,
+                      editorPendingWindowRect.right-editorPendingWindowRect.left,
+                      editorPendingWindowRect.bottom-editorPendingWindowRect.top,
+                      SWP_NOZORDER|SWP_NOACTIVATE|SWP_NOCOPYBITS);
+   }
+   editorWindowRectPending=FALSE;
+}
+
+BOOL EditorGetPendingWindowSize(int *width,int *height)
+{
+   if (!editorResizePending)
+      return FALSE;
+
+   *width=editorPendingWidth;
+   *height=editorPendingHeight;
+   editorResizePending=FALSE;
+   return TRUE;
+}
+
 //------------------------------------------------------------
 // Screen layout stuff 
 //
@@ -62,7 +182,9 @@ Layouts[] =
    { { 640, 480 }, RES_EditorLayout640x480},
    { {1024, 768 }, RES_EditorLayout1024x768},
    { { 800, 600 }, RES_EditorLayout800x600},
-   { {1280,1024 }, RES_EditorLayout1280x1024}, 
+   // RES_EditorLayout1280x1024 is only an alias for the 1024x768 resource.
+   // Advertising it as a distinct layout scales its 1024-wide coordinates
+   // by 1920/1280, leaving the editor canvas capped at 1536 pixels.
 };
 
 
@@ -131,7 +253,6 @@ void EditorCreateGUI(void)
    StatusSetRect(get_layout_rect(lay,REFINDEX(REF_RECT_layStatus)));
    CreateBrushGFH(get_layout_rect(lay,REFINDEX(REF_RECT_layGFH)));
    CreateCommandTerminal(LGadCurrentRoot(), get_layout_rect(lay,REFINDEX(REF_RECT_layCommand)),kCmdTermNoFlags);
-
 
    // make sure the windows common controls are loaded
    InitCommonControls();

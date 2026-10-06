@@ -688,6 +688,9 @@ STDMETHODIMP_(BOOL) cWinDisplayDevice::SetGamma(double gamma)
 
 STDMETHODIMP_(BOOL) cWinDisplayDevice::SetFlip(BOOL bFlip)
 {
+    // Off-screen modes do not expose a real flipping pair of DirectDraw
+    // surfaces.  The modern presenter is driven by Flush after the engine has
+    // copied its compatibility canvas into the current secondary surface.
     return FALSE;
 }
 

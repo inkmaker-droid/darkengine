@@ -100,6 +100,10 @@ EXTERN void ScrnClear(void);
 // call the background callback if present
 EXTERN void ScrnStartFrame(void);
 
+// Clear the software overlay at the beginning of an actual hardware-rendered
+// scene. Ordinary menu frames intentionally do not call this.
+EXTERN void ScrnClearHardwareOverlay(void);
+
 // blit or page flip, transparently, woo woo.
 EXTERN void ScrnEndFrame(void);
 

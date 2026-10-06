@@ -13,6 +13,7 @@
 
 #include <scrnman.h>
 #include <scrnguid.h>
+#include <d3d11legacy.h>
 
 #include <2d.h>
 
@@ -239,6 +240,11 @@ BOOL ScrnSetModeRaw(const sScrnMode* mode)
     AssertMsg((mode->valid_fields & kScrnModeAllValid) == kScrnModeAllValid,"ScrnSetModeRaw: Not all fields are valid");
 
     g_lgd3d = FALSE;
+    D3D11LegacyTrace(
+        "screen-mode requested=%dx%dx%d flags=0x%lx windowed=%d hardware=%d",
+        mode->w, mode->h, mode->bitdepth, mode->flags,
+        !!(mode->flags & kScrnModeWindowed),
+        !!(mode->flags & kScrnMode3dDriver));
 
 #ifdef PLAYTEST
     if (config_is_defined("screen_mode_spew"))
@@ -359,6 +365,8 @@ BOOL ScrnSetModeRaw(const sScrnMode* mode)
         }
 #endif
 
+        D3D11LegacyTrace("screen-display kind=%d display-flags=0x%x lgd3d=%d",
+                         kind, flags, g_lgd3d);
         BOOL match = (ScrnSetDisplay(kind,flags,pDD) == 0);
 
         //
@@ -372,8 +380,6 @@ BOOL ScrnSetModeRaw(const sScrnMode* mode)
 
         //if (match)
             //return TRUE;
-
-        ScrnClear();
 
         //
         // Now find and set the mode

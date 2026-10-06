@@ -105,7 +105,7 @@ extern BOOL g_AIPathDBDrawCellIds;
 extern BOOL g_lgd3d;
 extern BOOL g_zbuffer;
 
-extern BOOL portal_allow_object_splitting;
+extern bool portal_allow_object_splitting;
 extern void portal_render_water_polys(int n);
 extern void (*portal_post_render_cback)(void);
 extern void (*portal_queue_water_poly)();
@@ -1372,7 +1372,12 @@ static BOOL render_md(int idx, ObjID obj, int fragment, int color, uchar *clut)
 
    md_render_back_to_front(!g2pt_span_clip);
 
-   if (portal_model)
+   // portal_model selects the old software affine mapper.  It must never
+   // replace the model callback while the hardware renderer is active: dark
+   // textured models then get quantized into the 16-bit CPU canvas before
+   // gamma, producing nearly solid blue/black silhouettes (tree03 is a clear
+   // example).  Hardware clipping is already handled by r3/lgd3d.
+   if (portal_model && !g_lgd3d)
       old = md_set_render_pgon_callback(render_pgon);
 #ifdef EDITOR
    else if (!g_lgd3d)
@@ -1432,7 +1437,7 @@ static BOOL render_md(int idx, ObjID obj, int fragment, int color, uchar *clut)
    else
       rv=FALSE;
 
-   if (portal_model)
+   if (portal_model && !g_lgd3d)
       md_set_pgon_callback(old);
 #ifdef EDITOR
    else if (!g_lgd3d)
@@ -2393,6 +2398,12 @@ BOOL rendobj_core_render_object(ObjID obj, int fragment, int idx, uchar *clut,
 {  // ignore the clut for now!
    mxs_vector scale;
    BOOL rval;
+   // Primitive selection is process-global legacy state.  UI/debug drawing
+   // may have selected the software table since the preceding object, so make
+   // the hardware contract true at the common entry for immediate, split,
+   // and queued model paths alike.
+   if (g_lgd3d)
+      r3_use_lgd3d();
 
    setup_object_lighting(obj, 0, 0);
 
@@ -2411,7 +2422,7 @@ BOOL rendobj_core_render_object(ObjID obj, int fragment, int idx, uchar *clut,
    return rval;
 }
 
-extern bool obj_dealt[1024];  // HACK: need real object dealt flags
+extern bool obj_dealt[];  // HACK: need real object dealt flags
 bool show_split;
 BOOL show_bbox, show_bbox_2d;
 
@@ -2711,7 +2722,13 @@ typedef struct rqs_elem {
 
 #define RQ_FLAG_FOG 1
 
-#define RQ_MAX_OBJS 128
+// The original 128-entry queue was adequate for the retail game's narrower
+// camera, but a large DromEd viewport can expose hundreds of objects through
+// the portal tree.  Once full, rq_queue_object silently drops every remaining
+// object for the frame, which made doors or other early entries appear while
+// most fixtures and creatures vanished.  Keep the existing two-ended queue
+// algorithm, but give editor-sized views practical headroom.
+#define RQ_MAX_OBJS 4096
 static int rqd_num_objs;
 static int rqd_tluc_objs;
 static rqs_elem rqd_queue[RQ_MAX_OBJS];
@@ -2820,6 +2837,13 @@ static void rq_render_queue(void)
    // to mesh objects.
    for (i = 0; i < rqd_num_objs; ++i) {
       AssertMsg(rqd_queue[i].type == RQT_OBJECT, "rq_render_queue(): Invalid queue entry!");
+      // Legacy UI and diagnostic drawing can select the software primitive
+      // table while the display remains locked.  That state is shared with
+      // both DromEd and the game render loop, so explicitly restore the
+      // hardware table before every queued model.  Otherwise later objects
+      // can be drawn through the software fallback as flat, incorrectly
+      // tinted silhouettes instead of textured D3D geometry.
+      r3_use_lgd3d();
       rq_real_render_call(
          rqd_queue[i].obj, rqd_queue[i].clut, rqd_queue[i].fragment);
    }
@@ -2843,7 +2867,10 @@ static void rq_render_queue(void)
       if (portal_fog_on)
          lgd3d_set_fog_enable(!!(p_elem->flags & RQ_FLAG_FOG));
       if (p_elem->type == RQT_OBJECT)
+      {
+         r3_use_lgd3d();
          rq_real_render_call(p_elem->obj, p_elem->clut, p_elem->fragment);
+      }
       else {
          portal_render_water_polys(p_elem->count);
       }

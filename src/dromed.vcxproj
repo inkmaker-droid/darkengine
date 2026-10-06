@@ -118,7 +118,8 @@
       <ConformanceMode>false</ConformanceMode>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -157,7 +158,8 @@
       <ConformanceMode>false</ConformanceMode>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -2635,6 +2637,13 @@
     <TargetName>Thief2</TargetName>
     <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\Thief2\</IntDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(BuildThief2)'!='true'">
+    <!-- The game and editor share this project but must never share object
+         files.  Otherwise changing BuildThief2 can link stale THIEF2_GAME
+         objects into an executable named DromEd. -->
+    <TargetName>DromEd</TargetName>
+    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\DromEd\</IntDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(BuildThief2)'=='true' And '$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <!-- The runner validates installed retail data before engine startup. -->
@@ -2666,6 +2675,14 @@
       <ExcludedFromBuild>false</ExcludedFromBuild>
     </ClCompile>
   </ItemGroup>
+  <ItemDefinitionGroup Condition="'$(BuildThief2)'!='true'">
+    <Manifest>
+      <!-- The editor's client area is also its render-canvas size.  Without
+           an explicit DPI declaration Windows virtualizes GetClientRect,
+           leaving the right and bottom of a maximized DromEd window unused. -->
+      <AdditionalManifestFiles>$(ProjectDir)dromed.manifest;%(AdditionalManifestFiles)</AdditionalManifestFiles>
+    </Manifest>
+  </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />

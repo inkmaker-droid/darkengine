@@ -174,6 +174,20 @@ static porthw_texture *init_texture(int texture_index)
    porthw_texture *texture = &texture_list[texture_index];
    texture->bm = gr_alloc_bitmap(LM_BITMAP_TYPE, LM_FLAGS, TEX_SIZE, TEX_SIZE);
    texture->bits = texture->bm->bits;
+#if defined(RGB_LIGHTING) && !defined(RGB_888)
+   if (g_lgd3d)
+   {
+      grs_rgb_bitmask bitmask;
+
+      // portal_color_convert() packs cached lightmaps in the hardware
+      // texture format.  Label the bitmap with that same format before the
+      // modern uploader expands it to RGBA; treating 5:6:5 data as 5:5:5
+      // shifts the channels and gives dynamic lighting a green cast.
+      lgd3d_get_opaque_texture_bitmask(&bitmask);
+      gr_set_bitmap_format(texture->bm,
+         bitmask.green == 0x07e0 ? BMF_RGB_565 : BMF_RGB_555);
+   }
+#endif
 #ifndef RGB_LIGHTING
    if (pt_lightmap_pal_index < 0)
       pt_init_lightmap_pal();

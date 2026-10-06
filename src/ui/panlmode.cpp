@@ -215,7 +215,8 @@ STDMETHODIMP_(eLoopMessageResult) cPanelLoopClient::ReceiveMessage(eLoopMessage 
 #ifdef GRABBG_WORKS_IN_HARDWARE  
          if (desc->flags & kPanelClearScreen)
 #endif 
-            gr_clear(0); 
+            if (!(desc->flags & kPanelPreserveScreen))
+               gr_clear(0);
 
          DrawImage(kPanelBG, desc->flags & kPanelCenterBG);
          DrawImage(kPanelFG, desc->flags & kPanelCenterFG);
@@ -379,7 +380,7 @@ static sScrnMode max_scrnmode =
    kScrnModeFlagsValid,
    0, 0, 
    0, 
-   ~(kScrnMode3dDriver),  // anything but d3d 
+   ~0UL, // retain the active presentation backend; panels only draw 2D
 };
 
 static ScrnManContext def_scrnparm = 

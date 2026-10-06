@@ -457,6 +457,7 @@ void cFrostedEdgesEffect::Render(BOOL bIsScreenLocked)
 
    lgd3d_set_fog_enable(FALSE);
    lgd3d_set_blend(TRUE);
+   lgd3d_set_iterated_alpha(bCardSupportsIteratedAlpha);
 
    r3_set_clipmode(R3_NO_CLIP);
    r3_set_clip_flags(R3_CLIP_RGB);
@@ -491,6 +492,7 @@ void cFrostedEdgesEffect::Render(BOOL bIsScreenLocked)
    lgd3d_set_zcompare(bRestoreZCompare);
 
    lgd3d_set_blend(FALSE);
+   lgd3d_set_iterated_alpha(FALSE);
 }
 
 

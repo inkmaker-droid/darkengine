@@ -88,6 +88,11 @@ static float std_max_rad2; // maximum radius squared
 
 static BOOL check_bkgnd = TRUE;
 
+// Enhanced sky installs a renderer here so each projected star can be drawn
+// as its textured, alpha-blended quad.  The old pixel renderer remains the
+// fallback used by the classic sky.
+static tStarRenderCallback star_render_callback = NULL;
+
 // gpix_func is NULL when check_bkgnd is FALSE;
 // i.e., when we want to skip the check.
 static gdgpix_func *gpix_func;
@@ -117,7 +122,7 @@ void StarSetCheckBkgnd(BOOL check)
 
 void StarSetStarRenderCallback(tStarRenderCallback callback)
 {
-    // TODO
+   star_render_callback = callback;
 }
 
 // sets global pointers in the star library
@@ -385,6 +390,19 @@ void StarRender(void)
  
       // If on screen and z is big enough go for it
       if ((s.p.z > std_min_z) && (s.ccodes == 0)) {
+         if (star_render_callback != NULL) {
+            struct sStarRenderCallbackData callback_data;
+            callback_data.pVec = &std_vec[i];
+            callback_data.pPoint = &s;
+            callback_data.color = std_col[i];
+
+            // FALSE means the callback fully rendered the star. TRUE lets
+            // the legacy pixel path run as well, which preserves the API's
+            // original handler/fallback convention.
+            if (!star_render_callback(&callback_data))
+               continue;
+         }
+
          if (std_size <= 1)
          {
             if (anti_alias)

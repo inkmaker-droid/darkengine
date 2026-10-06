@@ -19,15 +19,17 @@
 
 int compute_free_diskspace(char *str)
 {
-    unsigned long sectorsPerCluster, bytesPerSector;
-    unsigned long freeClusters, totalClusters;
+   ULARGE_INTEGER freeBytesAvailable;
 
-    if (GetDiskFreeSpace(str, &sectorsPerCluster, &bytesPerSector,
-              &freeClusters, &totalClusters)) {
-       unsigned long total = (bytesPerSector*sectorsPerCluster*freeClusters);
-       return total < INT_MAX ? total : INT_MAX;
-    } else
-       return -1;
+   // GetDiskFreeSpace returns three 32-bit factors.  Multiplying them in an
+   // unsigned long wraps on modern large volumes before the old INT_MAX cap
+   // can be applied (for example, a healthy drive can appear to have 8 MB).
+   // Ask Windows for the already-combined 64-bit byte count instead.
+   if (GetDiskFreeSpaceExA(str, &freeBytesAvailable, NULL, NULL))
+      return freeBytesAvailable.QuadPart > INT_MAX
+         ? INT_MAX : (int)freeBytesAvailable.QuadPart;
+
+   return -1;
 }
 
 #define MB_SHIFT 20

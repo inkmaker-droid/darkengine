@@ -250,6 +250,7 @@ struct sEditorShortcut
 
 static std::vector<sEditorShortcut> g_DeclaredShortcuts;
 static HWND g_hShortcutWindow;
+static HWND g_hCommandWindow;
 
 enum eShortcutGroup
 {
@@ -281,7 +282,9 @@ struct sCommandHelp
 // in terms of what the key actually does, rather than exposing axis numbers or
 // other implementation details to the user.
 static const sCommandHelp g_BuiltInCommandHelp[] = {
-   {"help", "Show command help", kShortcutHelp},
+   {"help", "Print matching commands in the command console", kShortcutHelp},
+   {"show_command_help", "Open the searchable command reference", kShortcutHelp},
+   {"show_keyboard_shortcuts", "Open the keyboard and mouse reference", kShortcutHelp},
    {"edit_command", "Open the command entry box", kShortcutHelp},
 
    {"cam_rotate 0", "Roll camera right", kShortcutCamera},
@@ -555,7 +558,8 @@ static int ClassifyShortcut(const std::string &command, bool menuShortcut)
    const sCommandHelp *builtIn = FindBuiltInCommandHelp(command);
    if (builtIn)
       return builtIn->group;
-   if (name == "help" || name == "edit_command")
+   if (name == "help" || name == "show_command_help" ||
+       name == "show_keyboard_shortcuts" || name == "edit_command")
       return kShortcutHelp;
    if (StartsWith(name, "cam_") || name == "num_scroll")
       return kShortcutCamera;
@@ -937,11 +941,267 @@ static void ShowKeyboardShortcuts()
       (void *)shortcuts.c_str());
 }
 
+struct sRegisteredCommandHelp
+{
+   std::string name;
+   std::string description;
+   enum CommandType type;
+   bool active;
+};
+
+static BOOL LGAPI CollectRegisteredCommand(const Command *command, void *data)
+{
+   std::vector<sRegisteredCommandHelp> *commands =
+      (std::vector<sRegisteredCommandHelp> *)data;
+   if (!command || !command->name || !*command->name)
+      return TRUE;
+
+   sRegisteredCommandHelp entry;
+   entry.name = command->name;
+   entry.description = command->comment ? command->comment : "";
+   entry.type = command->type;
+   entry.active = command_context_ptr &&
+                  ((command->contexts & *command_context_ptr) != 0);
+   commands->push_back(entry);
+   return TRUE;
+}
+
+static const char *CommandTypeName(enum CommandType type)
+{
+   static const char *names[] = {
+      "command", "bool argument", "integer argument", "number argument",
+      "number argument", "text argument", "boolean variable",
+      "integer variable", "text variable", "integer array",
+      "number variable", "boolean toggle", "integer toggle",
+   };
+   return type >= FUNC_VOID && type <= TOGGLE_INT ? names[type] : "unknown";
+}
+
+static std::string BuildCommandHelpText(const char *filterText)
+{
+   std::vector<sRegisteredCommandHelp> commands;
+   std::string filter = Lowercase(filterText ? filterText : "");
+   std::string text;
+   size_t shown = 0;
+
+   CommandForEach(CollectRegisteredCommand, &commands);
+   std::stable_sort(commands.begin(), commands.end(),
+      [](const sRegisteredCommandHelp &a, const sRegisteredCommandHelp &b) {
+         return _stricmp(a.name.c_str(), b.name.c_str()) < 0;
+      });
+   commands.erase(std::unique(commands.begin(), commands.end(),
+      [](const sRegisteredCommandHelp &a, const sRegisteredCommandHelp &b) {
+         return !_stricmp(a.name.c_str(), b.name.c_str());
+      }), commands.end());
+
+   text = "DromEd command reference\r\n"
+          "========================\r\n\r\n"
+          "Enter commands in DromEd's command pane (the default shortcut is : ).\r\n"
+          "The console command 'help <text>' also prints matching entries; "
+          "'dump_cmds <file>' writes the registry to a file.\r\n\r\n";
+
+   for (const auto &command : commands)
+   {
+      std::string searchable = Lowercase(command.name + " " +
+                               command.description + " " +
+                               CommandTypeName(command.type));
+      if (!filter.empty() && searchable.find(filter) == std::string::npos)
+         continue;
+
+      ++shown;
+      text += command.name;
+      if (command.name.length() < 32)
+         text.append(32 - command.name.length(), ' ');
+      else
+         text += "  ";
+      text += "[";
+      text += CommandTypeName(command.type);
+      text += "]";
+      if (!command.active)
+         text += " [inactive in current mode]";
+      if (!command.description.empty())
+      {
+         text += "\r\n    ";
+         text += command.description;
+      }
+      text += "\r\n";
+   }
+
+   text += "\r\n";
+   text += std::to_string(shown);
+   text += " of ";
+   text += std::to_string(commands.size());
+   text += " registered commands shown.\r\n";
+   return text;
+}
+
+#define kCommandFilterControl 200
+#define kCommandTextControl 201
+
+static void RefreshCommandHelp(HWND hWnd)
+{
+   char filter[256];
+   HWND filterControl = GetDlgItem(hWnd, kCommandFilterControl);
+   HWND textControl = GetDlgItem(hWnd, kCommandTextControl);
+   GetWindowTextA(filterControl, filter, sizeof(filter));
+   std::string text = BuildCommandHelpText(filter);
+   SetWindowTextA(textControl, text.c_str());
+   SendMessage(textControl, EM_SETSEL, 0, 0);
+   SendMessage(textControl, EM_SCROLLCARET, 0, 0);
+}
+
+static LRESULT CALLBACK CommandHelpWindowProc(HWND hWnd, UINT message,
+                                              WPARAM wParam, LPARAM lParam)
+{
+   switch (message)
+   {
+      case WM_CREATE:
+      {
+         HWND label = CreateWindowExA(0, "STATIC", "Filter:",
+            WS_CHILD | WS_VISIBLE | SS_LEFT,
+            10, 14, 46, 20, hWnd, NULL, GetModuleHandle(NULL), NULL);
+         HWND filter = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+            WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
+            0, 0, 0, 0, hWnd, (HMENU)kCommandFilterControl,
+            GetModuleHandle(NULL), NULL);
+         HWND text = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+            WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL |
+            ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL |
+            ES_READONLY,
+            0, 0, 0, 0, hWnd, (HMENU)kCommandTextControl,
+            GetModuleHandle(NULL), NULL);
+         HWND close = CreateWindowExA(0, "BUTTON", "Close",
+            WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
+            0, 0, 0, 0, hWnd, (HMENU)IDOK, GetModuleHandle(NULL), NULL);
+         SendMessage(label, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT),
+                     TRUE);
+         SendMessage(filter, WM_SETFONT,
+                     (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+         SendMessage(text, WM_SETFONT, (WPARAM)GetStockObject(ANSI_FIXED_FONT),
+                     TRUE);
+         SendMessage(text, EM_SETLIMITTEXT, 2 * 1024 * 1024, 0);
+         SendMessage(close, WM_SETFONT,
+                     (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+         RefreshCommandHelp(hWnd);
+         SetFocus(filter);
+         return 0;
+      }
+
+      case WM_SIZE:
+      {
+         int width = LOWORD(lParam);
+         int height = HIWORD(lParam);
+         MoveWindow(GetDlgItem(hWnd, kCommandFilterControl), 62, 10,
+                    max(1, width - 72), 24, TRUE);
+         MoveWindow(GetDlgItem(hWnd, kCommandTextControl), 10, 44,
+                    max(1, width - 20), max(1, height - 90), TRUE);
+         MoveWindow(GetDlgItem(hWnd, IDOK), max(10, width - 100),
+                    max(10, height - 36), 90, 26, TRUE);
+         return 0;
+      }
+
+      case WM_GETMINMAXINFO:
+      {
+         MINMAXINFO *info = (MINMAXINFO *)lParam;
+         info->ptMinTrackSize.x = 560;
+         info->ptMinTrackSize.y = 360;
+         return 0;
+      }
+
+      case WM_COMMAND:
+         if (LOWORD(wParam) == kCommandFilterControl &&
+             HIWORD(wParam) == EN_CHANGE)
+         {
+            RefreshCommandHelp(hWnd);
+            return 0;
+         }
+         if (LOWORD(wParam) == IDOK)
+         {
+            DestroyWindow(hWnd);
+            return 0;
+         }
+         break;
+
+      case WM_CLOSE:
+         DestroyWindow(hWnd);
+         return 0;
+
+      case WM_DESTROY:
+         g_hCommandWindow = NULL;
+         return 0;
+   }
+   return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
+static void ShowCommandHelp()
+{
+   static const char kCommandWindowClass[] = "DromEdCommandHelp";
+   static BOOL registered;
+   AutoAppIPtr(WinApp);
+   HWND owner = pWinApp->GetMainWnd();
+
+   if (g_hCommandWindow && IsWindow(g_hCommandWindow))
+   {
+      ShowWindow(g_hCommandWindow, SW_RESTORE);
+      SetForegroundWindow(g_hCommandWindow);
+      SetFocus(GetDlgItem(g_hCommandWindow, kCommandFilterControl));
+      return;
+   }
+
+   if (!registered)
+   {
+      WNDCLASSA wc;
+      memset(&wc, 0, sizeof(wc));
+      wc.lpfnWndProc = CommandHelpWindowProc;
+      wc.hInstance = GetModuleHandle(NULL);
+      wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+      wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
+      wc.lpszClassName = kCommandWindowClass;
+      registered = RegisterClassA(&wc) != 0 ||
+                   GetLastError() == ERROR_CLASS_ALREADY_EXISTS;
+   }
+   if (!registered)
+      return;
+
+   RECT ownerRect = { 0, 0, 960, 700 };
+   GetWindowRect(owner, &ownerRect);
+   int width = min(960, max(640, ownerRect.right - ownerRect.left - 80));
+   int height = min(700, max(460, ownerRect.bottom - ownerRect.top - 80));
+   int x = ownerRect.left + ((ownerRect.right - ownerRect.left) - width) / 2;
+   int y = ownerRect.top + ((ownerRect.bottom - ownerRect.top) - height) / 2;
+
+   // CreateWindowEx returns immediately and never disables the editor owner:
+   // this and the shortcut reference are deliberately modeless working aids.
+   g_hCommandWindow = CreateWindowExA(WS_EX_TOOLWINDOW,
+      kCommandWindowClass, "DromEd Command Reference",
+      WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+      x, y, width, height, owner, NULL, GetModuleHandle(NULL), NULL);
+}
+
+static Command g_EditorHelpCommands[] = {
+   {"show_keyboard_shortcuts", FUNC_VOID, ShowKeyboardShortcuts,
+    "open the modeless keyboard and mouse reference", HK_EDITOR},
+   {"show_command_help", FUNC_VOID, ShowCommandHelp,
+    "open the modeless searchable command reference", HK_EDITOR},
+};
+
+static void RegisterEditorHelpCommands()
+{
+   static BOOL registered;
+   if (!registered)
+   {
+      COMMANDS(g_EditorHelpCommands, HK_EDITOR);
+      registered = TRUE;
+   }
+}
+
 static void AppendHelpMenu(cMenuSet &menuSet)
 {
    menuSet.BeginMenu("&Help");
    menuSet.AddItem("&Keyboard Shortcuts...",
                    g_MenuCommands.NewCommand("show_keyboard_shortcuts"));
+   menuSet.AddItem("&Command Reference...",
+                   g_MenuCommands.NewCommand("show_command_help"));
    menuSet.EndMenu();
 }
 
@@ -1062,6 +1322,8 @@ void SetMainMenu(const char * pszName)
 {
    AutoAppIPtr(WinApp);
 
+   RegisterEditorHelpCommands();
+
    HWND hWnd = pWinApp->GetMainWnd();
 
    g_MenuSet.DetachFromWindow();
@@ -1091,12 +1353,7 @@ void MenuCommand(unsigned id)
    const char * pszMenuCommand = g_MenuCommands.Lookup(id);
 
    if (pszMenuCommand)
-   {
-      if (!_stricmp(pszMenuCommand, "show_keyboard_shortcuts"))
-         ShowKeyboardShortcuts();
-      else
-         CommandExecute((char *)pszMenuCommand);
-   }
+      CommandExecute((char *)pszMenuCommand);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

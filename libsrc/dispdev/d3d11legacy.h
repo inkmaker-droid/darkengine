@@ -29,6 +29,9 @@ enum eD3D11LegacyBlend {
 };
 
 BOOL D3D11LegacyAvailable(void);
+void D3D11LegacySetScaleToWindow(BOOL enabled);
+void D3D11LegacySetPreserveCanvas(BOOL enabled);
+BOOL D3D11LegacyPreserveCanvas(void);
 BOOL D3D11LegacyBeginFrame(void);
 void D3D11LegacyEndFrame(void);
 void D3D11LegacyDeactivateScene(void);
@@ -48,6 +51,12 @@ void D3D11LegacyBindTexture(int level, void *texture);
 
 BOOL D3D11LegacyDraw(int primitive, const sD3D11LegacyVertex *vertices,
                      int vertexCount, BOOL useSecondTexture);
+
+// Optional diagnostics for automated render checks. Set DARK_RENDER_TRACE to
+// opt in to the plain-text trace; normal game and viewer runs create no log.
+void D3D11LegacyTraceReset(void);
+void D3D11LegacyTrace(const char *format, ...);
+BOOL D3D11LegacyCaptureComplete(void);
 
 #ifdef __cplusplus
 }
