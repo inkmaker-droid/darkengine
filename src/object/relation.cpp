@@ -12,6 +12,7 @@
 #include <reldeleg.h>
 
 #include <linkbase.h>
+#include <dataops_.h>
 
 #include <iobjed.h>
 #include <lnktrait.h>
@@ -62,6 +63,11 @@ ObjID cBaseRelation::gmRespondSourceObj = OBJ_NULL;
 ObjID cBaseRelation::gmRespondDestObj = OBJ_NULL;
 
 IMPLEMENT_UNAGGREGATABLE_SELF_DELETE(cUnknownRelation,IRelation);
+
+cBaseRelation::~cBaseRelation()
+{
+   delete static_cast<cBaseDataOps*>(DataDesc.data_ops);
+}
 
 STDMETHODIMP_(const sRelationDesc*) cBaseRelation::Describe() const
 {

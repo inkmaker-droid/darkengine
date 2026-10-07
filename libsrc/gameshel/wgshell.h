@@ -15,6 +15,7 @@
 #include <wappapi.h>
 
 #include <wdispapi.h>
+#include <d3d11legacy.h>
 
 #include <winshapi.h>
 #include <winput.h>
@@ -264,13 +265,20 @@ inline void cWinGameShell::ClientToGamePoint(int & x, int & y)
     RECT rect;
     unsigned nDisplayWidth, nDisplayHeight;
 
+    if (D3D11LegacyClientToLogicalPoint(&x, &y))
+        return;
+
     m_pWinDisplayDevice->GetWidthHeight(&nDisplayWidth, &nDisplayHeight);
     GetClientRect(m_hWnd, &rect); // left and top will be zero
 
     if (rect.right && rect.bottom)
     {
-        x = (x * nDisplayWidth) / rect.right;
-        y = (y * nDisplayHeight) / rect.bottom;
+        x = x == rect.right / 2
+                ? nDisplayWidth / 2
+                : MulDiv(x, nDisplayWidth, rect.right);
+        y = y == rect.bottom / 2
+                ? nDisplayHeight / 2
+                : MulDiv(y, nDisplayHeight, rect.bottom);
     }
 }
 
@@ -284,13 +292,20 @@ inline void cWinGameShell::GameToClientPoint(int & x, int & y)
     RECT rect;
     unsigned nDisplayWidth, nDisplayHeight;
 
+    if (D3D11LegacyLogicalToClientPoint(&x, &y))
+        return;
+
     m_pWinDisplayDevice->GetWidthHeight(&nDisplayWidth, &nDisplayHeight);
     GetClientRect(m_hWnd, &rect); // left and top will be zero
 
     if (nDisplayWidth && nDisplayHeight)
     {
-        x = (x * rect.right) / nDisplayWidth;
-        y = (y * rect.bottom) / nDisplayHeight;
+        x = x == nDisplayWidth / 2
+                ? rect.right / 2
+                : MulDiv(x, rect.right, nDisplayWidth);
+        y = y == nDisplayHeight / 2
+                ? rect.bottom / 2
+                : MulDiv(y, rect.bottom, nDisplayHeight);
     }
 }
 

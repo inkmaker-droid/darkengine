@@ -178,13 +178,15 @@ static void LoadUserVideoSettings(void)
    DWORD height;
    DWORD depth;
    DWORD fullscreen;
+   DWORD fit;
    DWORD gamma_milli;
 
    if (RegOpenKeyExA(HKEY_CURRENT_USER, kUserSettingsKey, 0, KEY_QUERY_VALUE,
                      &key) != ERROR_SUCCESS)
       return;
 
-   if (ReadUserDword(key, "VideoSettingsVersion", &version) && version == 1)
+   if (ReadUserDword(key, "VideoSettingsVersion", &version) &&
+       (version == 1 || version == 2))
    {
       if (ReadUserDword(key, "GammaMilli", &gamma_milli) &&
           gamma_milli >= 100 && gamma_milli <= 4000)
@@ -206,6 +208,8 @@ static void LoadUserVideoSettings(void)
          config_set_int("game_screen_depth", (int)depth);
       if (ReadUserDword(key, "Fullscreen", &fullscreen))
          config_set_int("game_full_screen", fullscreen != 0);
+      if (version >= 2 && ReadUserDword(key, "Fit", &fit))
+         config_set_int("game_screen_fit", fit != 0);
    }
 
    RegCloseKey(key);
@@ -221,11 +225,12 @@ void LGAPI CoreEngineSaveVideoSettings(void)
 #ifdef THIEF2_GAME
    HKEY key;
    DWORD disposition;
-   DWORD version = 1;
+   DWORD version = 2;
    DWORD width;
    DWORD height;
    DWORD depth;
    DWORD fullscreen;
+   DWORD fit;
    DWORD gamma_milli;
    int dimensions[2];
    int count = 2;
@@ -265,6 +270,12 @@ void LGAPI CoreEngineSaveVideoSettings(void)
       fullscreen = value != 0;
       RegSetValueExA(key, "Fullscreen", 0, REG_DWORD,
                      (const BYTE *)&fullscreen, sizeof(fullscreen));
+   }
+   if (config_get_int("game_screen_fit", &value))
+   {
+      fit = value != 0;
+      RegSetValueExA(key, "Fit", 0, REG_DWORD,
+                     (const BYTE *)&fit, sizeof(fit));
    }
 
    RegSetValueExA(key, "VideoSettingsVersion", 0, REG_DWORD,

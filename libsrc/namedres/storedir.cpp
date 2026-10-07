@@ -55,9 +55,10 @@ cDirectoryStorage::~cDirectoryStorage()
 
 	if (m_pStreamTable)
 	{
-		tHashSetHandle h;
-		for (auto* pEntry = m_pStreamTable->GetFirst(h); pEntry != nullptr; pEntry = m_pStreamTable->GetNext(h))
+		while (!m_pStreamTable->IsEmpty())
 		{
+			tHashSetHandle h;
+			auto* pEntry = m_pStreamTable->GetFirst(h);
 			m_pStreamTable->Remove(pEntry);
 			delete pEntry;
 		}
@@ -511,9 +512,10 @@ void cDirectoryStorage::Close()
 	if (!m_pSubstorageTable)
 		return;
 
-	tHashSetHandle h;
-	for (auto* pEntry = m_pSubstorageTable->GetFirst(h); pEntry != nullptr; pEntry = m_pSubstorageTable->GetNext(h))
+	while (!m_pSubstorageTable->IsEmpty())
 	{
+		tHashSetHandle h;
+		auto* pEntry = m_pSubstorageTable->GetFirst(h);
 		m_pSubstorageTable->Remove(pEntry);
 
 		IStoreHierarchy* pHier = nullptr;

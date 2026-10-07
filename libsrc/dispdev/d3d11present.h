@@ -28,6 +28,8 @@ public:
   void Stop();
   BOOL SetGamma(double gamma);
   BOOL Present(IDirectDrawSurface *surface, int x0, int y0, int x1, int y1);
+  BOOL ClientToLogicalPoint(int *x, int *y) const;
+  BOOL LogicalToClientPoint(int *x, int *y) const;
 
   BOOL BeginHardwareFrame();
   void EndHardwareFrame();
@@ -53,6 +55,7 @@ private:
   BOOL EnsureSourceCapacity(DWORD width, DWORD height);
   BOOL ConfigureLogicalSource(DWORD sourceWidth, DWORD sourceHeight,
                               IDirectDrawSurface *surface);
+  BOOL EnsureSceneSize();
   BOOL EnsureOutputSize();
   BOOL ResizeOutput(DWORD width, DWORD height);
   BOOL FlushHardwareCommands();

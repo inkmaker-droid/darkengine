@@ -3,6 +3,7 @@
 #include <allocapi.h>
 #include <bitmap.h>
 
+#include <cstring>
 #include <limits>
 
 #ifndef NO_DB_MEM
@@ -198,5 +199,68 @@ read_failed:
 
 uint8* ResTgaReadPalette(IStoreStream* pStream, IResMemOverride* pResMem)
 {
-	return nullptr;
+	constexpr auto PaletteEntries = 256u;
+	constexpr auto PaletteSize = PaletteEntries * 3u;
+
+	if (!pStream || !pResMem)
+		return nullptr;
+
+	TgaHeader header{};
+	if (!ReadHeader(pStream, &header) || !SkipBytes(pStream, header.idLength))
+		return nullptr;
+
+	LGALLOC_PUSH_CREDIT();
+	auto* pPalette = static_cast<uint8*>(pResMem->ResMalloc(PaletteSize));
+	LGALLOC_POP_CREDIT();
+	if (!pPalette)
+		return nullptr;
+
+	std::memset(pPalette, 0, PaletteSize);
+	if (header.colorMapType == 1)
+	{
+		const auto first = static_cast<unsigned long>(header.colorMapFirst);
+		const auto count = static_cast<unsigned long>(header.colorMapLength);
+		if (!count || first >= PaletteEntries || count > PaletteEntries - first ||
+			(header.colorMapDepth != 16 && header.colorMapDepth != 24 &&
+			 header.colorMapDepth != 32))
+		{
+			pResMem->ResFree(pPalette);
+			return nullptr;
+		}
+
+		for (unsigned long i = 0; i < count; ++i)
+		{
+			RgbaPixel pixel{};
+			if (!ReadTrueColorPixel(pStream, header.colorMapDepth, 0, &pixel))
+			{
+				pResMem->ResFree(pPalette);
+				return nullptr;
+			}
+
+			auto* pEntry = &pPalette[(first + i) * 3];
+			pEntry[0] = pixel.r;
+			pEntry[1] = pixel.g;
+			pEntry[2] = pixel.b;
+		}
+	}
+	else if (header.colorMapType == 0)
+	{
+		// Enhanced-sky code asks for a palette even for true-color TGAs.
+		// Their decoded BMT_FLAT16 pixels do not use the palette slot, but a
+		// stable fallback keeps that optional lookup from becoming a hard
+		// resource-load failure.
+		for (unsigned int i = 0; i < PaletteEntries; ++i)
+		{
+			pPalette[i * 3] = static_cast<uint8>(((i >> 5) & 7) * 255 / 7);
+			pPalette[i * 3 + 1] = static_cast<uint8>(((i >> 2) & 7) * 255 / 7);
+			pPalette[i * 3 + 2] = static_cast<uint8>((i & 3) * 255 / 3);
+		}
+	}
+	else
+	{
+		pResMem->ResFree(pPalette);
+		return nullptr;
+	}
+
+	return pPalette;
 }

@@ -33,6 +33,7 @@
 
 #include <wdispdd.h>
 #include <wddmode.h>
+#include <d3d11legacy.h>
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -113,6 +114,82 @@ void LGAPI cDDCritMsgHandler::CritMsgNotificationHandler(enum eCritMsgNotificati
 ///////////////////////////////////////
 
 static cDDCritMsgHandler g_DDCritMsgNotificationHandler;
+
+static int g_WindowedClientWidthHint;
+static int g_WindowedClientHeightHint;
+
+extern "C" void D3D11LegacySetWindowedClientSizeHint(int width, int height)
+{
+    g_WindowedClientWidthHint = width > 0 ? width : 0;
+    g_WindowedClientHeightHint = height > 0 ? height : 0;
+}
+
+// Give a newly-windowed modern renderer a useful initial client size without
+// imposing that size as a resize limit. The selected resolution remains the
+// fixed render canvas; subsequent WM_SIZE messages resize only the output.
+static void SizeModernWindowToMode(HWND hwnd, int clientWidth, int clientHeight)
+{
+    MONITORINFO monitorInfo;
+    RECT frame = { 0, 0, clientWidth, clientHeight };
+    const DWORD style = GetWindowLong(hwnd, GWL_STYLE);
+    const DWORD exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+    int workWidth;
+    int workHeight;
+    int frameWidth;
+    int frameHeight;
+    int x;
+    int y;
+
+    if (g_WindowedClientWidthHint > 0 && g_WindowedClientHeightHint > 0)
+    {
+        clientWidth = g_WindowedClientWidthHint;
+        clientHeight = g_WindowedClientHeightHint;
+    }
+    g_WindowedClientWidthHint = 0;
+    g_WindowedClientHeightHint = 0;
+
+    ZeroMemory(&monitorInfo, sizeof(monitorInfo));
+    monitorInfo.cbSize = sizeof(monitorInfo);
+    if (!GetMonitorInfo(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST),
+                        &monitorInfo))
+        return;
+
+    AdjustWindowRectEx(&frame, style, !!GetMenu(hwnd), exStyle);
+    workWidth = monitorInfo.rcWork.right - monitorInfo.rcWork.left;
+    workHeight = monitorInfo.rcWork.bottom - monitorInfo.rcWork.top;
+    frameWidth = frame.right - frame.left;
+    frameHeight = frame.bottom - frame.top;
+
+    if (frameWidth > workWidth || frameHeight > workHeight)
+    {
+        const int chromeWidth = frameWidth - clientWidth;
+        const int chromeHeight = frameHeight - clientHeight;
+        const int availableWidth = max(1, workWidth - chromeWidth);
+        const int availableHeight = max(1, workHeight - chromeHeight);
+
+        if ((__int64)clientWidth * availableHeight >
+            (__int64)clientHeight * availableWidth)
+        {
+            clientHeight = MulDiv(clientHeight, availableWidth, clientWidth);
+            clientWidth = availableWidth;
+        }
+        else
+        {
+            clientWidth = MulDiv(clientWidth, availableHeight, clientHeight);
+            clientHeight = availableHeight;
+        }
+
+        SetRect(&frame, 0, 0, clientWidth, clientHeight);
+        AdjustWindowRectEx(&frame, style, !!GetMenu(hwnd), exStyle);
+        frameWidth = frame.right - frame.left;
+        frameHeight = frame.bottom - frame.top;
+    }
+
+    x = monitorInfo.rcWork.left + (workWidth - frameWidth) / 2;
+    y = monitorInfo.rcWork.top + (workHeight - frameHeight) / 2;
+    SetWindowPos(hwnd, HWND_NOTOPMOST, x, y, frameWidth, frameHeight,
+                 SWP_NOACTIVATE);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -296,6 +373,14 @@ BOOL cDDProvider::DoProcessMessage(UINT msg, WPARAM /*wParam*/, LPARAM /*lParam*
 
     switch (msg)
     {
+        case WM_ENTERSIZEMOVE:
+            D3D11LegacySetInteractiveResize(TRUE);
+            break;
+
+        case WM_EXITSIZEMOVE:
+            D3D11LegacySetInteractiveResize(FALSE);
+            break;
+
         case WM_SIZE:
             if (m_pModeOps && (m_pModeOps->GetModeInfoEx().flags & kGrModeIsWindowed))
             {
@@ -789,6 +874,8 @@ cDDProvider::DoSetMode(const sGrModeInfo & modeInfo,
                 if (m_pModeOps->HandlesWindowResize())
                 {
                     m_pModeOps->SetScaleFactor(0);
+                    SizeModernWindowToMode(GetMainWnd(), modeInfo.w,
+                                           modeInfo.h);
                 }
                 else
                 {

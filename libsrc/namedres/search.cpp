@@ -335,64 +335,60 @@ BOOL cSearchPath::Next(void* pUntypedCookie, IStore** pFoundStore, char* pFoundN
 {
 	auto* pCookie = reinterpret_cast<SearchCookie*>(pUntypedCookie);
 
-	IStore* pStore = nullptr;
-	while (1)
+	while (pCookie->pNode)
 	{
-		while (1)
+		IStore* pStore = nullptr;
+		if (pCookie->pPath)
 		{
-		LABEL_1: // TODO: remove labels
-			if (!pCookie->pNode)
-				return FALSE;
-
-			if (!pCookie->pPath)
-				break;
-
-			auto* pStore = pCookie->pNode->pStore->GetSubstorage(pCookie->pPath, FALSE);
-			if (pStore)
-				goto LABEL_8;
-
-			pCookie = reinterpret_cast<SearchCookie*>(pCookie->pData);
+			pStore = pCookie->pNode->pStore->GetSubstorage(pCookie->pPath, FALSE);
+		}
+		else
+		{
+			pStore = pCookie->pNode->pStore;
+			pStore->AddRef();
 		}
 
-		pStore = pCookie->pNode->pStore;
-		pStore->AddRef();
-	LABEL_8:
-		if (pCookie->pData)
-			break;
-		pCookie->pData = pStore->BeginContents(pCookie->pPattern, pCookie->fFlags);
+		if (!pStore)
+		{
+			pCookie->pNode = pCookie->pNode->pNext;
+			continue;
+		}
 
-		if (pCookie->pData)
-			break;
+		if (!pCookie->pData)
+		{
+			pCookie->pData = pStore->BeginContents(pCookie->pPattern, pCookie->fFlags);
+			if (!pCookie->pData)
+			{
+				pStore->Release();
+				pCookie->pNode = pCookie->pNode->pNext;
+				continue;
+			}
+		}
 
+		while (pStore->Next(pCookie->pData, pFoundName))
+		{
+			if (pCookie->pStreamTable->Search(pFoundName))
+				continue;
+
+			*pFoundStore = pStore;
+
+			if (ppFoundCanonStore)
+			{
+				*ppFoundCanonStore = pStore;
+				pStore->AddRef();
+			}
+
+			pCookie->pStreamTable->Insert(new cNamedStream{ pFoundName, 1 });
+			return TRUE;
+		}
+
+		pStore->EndContents(pCookie->pData);
 		pStore->Release();
-
-		pCookie = reinterpret_cast<SearchCookie*>(pCookie->pData);
+		pCookie->pData = nullptr;
+		pCookie->pNode = pCookie->pNode->pNext;
 	}
 
-	do
-	{
-		if (!pStore->Next(pCookie->pData, pFoundName))
-		{
-			pStore->EndContents(pCookie->pData);
-			pStore->Release();
-			pCookie->pData = nullptr;
-
-			pCookie = reinterpret_cast<SearchCookie*>(pCookie->pData);
-			goto LABEL_1;
-		}
-	} while (pCookie->pStreamTable->Search(pFoundName));
-
-	*pFoundStore = pStore;
-
-	if (ppFoundCanonStore)
-	{
-		*ppFoundCanonStore = pStore;
-		pStore->AddRef();
-	}
-
-	pCookie->pStreamTable->Insert(new cNamedStream{ pFoundName, 1 });
-
-	return TRUE;
+	return FALSE;
 }
 
 ///////////////////////////////////////
@@ -528,7 +524,7 @@ void cSearchPath::ClearStorages()
 	{
 		pStoreNode->pStore->Release();
 		pNext = pStoreNode->pNext;
-		delete pStoreNode;
+		Free(pStoreNode);
 	}
 
 	m_pLastNode = nullptr;

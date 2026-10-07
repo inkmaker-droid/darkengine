@@ -55,9 +55,10 @@ cZipSubstorage::~cZipSubstorage()
 
 	if (m_pStreamTable)
 	{
-		tHashSetHandle h;
-		for (auto* pEntry = m_pStreamTable->GetFirst(h); pEntry != nullptr; m_pStreamTable->GetNext(h))
+		while (!m_pStreamTable->IsEmpty())
 		{
+			tHashSetHandle h;
+			auto* pEntry = m_pStreamTable->GetFirst(h);
 			m_pStreamTable->Remove(pEntry);
 			delete pEntry;
 		}
@@ -525,13 +526,14 @@ void cZipSubstorage::Close()
 	if (!m_pSubstorageTable)
 		return;
 
-	tHashSetHandle h;
-	for (auto* pEntry = m_pSubstorageTable->GetFirst(h); pEntry != nullptr; m_pSubstorageTable->GetNext(h))
+	while (!m_pSubstorageTable->IsEmpty())
 	{
+		tHashSetHandle h;
+		auto* pEntry = m_pSubstorageTable->GetFirst(h);
 		m_pSubstorageTable->Remove(pEntry);
 
 		IStoreHierarchy* pHier = nullptr;
-		if (SUCCEEDED(pEntry->m_pStore->QueryInterface(IID_IStoreHierarchy, reinterpret_cast<void**>(pHier))))
+		if (SUCCEEDED(pEntry->m_pStore->QueryInterface(IID_IStoreHierarchy, reinterpret_cast<void**>(&pHier))))
 		{
 			pHier->Close();
 			pHier->Release();

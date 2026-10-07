@@ -296,7 +296,16 @@ int ZInflateStreamToMem(IStoreStream* pStream, int nStreamSize, void* pData, int
 	{
 		if (!zBlock.avail_in && totalReadSize < nStreamSize)
 		{
-			pStream->Read(std::min(static_cast<long>(BufferSize), nStreamSize - totalReadSize), inputBuffer);
+			actualReadSize = pStream->Read(
+				std::min(static_cast<long>(BufferSize), nStreamSize - totalReadSize),
+				inputBuffer);
+			if (actualReadSize <= 0)
+			{
+				inflateEnd(&zBlock);
+				Free(inputBuffer);
+				return -1;
+			}
+
 			zBlock.next_in = reinterpret_cast<Bytef*>(inputBuffer);
 			zBlock.avail_in = actualReadSize;
 			totalReadSize += actualReadSize;
@@ -311,6 +320,7 @@ int ZInflateStreamToMem(IStoreStream* pStream, int nStreamSize, void* pData, int
 			if (ret)
 			{
 				CriticalMsg1("zlib inflate returned %d!\n", ret);
+				inflateEnd(&zBlock);
 				Free(inputBuffer);
 				return -1;
 			}

@@ -243,7 +243,8 @@ typedef struct _StateRecord
 {
    Context* context;
    BOOL first_frame;
-   BOOL from_game; 
+   BOOL from_game;
+   BOOL from_editor;
    BOOL in_mode; 
 } StateRecord;
 
@@ -413,6 +414,7 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
          // menu's client-area adjustment from masquerading as a user resize.
          EditorStartWindowResizeTracking();
          state->from_game = IsEqualGUID(info.mode->from.pID,&LOOPID_GameMode);
+          state->from_editor = IsEqualGUID(info.mode->from.pID,&LOOPID_EditMode);
 
          if (state->from_game)
          {
@@ -522,6 +524,15 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
                RemoveMissionBackup(); 
                RestoreBrushSelection(); 
             }
+            else if (state->from_editor)
+            {
+                // Changing the editor's canvas size switches from edit mode
+                // back into edit mode.  The brush-list loop removes its
+                // transient object/light brushes while the old mode exits;
+                // rebuild them after the new GUI and canvas are ready, just
+                // as the game-preview return path does after its backup load.
+                RestoreBrushSelection();
+            }
 
             state->first_frame = FALSE;
 
@@ -629,6 +640,12 @@ void enter_edit_mode(char* args)
       scrnmode.w = w; 
       scrnmode.h = h; 
    }
+
+   // An edit-to-edit mode switch (notably a window resize) destroys all
+   // transient object/light brushes.  Remember the current brush before the
+   // switch so the first frame in the rebuilt editor can recreate those
+   // brushes and restore the user's selection.
+   SaveBrushSelection();
 
    {
       ILoop* looper = AppGetObj(ILoop);

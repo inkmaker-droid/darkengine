@@ -545,10 +545,13 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
 
       case kMsgEnterMode:
       {
+         int fit = 0;
+         config_get_int("game_screen_fit", &fit);
          // DromEd and the retail game share this loop client.  Once either
          // enters gameplay, its fixed logical canvas must be aspect-fitted to
          // the host window and its CPU canvas is only a HUD overlay.
          D3D11LegacySetScaleToWindow(TRUE);
+         D3D11LegacySetFitToViewport(fit != 0);
          D3D11LegacySetPreserveCanvas(FALSE);
 #ifdef HISTO
          ILoop * pLoop = AppGetObj(ILoop);
@@ -584,7 +587,10 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
       // Fall through
       case kMsgResumeMode:
       {
+         int fit = 0;
+         config_get_int("game_screen_fit", &fit);
          D3D11LegacySetScaleToWindow(TRUE);
+         D3D11LegacySetFitToViewport(fit != 0);
          D3D11LegacySetPreserveCanvas(FALSE);
 
 #ifdef EDITOR

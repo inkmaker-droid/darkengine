@@ -510,9 +510,6 @@ EXTERN BOOL FindVhotLocation(mxs_vector *loc, ObjID obj, int vhot)
    mxs_vector scale;
    int idx;
 
-   // i guess we are disallowing parameterized lights, then?
-   mds_parm parms[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-
    ObjPos *pos = ObjPosGet(obj);
 
    // ummm, i think this should have been here all along, eh?
@@ -534,10 +531,6 @@ EXTERN BOOL FindVhotLocation(mxs_vector *loc, ObjID obj, int vhot)
       if (objmodelGetModelType(idx) == OM_TYPE_MD)
       {
          mds_model *model = (mds_model *) objmodelGetModel(idx);
-
-         r3_start_frame();
-         md_eval_vhots(model, parms);
-         r3_end_frame();
 
          mds_vhot *vh = md_vhot_list(model);
 

@@ -157,9 +157,18 @@ same power curve as the legacy palette correction.
 
 The Video Options screen includes a **Display Mode** toggle. **Fullscreen**
 uses a borderless window on the current display. **Windowed** uses a normal,
-resizable window. Resolution and display-mode changes are applied when
-**Done** is selected. The same setting can be changed in `cam.cfg` with
-`game_full_screen 1` or `game_full_screen 0`.
+resizable window. Display-mode changes take effect immediately; resolution
+changes are applied when **Done** is selected. In Windowed mode, the selected
+resolution is the fixed internal render size, not a maximum window size.
+Entering Windowed mode opens the client area at that size (clamped to the
+monitor work area); resizing the window afterward only resizes the swap-chain
+output and scales that fixed render canvas. Select **Fit** instead of a fixed
+resolution to render the 3D scene directly at the aspect-fitted client area in
+Windowed mode or at the display's native pixel area in Fullscreen mode. During
+an interactive window resize, the last completed scene is scaled; the single
+scene/depth pair is resized once the drag ends. The settings can also be
+changed in `cam.cfg` with `game_full_screen 1` or `game_full_screen 0` and
+`game_screen_fit 1` or `game_screen_fit 0`.
 
 On a multi-monitor system, the display containing the game window determines
 both the resolution list and the target for borderless fullscreen. To change

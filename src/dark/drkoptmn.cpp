@@ -20,6 +20,7 @@
 #include <drksound.h>
 
 #include <appsfx.h>
+#include <d3d11legacy.h>
 #include <gamescrn.h>
 #include <scrnmode.h>
 
@@ -279,7 +280,18 @@ class cOptions: public cDarkPanel
 public:
    cOptions() : cDarkPanel(&gDesc)
    {
-   };
+      // These gadgets are created lazily as the user changes subpanels.
+      // LGadCreateBoxInternal checks the active flag before initializing its
+      // Region, so an uninitialized list can be mistaken for a live gadget.
+      // The sibling Shock/Deep Cover option panels perform the same setup.
+      memset(&mTabButtons, 0, sizeof(mTabButtons));
+      memset(mSubPanelButtons, 0, sizeof(mSubPanelButtons));
+      memset(&mListButtons, 0, sizeof(mListButtons));
+      memset(&mBindButtons, 0, sizeof(mBindButtons));
+      memset(&mBindScrollers, 0, sizeof(mBindScrollers));
+      memset(mSliders, 0, sizeof(mSliders));
+      memset(&mPanelVideoMode, 0, sizeof(mPanelVideoMode));
+   }
 
    void SetInitialSub ()
    {
@@ -489,6 +501,9 @@ protected:
 
    //video-related data
    BOOL mNumVidDevices;
+   sScrnMode mPendingVideoMode;
+   sScrnMode mPanelVideoMode;
+   BOOL mPendingFit;
    int mSelectedRes;
    int m3dDriver;
    //binding-related data
@@ -852,9 +867,11 @@ protected:
       //let's get some info about the video card
       mNumVidDevices = lgd3d_enumerate_devices ();
 
-      sScrnMode mode;
-      const sScrnMode *old_mode = GetGameScreenMode ();
-      memcpy (&mode, old_mode, sizeof (sScrnMode));
+      mPendingVideoMode = *GetGameScreenMode ();
+      int fit = 0;
+      config_get_int ("game_screen_fit", &fit);
+      mPendingFit = fit != 0;
+      sScrnMode &mode = mPendingVideoMode;
 
       int fog_togval;
       config_get_int("fogging",&fog_togval);
@@ -874,8 +891,6 @@ protected:
 		  portal_fog_on = (fog_togval == 1);         
 		  mode.flags &= ~kScrnMode3dDriver;         
       }
-
-      SetGameScreenMode (&mode);
 
       SetDisplayModeString();
 
@@ -1324,17 +1339,17 @@ protected:
       if (mSelectedRes == -1)
          return;
 
-      sScrnMode mode;
-      const sScrnMode *old_mode = GetGameScreenMode ();
-      memcpy (&mode, old_mode, sizeof (sScrnMode));
-
       char *mode_desc = (char *)(const char *)mListButtonStrs[mSelectedRes];
-      if (sscanf (mode_desc, "%dx%d", &mode.w, &mode.h) != 2)
+      if (!strcmp (mode_desc, "Fit"))
+      {
+         mPendingFit = TRUE;
          return;
-      mode.bitdepth = 16;
-
-      SetGameScreenMode (&mode);
-      ScrnModeSetConfig (GetGameScreenMode (), "game_");
+      }
+      if (sscanf (mode_desc, "%dx%d", &mPendingVideoMode.w,
+                  &mPendingVideoMode.h) != 2)
+         return;
+      mPendingFit = FALSE;
+      mPendingVideoMode.bitdepth = 16;
    }
 
    //////////////////////////////////////////////////////
@@ -1342,30 +1357,39 @@ protected:
    void FillVidResStrs ()
    {
       sDisplayResolution resolutions[MAX_DISPLAY_RESOLUTIONS];
-      const sScrnMode *mode = GetGameScreenMode ();
       int resolutionCount = GetDisplayResolutions(resolutions,
                                                    MAX_DISPLAY_RESOLUTIONS);
+      int totalCount = resolutionCount + 1;
       char buf[32], mode_str[32];
 
       //get current mode string so we know what to select
-      sprintf (mode_str, "%dx%d", mode->w, mode->h);
+      sprintf (mode_str, "%dx%d", mPendingVideoMode.w,
+               mPendingVideoMode.h);
       //dunny button will be default selection if we dont have a matching res for some reason
       LGadRadioButtonSelect (&mListButtons, mListPrevPick = NUM_LIST - 1); 
 
-      if (mTopList > resolutionCount - (NUM_LIST - 1))
-         mTopList = resolutionCount - (NUM_LIST - 1);
+      if (mTopList > totalCount - (NUM_LIST - 1))
+         mTopList = totalCount - (NUM_LIST - 1);
       if (mTopList < 0)
          mTopList = 0;
-      mCanScrollListDown = mTopList + (NUM_LIST - 1) < resolutionCount;
+      mCanScrollListDown = mTopList + (NUM_LIST - 1) < totalCount;
 
       mNumListTotal = 0;
+      mSelectedRes = -1;
       long i;
-      for (i = 0; i < NUM_LIST - 1 && mTopList + i < resolutionCount; ++i)
+      for (i = 0; i < NUM_LIST - 1 && mTopList + i < totalCount; ++i)
       {
-         sDisplayResolution *resolution = &resolutions[mTopList + i];
-         sprintf (buf, "%dx%d", resolution->w, resolution->h);
+         int listIndex = mTopList + i;
+         if (listIndex == 0)
+            strcpy (buf, "Fit");
+         else
+         {
+            sDisplayResolution *resolution = &resolutions[listIndex - 1];
+            sprintf (buf, "%dx%d", resolution->w, resolution->h);
+         }
          mListButtonStrs[i] = buf;
-         if (!strcmp (buf, mode_str))
+         if ((mPendingFit && listIndex == 0) ||
+             (!mPendingFit && !strcmp (buf, mode_str)))
             LGadRadioButtonSelect (&mListButtons, mListPrevPick = i);
          ++mNumListTotal;
       }
@@ -1554,10 +1578,9 @@ protected:
 
    void SetDisplayModeString ()
    {
-      const sScrnMode *mode = GetGameScreenMode ();
       cStr &str = mSubPanelStrs[(int)kDisplayMode];
       str = "Display Mode: ";
-      str += (mode->flags & kScrnModeWindowed) ? "Windowed" : "Fullscreen";
+      str += (mPendingVideoMode.flags & kScrnModeWindowed) ? "Windowed" : "Fullscreen";
       mSubPanelElems[(int)kDisplayMode].draw_data = (void *)(const char *)str;
    }
 
@@ -1958,22 +1981,48 @@ protected:
 
          case kDisplayMode:
          {
-            sScrnMode mode = *GetGameScreenMode ();
-            if (mode.flags & kScrnModeWindowed)
+            if (mPendingVideoMode.flags & kScrnModeWindowed)
             {
-               mode.flags &= ~kScrnModeWindowed;
-               mode.flags |= kScrnModeFullScreen|kScrnMode2dDriver;
+               mPendingVideoMode.flags &= ~(kScrnModeWindowed |
+                                             kScrnModeFullScreen);
+               mPendingVideoMode.flags |= kScrnModeFullScreen |
+                                           kScrnMode2dDriver;
             }
             else
             {
-               mode.flags &= ~(kScrnModeFullScreen|kScrnMode3dDriver);
-               mode.flags |= kScrnModeWindowed|kScrnMode2dDriver;
+               mPendingVideoMode.flags &= ~(kScrnModeWindowed |
+                                             kScrnModeFullScreen);
+               mPendingVideoMode.flags |= kScrnModeWindowed |
+                                           kScrnMode2dDriver;
             }
-            SetGameScreenMode (&mode);
-            ScrnModeSetConfig (GetGameScreenMode (), "game_");
-            SetDisplayModeString ();
-            FillBlack ((int)kDisplayMode);
-            RedrawDisplay ();
+
+            // Apply presentation changes immediately, but restart this panel
+            // through the loop manager so its regions are torn down before
+            // the display surface and HWND style change. The panel remains a
+            // 640x480 logical canvas; the game resolution is only an initial
+            // client-size hint for the newly windowed HWND.
+            config_set_int("game_screen_fit", mPendingFit);
+            D3D11LegacySetFitToViewport(mPendingFit);
+            mPendingVideoMode = *SetGameScreenMode(&mPendingVideoMode);
+            ScrnModeSetConfig(GetGameScreenMode(), "game_");
+            CoreEngineSaveVideoSettings();
+            if (mPendingVideoMode.flags & kScrnModeWindowed)
+               D3D11LegacySetWindowedClientSizeHint(mPendingVideoMode.w,
+                                                    mPendingVideoMode.h);
+            else
+               D3D11LegacySetWindowedClientSizeHint(0, 0);
+
+            mPanelVideoMode = mPendingVideoMode;
+            mPanelVideoMode.valid_fields = kScrnModeAllValid;
+            mPanelVideoMode.w = 640;
+            mPanelVideoMode.h = 480;
+            mPanelVideoMode.bitdepth = 16;
+
+            cAutoIPtr<IPanelMode> panelMode = GetPanelMode();
+            sPanelModeDesc panelDesc = *panelMode->Describe();
+            panelDesc.screen_mode = &mPanelVideoMode;
+            panelMode->SetDescription(&panelDesc);
+            panelMode->Switch(kLoopModeSwitch);
          }
          break;
 
@@ -2556,6 +2605,9 @@ protected:
             // gamma and display mode immediately.
             TouchGamma ((((MAX_GAMMA - MIN_GAMMA) / 20.0) *
                          (float)(20-m_gamma)) + MIN_GAMMA);
+            config_set_int ("game_screen_fit", mPendingFit);
+            D3D11LegacySetFitToViewport (mPendingFit);
+            SetGameScreenMode (&mPendingVideoMode);
             ScrnModeSetConfig (GetGameScreenMode (), "game_");
             CoreEngineSaveVideoSettings();
 

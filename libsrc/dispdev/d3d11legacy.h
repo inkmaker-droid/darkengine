@@ -30,8 +30,13 @@ enum eD3D11LegacyBlend {
 
 BOOL D3D11LegacyAvailable(void);
 void D3D11LegacySetScaleToWindow(BOOL enabled);
+void D3D11LegacySetFitToViewport(BOOL enabled);
+void D3D11LegacySetInteractiveResize(BOOL resizing);
 void D3D11LegacySetPreserveCanvas(BOOL enabled);
 BOOL D3D11LegacyPreserveCanvas(void);
+void D3D11LegacySetWindowedClientSizeHint(int width, int height);
+BOOL D3D11LegacyClientToLogicalPoint(int *x, int *y);
+BOOL D3D11LegacyLogicalToClientPoint(int *x, int *y);
 BOOL D3D11LegacyBeginFrame(void);
 void D3D11LegacyEndFrame(void);
 void D3D11LegacyDeactivateScene(void);

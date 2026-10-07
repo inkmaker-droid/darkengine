@@ -25,7 +25,7 @@ class cAIRangedMode
 {
 public:
    cAIRangedMode(cAINewRangedSubcombat* pOwner);
-   ~cAIRangedMode(void);
+   virtual ~cAIRangedMode(void);
 
    virtual void Reset(void); 
    virtual void Save(void) const;

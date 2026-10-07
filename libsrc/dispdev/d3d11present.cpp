@@ -48,12 +48,42 @@ struct sD3D11LegacyCommand {
 };
 
 static BOOL g_D3D11ScaleToWindow = TRUE;
+static BOOL g_D3D11FitToViewport = FALSE;
+static BOOL g_D3D11InteractiveResize = FALSE;
 static BOOL g_D3D11PreserveLegacyCanvas = FALSE;
 static char g_D3D11CapturePath[MAX_PATH] = "";
 static int g_D3D11CaptureFrame = 1;
 static int g_D3D11HardwareFrameCount = 0;
 static BOOL g_D3D11CaptureConfigured = FALSE;
 static BOOL g_D3D11CaptureComplete = FALSE;
+
+static RECT ComputePresentationViewport(DWORD sourceWidth, DWORD sourceHeight,
+                                        DWORD outputWidth, DWORD outputHeight) {
+  RECT viewport = {0, 0, (LONG)outputWidth, (LONG)outputHeight};
+  LONG width, height;
+
+  if (!sourceWidth || !sourceHeight || !outputWidth || !outputHeight)
+    return viewport;
+
+  if (g_D3D11ScaleToWindow) {
+    if ((__int64)outputWidth * sourceHeight >
+        (__int64)outputHeight * sourceWidth) {
+      height = (LONG)outputHeight;
+      width = max(1, MulDiv(height, (int)sourceWidth, (int)sourceHeight));
+      viewport.left = ((LONG)outputWidth - width) / 2;
+      viewport.right = viewport.left + width;
+    } else {
+      width = (LONG)outputWidth;
+      height = max(1, MulDiv(width, (int)sourceHeight, (int)sourceWidth));
+      viewport.top = ((LONG)outputHeight - height) / 2;
+      viewport.bottom = viewport.top + height;
+    }
+  } else {
+    viewport.right = min((LONG)sourceWidth, (LONG)outputWidth);
+    viewport.bottom = min((LONG)sourceHeight, (LONG)outputHeight);
+  }
+  return viewport;
+}
 
 static BOOL TraceEnabled(void) {
   static int enabled = -1;
@@ -165,6 +195,7 @@ struct cD3D11Presenter::sImpl {
   HWND hwnd;
   DWORD sourceWidth, sourceHeight, targetWidth, targetHeight;
   DWORD backBufferWidth, backBufferHeight;
+  DWORD sceneWidth, sceneHeight;
   DWORD sourceTextureWidth, sourceTextureHeight;
   IDirectDrawSurface *legacySurface;
   ID3D11Device *device;
@@ -197,6 +228,7 @@ struct cD3D11Presenter::sImpl {
   sImpl()
       : hwnd(NULL), sourceWidth(0), sourceHeight(0), targetWidth(0),
         targetHeight(0), backBufferWidth(0), backBufferHeight(0),
+        sceneWidth(0), sceneHeight(0),
         sourceTextureWidth(0), sourceTextureHeight(0), legacySurface(NULL),
         device(NULL), context(NULL), swapChain(NULL), renderTarget(NULL),
         sourceTexture(NULL), sceneTexture(NULL), depthTexture(NULL),
@@ -292,6 +324,7 @@ void cD3D11Presenter::Stop() {
   m_pImpl->sourceWidth = m_pImpl->sourceHeight = 0;
   m_pImpl->targetWidth = m_pImpl->targetHeight = 0;
   m_pImpl->backBufferWidth = m_pImpl->backBufferHeight = 0;
+  m_pImpl->sceneWidth = m_pImpl->sceneHeight = 0;
   m_pImpl->sourceTextureWidth = m_pImpl->sourceTextureHeight = 0;
   m_pImpl->hardwareFrame = m_pImpl->sceneActive = m_pImpl->sceneOpen = FALSE;
   m_pImpl->sourceNeedsFullUpload = FALSE;
@@ -354,11 +387,27 @@ HRESULT cD3D11Presenter::CreateSceneResources(sImpl *p, DWORD width,
                                                     &depthView)))
     goto fail;
 
+  // The old scene may still be bound by either the hardware pass or the
+  // composite pass. Unbind it before replacing the logical-resolution
+  // resources, but leave the independent swap-chain target alone.
+  {
+    ID3D11ShaderResourceView *nulls[2] = {NULL, NULL};
+    p->context->PSSetShaderResources(0, 2, nulls);
+    p->context->OMSetRenderTargets(0, NULL, NULL);
+  }
+  ReleaseInterface(p->depthView);
+  ReleaseInterface(p->depthTexture);
+  ReleaseInterface(p->sceneTarget);
+  ReleaseInterface(p->sceneView);
+  ReleaseInterface(p->sceneTexture);
+
   p->sceneTexture = sceneTexture;
   p->sceneTarget = sceneTarget;
   p->sceneView = sceneView;
   p->depthTexture = depthTexture;
   p->depthView = depthView;
+  p->sceneWidth = width;
+  p->sceneHeight = height;
   return S_OK;
 
 fail:
@@ -419,29 +468,65 @@ BOOL cD3D11Presenter::ConfigureLogicalSource(DWORD sw, DWORD sh,
 
   if (!m_pImpl || !m_pImpl->device || !surface || !sw || !sh)
     return FALSE;
+  m_pImpl->ReleaseQueuedCommands();
   if (!EnsureSourceCapacity(sw, sh))
     return FALSE;
 
   overlayPixels.assign(sw * sh, 0);
-  m_pImpl->ReleaseQueuedCommands();
   ReleaseInterface(m_pImpl->legacySurface);
   m_pImpl->legacySurface = surface;
   surface->AddRef();
   m_pImpl->sourceWidth = sw;
   m_pImpl->sourceHeight = sh;
   m_pImpl->overlayPixels.swap(overlayPixels);
+  if (!EnsureSceneSize())
+    return FALSE;
   m_pImpl->hardwareFrame = FALSE;
   m_pImpl->sceneActive = FALSE;
   m_pImpl->sceneOpen = FALSE;
   m_pImpl->sourceNeedsFullUpload = TRUE;
-  D3D11LegacyTrace("logical-source %lux%lu output=%lux%lu scale=%d preserve=%d",
+  D3D11LegacyTrace("logical-source %lux%lu output=%lux%lu scale=%d fit=%d preserve=%d",
                    sw, sh, m_pImpl->backBufferWidth,
                    m_pImpl->backBufferHeight, g_D3D11ScaleToWindow,
+                   g_D3D11FitToViewport,
                    g_D3D11PreserveLegacyCanvas);
   // Logical canvas changes do not invalidate model textures.  Keep the
   // desired bindings in sync with lgd3d's texture-id cache; clearing them
   // here makes the first objects after a menu-to-game transition sample a
   // null SRV when lgd3d correctly decides the texture ID has not changed.
+  return TRUE;
+}
+
+BOOL cD3D11Presenter::EnsureSceneSize() {
+  DWORD width, height;
+
+  if (!m_pImpl || !m_pImpl->device || !m_pImpl->sourceWidth ||
+      !m_pImpl->sourceHeight)
+    return FALSE;
+
+  width = m_pImpl->sourceWidth;
+  height = m_pImpl->sourceHeight;
+  if (g_D3D11ScaleToWindow && g_D3D11FitToViewport &&
+      m_pImpl->backBufferWidth && m_pImpl->backBufferHeight) {
+    RECT viewport = ComputePresentationViewport(
+        m_pImpl->sourceWidth, m_pImpl->sourceHeight,
+        m_pImpl->backBufferWidth, m_pImpl->backBufferHeight);
+    width = viewport.right - viewport.left;
+    height = viewport.bottom - viewport.top;
+  }
+
+  if (width == m_pImpl->sceneWidth && height == m_pImpl->sceneHeight)
+    return TRUE;
+  // While the user drags a window edge, scale the last completed scene.
+  // Reallocate the single scene/depth pair once WM_EXITSIZEMOVE arrives.
+  if (g_D3D11InteractiveResize && m_pImpl->sceneTexture)
+    return TRUE;
+  m_pImpl->ReleaseQueuedCommands();
+  if (FAILED(CreateSceneResources(m_pImpl, width, height)))
+    return FALSE;
+  m_pImpl->hardwareFrame = FALSE;
+  m_pImpl->sceneActive = FALSE;
+  m_pImpl->sceneOpen = FALSE;
   return TRUE;
 }
 
@@ -457,27 +542,20 @@ BOOL cD3D11Presenter::ResizeOutput(DWORD width, DWORD height) {
   m_pImpl->ReleaseQueuedCommands();
   m_pImpl->context->PSSetShaderResources(0, 2, nulls);
   m_pImpl->context->OMSetRenderTargets(0, NULL, NULL);
-  ReleaseInterface(m_pImpl->depthView);
-  ReleaseInterface(m_pImpl->depthTexture);
-  ReleaseInterface(m_pImpl->sceneTarget);
-  ReleaseInterface(m_pImpl->sceneView);
-  ReleaseInterface(m_pImpl->sceneTexture);
   ReleaseInterface(m_pImpl->renderTarget);
 
   hr = m_pImpl->swapChain->ResizeBuffers(1, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
-  if (FAILED(hr) || FAILED(CreateRenderTarget(m_pImpl)) ||
-      FAILED(CreateSceneResources(m_pImpl, m_pImpl->backBufferWidth,
-                                  m_pImpl->backBufferHeight)) ||
-      !EnsureSourceCapacity(m_pImpl->backBufferWidth,
-                            m_pImpl->backBufferHeight))
+  if (FAILED(hr) || FAILED(CreateRenderTarget(m_pImpl)))
+  {
+    m_pImpl->targetWidth = m_pImpl->targetHeight = 0;
     return FALSE;
+  }
 
   m_pImpl->targetWidth = width;
   m_pImpl->targetHeight = height;
   m_pImpl->hardwareFrame = FALSE;
-  m_pImpl->sceneActive = FALSE;
   m_pImpl->sceneOpen = FALSE;
-  return TRUE;
+  return EnsureSceneSize();
 }
 
 BOOL cD3D11Presenter::EnsureOutputSize() {
@@ -488,7 +566,11 @@ BOOL cD3D11Presenter::EnsureOutputSize() {
   GetClientRect(m_pImpl->hwnd, &rc);
   width = rc.right - rc.left;
   height = rc.bottom - rc.top;
-  return width && height && ResizeOutput(width, height);
+  if (!width || !height)
+    return FALSE;
+  if (width != m_pImpl->targetWidth || height != m_pImpl->targetHeight)
+    return ResizeOutput(width, height);
+  return EnsureSceneSize();
 }
 
 BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
@@ -520,6 +602,8 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
   ID3DBlob *vb = NULL, *pb = NULL;
   HRESULT hr;
   DWORD clientWidth, clientHeight;
+  DWORD sceneWidth, sceneHeight;
+  RECT sceneViewport;
   int i;
   D3D11_INPUT_ELEMENT_DESC il[] = {
       {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
@@ -533,9 +617,8 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
        D3D11_INPUT_PER_VERTEX_DATA, 0}};
   if (!hwnd || !sw || !sh || !surface)
     return FALSE;
-  // A menu/movie/game resolution is only a logical canvas change.  Keep the
-  // output-sized scene/depth targets and swap chain alive; replace only the
-  // CPU-canvas upload texture and its DirectDraw-compatible backing surface.
+  // A menu/movie/game resolution is a logical canvas and scene-size change.
+  // Keep the device and swap chain alive; only logical resources are replaced.
   if (m_pImpl->device && m_pImpl->swapChain && m_pImpl->hwnd == hwnd) {
     if (ConfigureLogicalSource(sw, sh, surface))
       return TRUE;
@@ -576,10 +659,17 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
         levels, 3, D3D11_SDK_VERSION, &sd, &m_pImpl->swapChain,
         &m_pImpl->device, &got, &m_pImpl->context);
   if (FAILED(hr) || FAILED(CreateRenderTarget(m_pImpl)) ||
-      FAILED(CreateSceneResources(m_pImpl, m_pImpl->backBufferWidth,
-                                  m_pImpl->backBufferHeight)) ||
-      !EnsureSourceCapacity(max(sw, m_pImpl->backBufferWidth),
-                            max(sh, m_pImpl->backBufferHeight)))
+      !EnsureSourceCapacity(sw, sh))
+    goto fail;
+  sceneWidth = sw;
+  sceneHeight = sh;
+  if (g_D3D11ScaleToWindow && g_D3D11FitToViewport) {
+    sceneViewport = ComputePresentationViewport(
+        sw, sh, m_pImpl->backBufferWidth, m_pImpl->backBufferHeight);
+    sceneWidth = sceneViewport.right - sceneViewport.left;
+    sceneHeight = sceneViewport.bottom - sceneViewport.top;
+  }
+  if (FAILED(CreateSceneResources(m_pImpl, sceneWidth, sceneHeight)))
     goto fail;
   if (FAILED(CompileShader(cvs, "main", "vs_4_0", &vb)) ||
       FAILED(m_pImpl->device->CreateVertexShader(vb->GetBufferPointer(),
@@ -697,6 +787,63 @@ BOOL cD3D11Presenter::SetGamma(double g) {
   m_pImpl->gamma = (float)g;
   return TRUE;
 }
+
+BOOL cD3D11Presenter::ClientToLogicalPoint(int *x, int *y) const {
+  RECT client, viewport;
+  int width, height, localX, localY;
+
+  if (!m_pImpl || !m_pImpl->hwnd || !m_pImpl->sourceWidth ||
+      !m_pImpl->sourceHeight || !x || !y ||
+      !GetClientRect(m_pImpl->hwnd, &client))
+    return FALSE;
+  viewport = ComputePresentationViewport(
+      m_pImpl->sourceWidth, m_pImpl->sourceHeight,
+      client.right - client.left, client.bottom - client.top);
+  width = viewport.right - viewport.left;
+  height = viewport.bottom - viewport.top;
+  if (!width || !height)
+    return FALSE;
+
+  localX = *x - viewport.left;
+  localY = *y - viewport.top;
+  // Mouselook warps to the logical center. Preserve that exact fixed point
+  // even when an odd-sized client viewport cannot round-trip by division.
+  *x = localX == width / 2
+           ? (int)m_pImpl->sourceWidth / 2
+           : MulDiv(localX, (int)m_pImpl->sourceWidth, width);
+  *y = localY == height / 2
+           ? (int)m_pImpl->sourceHeight / 2
+           : MulDiv(localY, (int)m_pImpl->sourceHeight, height);
+  return TRUE;
+}
+
+BOOL cD3D11Presenter::LogicalToClientPoint(int *x, int *y) const {
+  RECT client, viewport;
+  int width, height;
+
+  if (!m_pImpl || !m_pImpl->hwnd || !m_pImpl->sourceWidth ||
+      !m_pImpl->sourceHeight || !x || !y ||
+      !GetClientRect(m_pImpl->hwnd, &client))
+    return FALSE;
+  viewport = ComputePresentationViewport(
+      m_pImpl->sourceWidth, m_pImpl->sourceHeight,
+      client.right - client.left, client.bottom - client.top);
+  width = viewport.right - viewport.left;
+  height = viewport.bottom - viewport.top;
+  if (!width || !height)
+    return FALSE;
+
+  *x = viewport.left +
+       (*x == (int)m_pImpl->sourceWidth / 2
+            ? width / 2
+            : MulDiv(*x, width, (int)m_pImpl->sourceWidth));
+  *y = viewport.top +
+       (*y == (int)m_pImpl->sourceHeight / 2
+            ? height / 2
+            : MulDiv(*y, height, (int)m_pImpl->sourceHeight));
+  return TRUE;
+}
+
 static BYTE ExpandChannel(DWORD p, DWORD m) {
   DWORD s = 0, n;
   if (!m)
@@ -731,11 +878,10 @@ BOOL cD3D11Presenter::BeginHardwareFrame() {
     m_pImpl->sceneActive = TRUE;
   }
   ZeroMemory(&v, sizeof(v));
-  // The scene/depth pair is output-sized and persists across all logical
-  // modes.  Vertex coordinates remain in the active logical canvas; the
-  // viewport performs the scale without reallocating render surfaces.
-  v.Width = (float)m_pImpl->backBufferWidth;
-  v.Height = (float)m_pImpl->backBufferHeight;
+  // Scene/depth follow the selected logical resolution. Window resizing only
+  // changes the swap-chain backbuffer; the composite pass performs scaling.
+  v.Width = (float)m_pImpl->sceneWidth;
+  v.Height = (float)m_pImpl->sceneHeight;
   v.MaxDepth = 1;
   m_pImpl->context->OMSetRenderTargets(1, &m_pImpl->sceneTarget,
                                        m_pImpl->depthView);
@@ -990,12 +1136,13 @@ BOOL cD3D11Presenter::Present(IDirectDrawSurface *surface, int x0, int y0,
   DDSURFACEDESC sd;
   D3D11_BOX uploadBox;
   D3D11_VIEWPORT v;
+  RECT viewport;
   DWORD cw, ch, bw, bh;
   int x, y;
   BOOL transparentOverlay;
   BOOL tracePresentation;
   HRESULT hr;
-  float black[4] = {0, 0, 0, 1}, sa, ca;
+  float black[4] = {0, 0, 0, 1};
   sCompositeConstants c;
   ID3D11ShaderResourceView *views[2];
   if (!m_pImpl || !m_pImpl->device || !surface)
@@ -1087,36 +1234,22 @@ BOOL cD3D11Presenter::Present(IDirectDrawSurface *surface, int x0, int y0,
   ch = m_pImpl->targetHeight;
   bw = m_pImpl->backBufferWidth ? m_pImpl->backBufferWidth : cw;
   bh = m_pImpl->backBufferHeight ? m_pImpl->backBufferHeight : ch;
+  viewport = ComputePresentationViewport(m_pImpl->sourceWidth,
+                                         m_pImpl->sourceHeight, bw, bh);
   ZeroMemory(&v, sizeof(v));
-  if (g_D3D11ScaleToWindow) {
-    // Thief's menus and game canvas use the selected logical resolution. Fit
-    // that canvas to the actual window/display while preserving its aspect.
-    sa = (float)m_pImpl->sourceWidth / m_pImpl->sourceHeight;
-    ca = (float)bw / bh;
-    if (ca > sa) {
-      v.Height = (float)bh;
-      v.Width = v.Height * sa;
-      v.TopLeftX = (bw - v.Width) * .5f;
-    } else {
-      v.Width = (float)bw;
-      v.Height = v.Width / sa;
-      v.TopLeftY = (bh - v.Height) * .5f;
-    }
-  } else {
-    // DromEd recreates its canvas at the client size after WM_SIZE. During
-    // that transition, retain one source pixel per output pixel and leave the
-    // not-yet-available edge black instead of distorting editor geometry.
-    v.Width = (float)min(m_pImpl->sourceWidth, bw);
-    v.Height = (float)min(m_pImpl->sourceHeight, bh);
-  }
+  v.TopLeftX = (float)viewport.left;
+  v.TopLeftY = (float)viewport.top;
+  v.Width = (float)(viewport.right - viewport.left);
+  v.Height = (float)(viewport.bottom - viewport.top);
   v.MaxDepth = 1;
   if (tracePresentation)
     D3D11LegacyTrace(
-        "present source=%lux%lu texture=%lux%lu output=%lux%lu viewport=%.1f,%.1f %.1fx%.1f scale=%d scene=%d gamma=%.4f",
+        "present source=%lux%lu texture=%lux%lu scene=%lux%lu output=%lux%lu viewport=%.1f,%.1f %.1fx%.1f scale=%d fit=%d scene-active=%d gamma=%.4f",
         m_pImpl->sourceWidth, m_pImpl->sourceHeight,
-        m_pImpl->sourceTextureWidth, m_pImpl->sourceTextureHeight, bw, bh,
+        m_pImpl->sourceTextureWidth, m_pImpl->sourceTextureHeight,
+        m_pImpl->sceneWidth, m_pImpl->sceneHeight, bw, bh,
         v.TopLeftX, v.TopLeftY, v.Width, v.Height, g_D3D11ScaleToWindow,
-        m_pImpl->sceneActive, m_pImpl->gamma);
+        g_D3D11FitToViewport, m_pImpl->sceneActive, m_pImpl->gamma);
   m_pImpl->context->OMSetRenderTargets(1, &m_pImpl->renderTarget, NULL);
   m_pImpl->context->ClearRenderTargetView(m_pImpl->renderTarget, black);
   m_pImpl->context->RSSetViewports(1, &v);
@@ -1175,11 +1308,23 @@ extern "C" BOOL D3D11LegacyAvailable(void) { return g_pPresenter != NULL; }
 extern "C" void D3D11LegacySetScaleToWindow(BOOL enabled) {
   D3D11SetScaleToWindow(enabled);
 }
+extern "C" void D3D11LegacySetFitToViewport(BOOL enabled) {
+  g_D3D11FitToViewport = enabled;
+}
+extern "C" void D3D11LegacySetInteractiveResize(BOOL resizing) {
+  g_D3D11InteractiveResize = resizing;
+}
 extern "C" void D3D11LegacySetPreserveCanvas(BOOL enabled) {
   g_D3D11PreserveLegacyCanvas = enabled;
 }
 extern "C" BOOL D3D11LegacyPreserveCanvas(void) {
   return g_D3D11PreserveLegacyCanvas;
+}
+extern "C" BOOL D3D11LegacyClientToLogicalPoint(int *x, int *y) {
+  return g_pPresenter && g_pPresenter->ClientToLogicalPoint(x, y);
+}
+extern "C" BOOL D3D11LegacyLogicalToClientPoint(int *x, int *y) {
+  return g_pPresenter && g_pPresenter->LogicalToClientPoint(x, y);
 }
 extern "C" BOOL D3D11LegacyBeginFrame(void) {
   return g_pPresenter && g_pPresenter->BeginHardwareFrame();

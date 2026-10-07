@@ -312,6 +312,8 @@ void headmoveInit(void)
    config_get_int("head_speed",&mouse_head_def_speed);
    config_get_int("head_zone",&mouse_head_def_dead_zone);
    headmoveSetMouseParams(-1,-1);
+   mouse_rel_x = 0;
+   mouse_rel_y = 0;
    mouse_put_xy((short)(grd_visible_canvas->bm.w/2),(short)(grd_visible_canvas->bm.h/2));
 
    config_get_int("kbd_turn_accelerate", &kbd_accelerate);
