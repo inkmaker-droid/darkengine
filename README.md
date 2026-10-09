@@ -212,6 +212,45 @@ retail movie directory contains both formats, the runner uses the H.264 MP4
 through Windows Media Foundation instead of requiring the obsolete Indeo 5
 codec used by the original AVI.
 
+## Xbox controller support
+
+Thief2 supports one active Xbox-style controller through a platform-neutral
+gamepad layer and a runtime-loaded XInput backend. Controllers can be connected,
+disconnected, and reconnected while the game is running. Keyboard and mouse
+remain active, and an XInput controller is not also polled through the legacy
+DirectInput joystick path.
+
+The default layout follows a NewDark-compatible Thief control scheme: left
+stick moves and strafes, right stick looks, A jumps, B crouches, X/Y use or
+frob, the triggers block and attack, the shoulders and D-pad cycle inventory or
+weapons, View opens the automap, and Menu opens the pause menu. Stick clicks run
+and recenter the view. Menus accept D-pad navigation, A to accept, and B or Menu
+to go back. These controls use semantic names such as `pad_a`, `pad_rt`, and
+`pad_right_x` in `user.bnd`; existing `joy1` and `joy_axis*` bindings remain
+valid as fallbacks.
+
+Gamepad behavior can be adjusted in `cam.cfg`:
+
+```text
+gamepad_enable 1
+gamepad_backend auto
+gamepad_index 0
+gamepad_left_deadzone 0.18
+gamepad_right_deadzone 0.14
+gamepad_left_response 1.0
+gamepad_right_response 1.35
+gamepad_trigger_press 0.15
+gamepad_trigger_release 0.10
+gamepad_look_sensitivity 1.0
+gamepad_look_invert_y 0
+gamepad_rumble 1
+```
+
+`gamepad_backend` accepts `auto`, `xinput`, `legacy`, or `off`. The
+`gamepad_status` console command prints the selected backend and normalized
+state. DromEd editor input remains unchanged; gamepad input is currently enabled
+only in the Thief2 target.
+
 ## Command console
 
 The console appears as **Console** under **Options > Controls > Customize

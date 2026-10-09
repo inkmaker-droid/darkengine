@@ -3,6 +3,8 @@
 #include "ibmapper.h"
 #include <kbcook.h>
 #include <ibvarman.h>
+#include <gamepad.h>
+#include <gamepadevent.h>
 
 // implement hash sets
 #include <hshsttem.h>
@@ -94,7 +96,7 @@ unsigned short g_shift_to_scan[0xE0];
 #define SCANCODE_RALT 184
 #define SCANCODE_CAPS_LOCK 58
 
-input_code g_valid_input_controls[202] = {
+input_code g_valid_input_controls[] = {
 	{"esc", 27},
 	{"pause", 2175},
 	{"print_screen", 10295},
@@ -296,7 +298,35 @@ input_code g_valid_input_controls[202] = {
 	{"joy_hatdn", -1},
 	{"joy_hatrt", -1},
 	{"joy_hatlt", -1},
+	{"pad_a", -1},
+	{"pad_b", -1},
+	{"pad_x", -1},
+	{"pad_y", -1},
+	{"pad_lb", -1},
+	{"pad_rb", -1},
+	{"pad_view", -1},
+	{"pad_menu", -1},
+	{"pad_leftstick", -1},
+	{"pad_rightstick", -1},
+	{"pad_dpad_up", -1},
+	{"pad_dpad_down", -1},
+	{"pad_dpad_left", -1},
+	{"pad_dpad_right", -1},
+	{"pad_lt", -1},
+	{"pad_rt", -1},
+	{"pad_left_x", -1},
+	{"pad_left_y", -1},
+	{"pad_right_x", -1},
+	{"pad_right_y", -1},
 	{NULL, 0} };
+
+static const char* g_gamepad_button_controls[kGamepadButtonCount] = {
+	"pad_a", "pad_b", "pad_x", "pad_y",
+	"pad_lb", "pad_rb", "pad_view", "pad_menu",
+	"pad_leftstick", "pad_rightstick",
+	"pad_dpad_up", "pad_dpad_down", "pad_dpad_left", "pad_dpad_right",
+	"pad_lt", "pad_rt"
+};
 
 cIBInputMapper::cIBInputMapper()
 	: m_control_binds{}, m_mod_states{ 0 }, m_trapping{ false }, m_valid_events{ (std::numeric_limits<uint>::max)() }, m_pCtrlIterNode{ nullptr }, m_joyproc{ nullptr }
@@ -321,7 +351,13 @@ cIBInputMapper::cIBInputMapper()
 			char code_str[16] = {};
 			sprintf(code_str, "%d", *code);
 
-			if (!strncmp("mouse", control_name, 5))
+			if (!strncmp("pad_", control_name, 4))
+			{
+				// Gamepad events already carry semantic names.  They do not need a
+				// reverse lookup entry in the keyboard/mouse/legacy joystick maps.
+				delete[] control_name;
+			}
+			else if (!strncmp("mouse", control_name, 5))
 			{
 				g_input_controls[1].Add(code_str, control_name, strlen(control_name) + 1);
 			}
@@ -595,10 +631,17 @@ BOOL cIBInputMapper::TrapHandler(uiEvent* p_event)
 	}
 	case UI_EVENT_JOY: {
 		auto* event = reinterpret_cast<uiJoyEvent*>(p_event);
+		const bool gamepad = GAMEPAD_UI_EVENT_IS_GAMEPAD(event->joynum);
+		const unsigned joynum = GAMEPAD_UI_EVENT_VALUE(event->joynum);
 		if (p_event->subtype == 3)
 		{
+			if (gamepad && joynum < kGamepadButtonCount)
+			{
+				strcpy(bind_control, g_gamepad_button_controls[joynum]);
+				break;
+			}
 			char str[32] = {};
-			sprintf(str, "joy%d", event->joynum + 1);
+			sprintf(str, "joy%d", joynum + 1);
 			auto* control = g_input_controls[2].Find(str);
 			if (control)
 			{
@@ -1341,10 +1384,25 @@ void cIBInputMapper::StripSendDoubleCmd(const char* control, long double a)
 
 int cIBInputMapper::ProcessJoystick(uiJoyEvent* event)
 {
+	const bool gamepad = GAMEPAD_UI_EVENT_IS_GAMEPAD(event->joynum);
+	const unsigned joynum = GAMEPAD_UI_EVENT_VALUE(event->joynum);
 	if (event->action == 1 || event->action == 3)
 	{
+		if (gamepad && joynum < kGamepadButtonCount)
+		{
+			const char* semantic = g_gamepad_button_controls[joynum];
+			if (m_control_binds.Find(semantic) != nullptr)
+				return SendButtonCmd(semantic, event->action == 3, 0);
+
+			static const char* dpad_fallbacks[] = {
+				"joy_hatup", "joy_hatdn", "joy_hatlt", "joy_hatrt"
+			};
+			if (joynum >= kGamepadButtonDpadUp && joynum <= kGamepadButtonDpadRight)
+				return SendButtonCmd(dpad_fallbacks[joynum - kGamepadButtonDpadUp], event->action == 3, 0);
+		}
+
 		char str[32] = {};
-		sprintf(str, "joy%d", event->joynum + 1);
+		sprintf(str, "joy%d", joynum + 1);
 		auto* control = g_input_controls[2].Find(str);
 		if (control != nullptr)
 			return SendButtonCmd(control, event->action == 3, 0);
@@ -1355,33 +1413,45 @@ int cIBInputMapper::ProcessJoystick(uiJoyEvent* event)
 	if (event->action)
 		return 1;
 
-	if (event->joynum == 0)
+	if (joynum == 0)
 	{
 		auto x = ShortScaleDouble(event->joypos.x);
 		auto y = ShortScaleDouble(event->joypos.y);
-		if (m_joyproc)
+		if (m_joyproc && !gamepad)
 			m_joyproc->ProcessXY(&x, &y);
 
-		StripSendDoubleCmd("joy_axisx", x);
-		StripSendDoubleCmd("joy_axisy", y);
+		if (gamepad && m_control_binds.Find("pad_left_x"))
+			StripSendDoubleCmd("pad_left_x", x);
+		else
+			StripSendDoubleCmd("joy_axisx", x);
+		if (gamepad && m_control_binds.Find("pad_left_y"))
+			StripSendDoubleCmd("pad_left_y", y);
+		else
+			StripSendDoubleCmd("joy_axisy", y);
 
 		return 1;
 	}
 
-	if (event->joynum == 1)
+	if (joynum == 1)
 	{
 		auto r = ShortScaleDouble(event->joypos.x);
 		auto z = ShortScaleDouble(event->joypos.y);
-		if (m_joyproc)
+		if (m_joyproc && !gamepad)
 			m_joyproc->ProcessZR(&z, &r);
 
-		StripSendDoubleCmd("joy_axisz", z);
-		StripSendDoubleCmd("joy_axisr", r);
+		if (gamepad && m_control_binds.Find("pad_right_y"))
+			StripSendDoubleCmd("pad_right_y", z);
+		else
+			StripSendDoubleCmd("joy_axisz", z);
+		if (gamepad && m_control_binds.Find("pad_right_x"))
+			StripSendDoubleCmd("pad_right_x", r);
+		else
+			StripSendDoubleCmd("joy_axisr", r);
 
 		return 1;
 	}
 
-	if (event->joynum == 2)
+	if (joynum == 2)
 	{
 		if (event->joypos.y == 1)
 		{
@@ -1416,7 +1486,7 @@ int cIBInputMapper::ProcessJoystick(uiJoyEvent* event)
 
 double CDECL cIBInputMapper::ShortScaleDouble(short m)
 {
-	return (double)(m - 0x7FFF) * m + 1.0;
+	return m < 0 ? (double)m / 32768.0 : (double)m / 32767.0;
 }
 
 const char* cIBInputMapper::DecomposeControl(const char* control_str, char(*controls)[32], long* num_controls)

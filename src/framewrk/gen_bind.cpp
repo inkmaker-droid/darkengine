@@ -106,6 +106,8 @@ float g_joystickSensitivity = 1.0;
 float g_joystickDeadzone = 0.05;
 float g_rudderSensitivity = 1.0;
 float g_rudderDeadzone = 0.05;
+static float g_gamepadLookSensitivity = 1.0;
+static int g_gamepadLookInvertY = 0;
 
 static void GetStates ()
 {
@@ -230,6 +232,24 @@ static char *JoyForwardProc (const char *, const char *val, BOOL)
    return NULL;
 }
 
+static char *GamepadForwardProc(const char *, const char *val, BOOL)
+{
+   float f = atof(val);
+   if ((f != 0.0f) && (GetPlayerMode() == kPM_Dead || gNoMoveKeys))
+      return NULL;
+
+   float forward_val = 2.0f * f;
+   if (forward_val > 2.0f) forward_val = 2.0f;
+   if (forward_val < -2.0f) forward_val = -2.0f;
+   SetForwardState(forward_val);
+   gtogglefast = FALSE;
+   if (grunpref)
+      SetSpeedToggleState(0);
+   SetSpeedToggleMeansFaster(gtogglefast);
+   UpdatePlayerSpeed();
+   return NULL;
+}
+
 static char *TurnProc (const char *, const char *val, BOOL)
 {
    //   mprintf("Turn %g %d\n",atof(val),atoi(val));
@@ -321,6 +341,20 @@ static char *JoySidestepProc (const char *, const char *val, BOOL)
    if (sidestep_val < -2.0)
       sidestep_val = -2.0;
 
+   SetSidestepState(sidestep_val);
+   UpdatePlayerSpeed();
+   return NULL;
+}
+
+static char *GamepadSidestepProc(const char *, const char *val, BOOL)
+{
+   float f = atof(val);
+   if ((f != 0.0f) && (GetPlayerMode() == kPM_Dead || gNoMoveKeys))
+      return NULL;
+
+   float sidestep_val = 2.0f * f;
+   if (sidestep_val > 2.0f) sidestep_val = 2.0f;
+   if (sidestep_val < -2.0f) sidestep_val = -2.0f;
    SetSidestepState(sidestep_val);
    UpdatePlayerSpeed();
    return NULL;
@@ -925,6 +959,31 @@ static char *RudderTurnProc (const char *, const char *val, BOOL)
    return NULL;
 }
 
+static char *GamepadTurnProc(const char *, const char *val, BOOL)
+{
+   if (gNoLookAround || GetPlayerMode() == kPM_Dead)
+      return NULL;
+
+   BOOL freelook = (atof(g_pInputBinder->ProcessCmd("echo $freelook")) != 0.0);
+   if (g_freelookon ^ freelook)
+      headmoveSetRelPosX(atof(val) * 200.0f * g_gamepadLookSensitivity);
+   return NULL;
+}
+
+static char *GamepadLookProc(const char *, const char *val, BOOL)
+{
+   if (gNoLookAround || GetPlayerMode() == kPM_Dead)
+      return NULL;
+
+   BOOL freelook = (atof(g_pInputBinder->ProcessCmd("echo $freelook")) != 0.0);
+   if (g_freelookon ^ freelook)
+   {
+      float value = atof(val) * 200.0f * g_gamepadLookSensitivity;
+      headmoveSetRelPosY(g_gamepadLookInvertY ? -value : value);
+   }
+   return NULL;
+}
+
 
 static char *DummyProc (const char *, const char *, BOOL)
 {
@@ -946,6 +1005,10 @@ IB_var g_gen_ib_vars[] = {
    {"joysidestep", "0", 0, JoySidestepProc, IBAddActiveAgg, NULL},
    {"joyturn", "0", 0, JoyTurnProc, IBAddActiveAgg, NULL},
    {"rudderturn", "0", 0, RudderTurnProc, NULL, NULL},
+   {"gamepad_forward", "0", 0, GamepadForwardProc, IBAddActiveAgg, NULL},
+   {"gamepad_sidestep", "0", 0, GamepadSidestepProc, IBAddActiveAgg, NULL},
+   {"gamepad_turn", "0", 0, GamepadTurnProc, NULL, NULL},
+   {"gamepad_look", "0", 0, GamepadLookProc, NULL, NULL},
 
    {"mturn", "0", 0, MTurnProc, NULL, NULL},
    {"mlook", "0", 0, MLookProc, NULL, NULL},
@@ -1372,6 +1435,54 @@ void InitIBVars ()
    InstallDefaultConsoleBinding(HK_GAME_MODE);
 #endif
 
+#ifdef THIEF2_GAME
+   int gamepad_enabled = 1;
+   config_get_int("gamepad_enable", &gamepad_enabled);
+   if (gamepad_enabled)
+   {
+      struct sDefaultGamepadBind
+      {
+         const char *control;
+         const char *command;
+      };
+      static const sDefaultGamepadBind gamepad_binds[] = {
+         {"pad_left_x", "gamepad_sidestep"},
+         {"pad_left_y", "gamepad_forward"},
+         {"pad_right_x", "gamepad_turn"},
+         {"pad_right_y", "gamepad_look"},
+         {"pad_a", "+jump"},
+         {"pad_b", "crouch"},
+         {"pad_x", "+use_item"},
+         {"pad_y", "+use_item"},
+         {"pad_rt", "+use_weapon"},
+         {"pad_lt", "+block"},
+         {"pad_lb", "prev_item"},
+         {"pad_rb", "next_item"},
+         {"pad_dpad_up", "next_weapon"},
+         {"pad_dpad_down", "prev_weapon"},
+         {"pad_dpad_left", "prev_item"},
+         {"pad_dpad_right", "next_item"},
+         {"pad_view", "automap"},
+         {"pad_menu", "sim_menu"},
+         {"pad_leftstick", "+runon"},
+         {"pad_rightstick", "lookcenter"},
+         {NULL, NULL}
+      };
+
+      ulong old_context = 0;
+      g_pInputBinder->GetContext(&old_context);
+      g_pInputBinder->SetContext(HK_GAME_MODE, TRUE);
+      for (const sDefaultGamepadBind *bind = gamepad_binds; bind->control; ++bind)
+      {
+         char current[256] = {};
+         g_pInputBinder->QueryBind(bind->control, current, sizeof(current));
+         if (!current[0])
+            g_pInputBinder->Bind(bind->control, bind->command);
+      }
+      g_pInputBinder->SetContext(old_context, TRUE);
+   }
+#endif
+
    //the command context is for when the command box is open. there are no binds in it,
    //so that no key events are eaten by the raw handler
    g_pInputBinder->SetContext (HK_COMMAND_MODE, TRUE);
@@ -1392,6 +1503,8 @@ void InitIBVars ()
    g_joystickDeadzone = atof (g_pInputBinder->ProcessCmd ("echo $joystick_deadzone"));
    g_rudderSensitivity = atof (g_pInputBinder->ProcessCmd ("echo $rudder_sensitivity"));
    g_rudderDeadzone = atof (g_pInputBinder->ProcessCmd ("echo $rudder_deadzone"));
+   config_get_float("gamepad_look_sensitivity", &g_gamepadLookSensitivity);
+   config_get_int("gamepad_look_invert_y", &g_gamepadLookInvertY);
 
 }
 

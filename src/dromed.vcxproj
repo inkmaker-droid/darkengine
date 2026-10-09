@@ -741,6 +741,7 @@
     <ClInclude Include="framewrk\Gameapp.h" />
     <ClInclude Include="framewrk\Gamecam.h" />
     <ClInclude Include="framewrk\Gameinfo.h" />
+    <ClInclude Include="framewrk\gamepad_backend.h" />
     <ClInclude Include="framewrk\Gamemode.h" />
     <ClInclude Include="framewrk\Gamemsg.h" />
     <ClInclude Include="framewrk\Gamescrn.h" />
@@ -1929,6 +1930,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="framewrk\Gameinfo.c" />
+    <ClCompile Include="framewrk\gamepad.cpp" />
     <ClCompile Include="framewrk\Gamemode.c" />
     <ClCompile Include="framewrk\Gamescrn.cpp" />
     <ClCompile Include="framewrk\Gamestr.cpp" />
@@ -2515,6 +2517,7 @@
     <ClCompile Include="ui\Cmdterm.c" />
     <ClCompile Include="ui\Ged_win.c" />
     <ClCompile Include="ui\Joypoll.cpp" />
+    <ClCompile Include="..\winsrc\input\gamepad_xinput.cpp" />
     <ClCompile Include="ui\Movie.cpp" />
     <ClCompile Include="ui\Panlmode.cpp" />
     <ClCompile Include="ui\Panltool.cpp" />

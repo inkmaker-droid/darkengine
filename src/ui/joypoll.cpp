@@ -16,9 +16,12 @@
 
 #include <keydefs.h>
 #include <event.h>
+#include <hotkey.h>
 
 #include <joyapi.h>
 #include <inpbase.h>
+#include <gamepad.h>
+#include <gamepadevent.h>
 
 #include <tminit.h>
 #include <timer.h>
@@ -27,6 +30,8 @@
 
 #include <joypoll.h>
 #include <gen_bind.h>
+#include <contexts.h>
+#include <command.h>
 
 #include <config.h>
 #include <memall.h>
@@ -36,6 +41,9 @@
 #define DOWN(x)    ((x)|KB_FLAG_DOWN)
 
 static IJoystick *g_pJoystick;
+static bool gGamepadWasOwner = FALSE;
+static short gGamepadAxes[4] = {0, 0, 0, 0};
+static bool gGamepadCommandsRegistered = FALSE;
 
 
 static bool bHasNoRudder = FALSE;
@@ -81,6 +89,23 @@ static int hatCodes[5] = {0,KEY_PAD_UP,KEY_PAD_RIGHT,KEY_PAD_DOWN,KEY_PAD_LEFT};
 
 cDarkJoyProcControl g_dark_joy_control;
 
+static void GamepadStatus(void)
+{
+   const unsigned index = GamepadGetActiveIndex();
+   const sGamepadState *state = GamepadGetState(index);
+   if (!state)
+   {
+      mprintf("gamepad: backend=%s no state\n", GamepadGetBackendName());
+      return;
+   }
+
+   mprintf("gamepad: backend=%s index=%u connected=%d packet=%u buttons=0x%04x "
+           "left=(%.3f,%.3f) right=(%.3f,%.3f) triggers=(%.3f,%.3f)\n",
+           GamepadGetBackendName(), index, state->connected, state->packet_number,
+           state->buttons, state->left_x, state->left_y, state->right_x,
+           state->right_y, state->left_trigger, state->right_trigger);
+}
+
 cDarkJoyProcControl :: cDarkJoyProcControl() : cIBJoyAxisProcess()
 {
    SetDeadZoneX(0.1);
@@ -122,6 +147,16 @@ void UiJoyInit ()
 {
    sInputDeviceIter iter;
    int i;
+
+   GamepadInit();
+   if (!gGamepadCommandsRegistered)
+   {
+      static Command gamepadCommands[] = {
+         {"gamepad_status", FUNC_VOID, GamepadStatus, "show gamepad backend and normalized state"}
+      };
+      COMMANDS(gamepadCommands, HK_ALL);
+      gGamepadCommandsRegistered = TRUE;
+   }
 
    IInputManager *g_pInputMan = AppGetObj(IInputManager);
    g_pInputMan->IterStart(&iter, IID_IJoystick);
@@ -178,6 +213,13 @@ void UiJoyInit ()
    g_pInputBinder->RegisterJoyProcObj(&g_dark_joy_control);
 }
 
+void UiJoyTerm(void)
+{
+   GamepadTerm();
+   g_pJoystick = NULL;
+   gGamepadWasOwner = FALSE;
+}
+
 
 //
 // This is to create/dispatch/handle joystick events
@@ -223,6 +265,133 @@ void DispatchJoystickButtonEvent(char buttNum, char state)
    uiDispatchEvent( (uiEvent*)&ev );
 }
 
+static short GamepadAxisToShort(float value)
+{
+   if (value <= -1.0f)
+      return SHRT_MIN;
+   if (value >= 1.0f)
+      return SHRT_MAX;
+   return (short)(value * (value < 0.0f ? 32768.0f : 32767.0f));
+}
+
+static void DispatchGamepadMoveEvent(char axisPair, short x, short y)
+{
+   DispatchJoystickMoveEvent((char)(GAMEPAD_UI_EVENT_MARKER | axisPair), x, y);
+}
+
+static void DispatchGamepadButtonEvent(char button, char state)
+{
+   DispatchJoystickButtonEvent((char)(GAMEPAD_UI_EVENT_MARKER | button), state);
+}
+
+static int GamepadMenuKey(unsigned button)
+{
+   switch (button)
+   {
+      case kGamepadButtonA: return KEY_ENTER;
+      case kGamepadButtonB:
+      case kGamepadButtonMenu: return KEY_ESC;
+      case kGamepadButtonDpadUp: return KEY_UP;
+      case kGamepadButtonDpadDown: return KEY_DOWN;
+      case kGamepadButtonDpadLeft: return KEY_LEFT;
+      case kGamepadButtonDpadRight: return KEY_RIGHT;
+      default: return 0;
+   }
+}
+
+static void DispatchGamepadMenuKey(unsigned button, int down)
+{
+   const int key = GamepadMenuKey(button);
+   if (!key || HotkeyContext != HK_PANEL_MODE)
+      return;
+
+   uiCookedKeyEvent event;
+   memset(&event, 0, sizeof(event));
+   event.type = UI_EVENT_KBD_COOKED;
+   event.code = down ? DOWN(key) : key;
+   uiDispatchEvent((uiEvent *)&event);
+}
+
+static void DispatchGamepadState(void)
+{
+   static float repeatTime[kGamepadButtonCount] = {};
+   const sGamepadState *state = GamepadGetState(GamepadGetActiveIndex());
+   if (!state)
+      return;
+
+   const short axes[4] = {
+      GamepadAxisToShort(state->left_x),
+      GamepadAxisToShort(state->left_y),
+      GamepadAxisToShort(state->right_x),
+      GamepadAxisToShort(state->right_y)
+   };
+   if (axes[0] != gGamepadAxes[0] || axes[1] != gGamepadAxes[1])
+      DispatchGamepadMoveEvent(0, axes[0], axes[1]);
+   if (axes[2] != gGamepadAxes[2] || axes[3] != gGamepadAxes[3])
+      DispatchGamepadMoveEvent(1, axes[2], axes[3]);
+   memcpy(gGamepadAxes, axes, sizeof(gGamepadAxes));
+
+   const float now = (float)(tm_get_millisec() / 1000.0);
+   for (unsigned i = 0; i < kGamepadButtonCount; ++i)
+   {
+      const uint32_t bit = 1u << i;
+      if (state->buttons_pressed & bit)
+      {
+         DispatchGamepadButtonEvent((char)i, 1);
+         DispatchGamepadMenuKey(i, 1);
+         repeatTime[i] = now + buttonRepeatDelay;
+      }
+      if (state->buttons_released & bit)
+      {
+         DispatchGamepadButtonEvent((char)i, 0);
+         DispatchGamepadMenuKey(i, 0);
+         repeatTime[i] = 0.0f;
+      }
+      const bool repeatable = i >= kGamepadButtonDpadUp && i <= kGamepadButtonDpadRight;
+      if (repeatable && (state->buttons & bit) && now >= repeatTime[i])
+      {
+         DispatchGamepadMenuKey(i, 1);
+         repeatTime[i] = now + buttonRepeatInterval;
+      }
+   }
+}
+
+static void ReleaseLegacyJoystickState(void)
+{
+   if (joyAPos.x || joyAPos.y)
+      DispatchJoystickMoveEvent(0, 0, 0);
+   if (joyBPos.x || joyBPos.y)
+      DispatchJoystickMoveEvent(1, 0, 0);
+   if (joyCPos.x || joyCPos.y)
+      DispatchJoystickMoveEvent(2, 0, 0);
+   joyAPos = MakePoint(0, 0);
+   joyBPos = MakePoint(0, 0);
+   joyCPos = MakePoint(0, 0);
+   for (int i = 0; i < MAX_BUTTONS; ++i)
+   {
+      if (joyButtons[i])
+      {
+         joyButtons[i] = 0;
+         DispatchJoystickButtonEvent((char)i, 0);
+      }
+   }
+}
+
+void UiJoySuspend(void)
+{
+   GamepadSetActive(FALSE);
+   DispatchGamepadState();
+   GamepadStopAllRumble();
+   if (gGamepadWasOwner)
+      ReleaseLegacyJoystickState();
+   gGamepadWasOwner = FALSE;
+}
+
+void UiJoyResume(void)
+{
+   GamepadSetActive(TRUE);
+}
+
 
 void uiJoystickPoller(void)
 {
@@ -245,6 +414,15 @@ void uiJoystickPoller(void)
    uchar buttonVal;
    HRESULT hRes;
    float now;
+
+   GamepadUpdate();
+   DispatchGamepadState();
+   const bool gamepadOwnsInput = GamepadOwnsInput() != 0;
+   if (gamepadOwnsInput && !gGamepadWasOwner)
+      ReleaseLegacyJoystickState();
+   gGamepadWasOwner = gamepadOwnsInput;
+   if (gamepadOwnsInput)
+      return;
 
    // This is for retarded machines that 
    // can't deal with having i/o and the 

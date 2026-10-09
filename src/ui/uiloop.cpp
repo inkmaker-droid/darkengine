@@ -198,6 +198,7 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
          //      case kMsgResumeMode: 
 
       case kMsgResumeMode: 
+         UiJoyResume();
          // resize the root region, in case resolution changed
          // if I were cooler I'd check the current dims to see
          // whether we need to bother.
@@ -215,6 +216,7 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
 
       case kMsgExitMode:
       {
+         UiJoySuspend();
          uiSlab* slab; 
          uiGetCurrentSlab(&slab); 
          if (slab == state->root.root_slab)
@@ -229,6 +231,7 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
       break; 
 
       case kMsgSuspendMode:
+         UiJoySuspend();
          uiHideMouse(NULL);
          uiSetCurrentSlab(state->old_slab);
          uiShowMouse(NULL);
@@ -240,6 +243,7 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
          break;
 
       case kMsgEnd:
+         UiJoyTerm();
          Free(state);
          break;
       case kMsgVisual:

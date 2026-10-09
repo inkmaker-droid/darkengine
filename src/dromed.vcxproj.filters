@@ -1788,6 +1788,9 @@
     <ClInclude Include="framewrk\Gen_bind.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="framewrk\gamepad_backend.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
     <ClInclude Include="framewrk\Hchkthrd.h">
       <Filter>Framework</Filter>
     </ClInclude>
@@ -5107,6 +5110,9 @@
     <ClCompile Include="framewrk\Gen_bind.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
+    <ClCompile Include="framewrk\gamepad.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
     <ClCompile Include="framewrk\Hchkthrd.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
@@ -6324,6 +6330,9 @@
     </ClCompile>
     <ClCompile Include="ui\Joypoll.cpp">
       <Filter>UI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winsrc\input\gamepad_xinput.cpp">
+      <Filter>Win32</Filter>
     </ClCompile>
     <ClCompile Include="ui\Movie.cpp">
       <Filter>UI</Filter>
