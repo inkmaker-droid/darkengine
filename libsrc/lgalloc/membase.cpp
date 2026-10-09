@@ -55,7 +55,7 @@ STDMETHODIMP_(ULONG) cMallocBase::Release()
 
 ///////////////////////////////////////
 
-STDMETHODIMP_(ULONG) cMallocBase::GetSize(void * )
+STDMETHODIMP_(SIZE_T) cMallocBase::GetSize(void * )
 {
     return (ULONG)-1;
 }
@@ -78,14 +78,14 @@ STDMETHODIMP_(void) cMallocBase::HeapMinimize()
 ///////////////////////////////////////
 #ifndef SHIP
 
-STDMETHODIMP_(void *) cMallocBase::AllocEx(ULONG cb, const char *, int)
+STDMETHODIMP_(void *) cMallocBase::AllocEx(SIZE_T cb, const char *, int)
 {
     return Alloc(cb);
 }
 
 ///////////////////////////////////////
 
-STDMETHODIMP_(void *) cMallocBase::ReallocEx(void * pv, ULONG cb, const char *, int)
+STDMETHODIMP_(void *) cMallocBase::ReallocEx(void * pv, SIZE_T cb, const char *, int)
 {
     return Realloc(pv, cb);
 }

@@ -6,8 +6,10 @@
 //
 
 // Core headers
+#pragma pack(push, 8)
 #include <windows.h>
 #include <ddraw.h>
+#pragma pack(pop)
 
 #include <lg.h>
 

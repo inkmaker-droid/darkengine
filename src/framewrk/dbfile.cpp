@@ -277,7 +277,8 @@ static BOOL read_file_type(ITagFile* file, edbFiletype* Filetype)
    TagVersion v = dbTypeVersion;
    if (FAILED(file->OpenBlock(&dbTypeTag,&v)))
       return FALSE;
-   BOOL retval = file->Read((char*)Filetype,sizeof(*Filetype)) == sizeof(Filetype);
+   long bytesRead = file->Read((char*)Filetype,sizeof(*Filetype));
+   BOOL retval = bytesRead == sizeof(*Filetype);
    file->CloseBlock();
    return retval;
 }

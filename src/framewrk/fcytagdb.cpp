@@ -123,6 +123,9 @@ BOOL cFancyTagDatabase::Load(ITagFile *pFile)
 
    ITagFile_Read(pFile, (char *)&size, sizeof(size));
 
+   if (size > 65536)
+      Error(1, "Invalid motion tag declaration count %lu\n", size);
+
    m_TagSet.SetSize(size);
    for(i=0;i<size;i++)
    {

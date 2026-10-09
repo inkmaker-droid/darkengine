@@ -199,7 +199,9 @@ STDMETHODIMP cTraitManager::AddObject(ObjID obj, ObjID archetype)
    }
    
    // Make sure our archetype is valid for inheritance
-   AssertMsg(ObjIsDonor(archetype), "Attempt to inherit from non-inheritable archetype");
+   AssertMsg2(ObjIsDonor(archetype),
+              "Attempt to make object %d inherit from non-inheritable archetype %d",
+              obj, archetype);
 
    SetArchetype(obj, archetype); 
 

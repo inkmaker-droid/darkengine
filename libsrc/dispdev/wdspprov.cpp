@@ -41,7 +41,7 @@ cWinDisplayProvider::~cWinDisplayProvider()
 
 ///////////////////////////////////////
 
-BOOL cWinDisplayProvider::DoProcessMessage(UINT, WPARAM, LPARAM, long *)
+BOOL cWinDisplayProvider::DoProcessMessage(UINT, WPARAM, LPARAM, LRESULT *)
 {
     return 0;
 }

@@ -166,6 +166,7 @@
     <ClInclude Include="miprstyp.h" />
     <ClInclude Include="palrstyp.h" />
     <ClInclude Include="pathutil.h" />
+    <ClInclude Include="portableinflate.h" />
     <ClInclude Include="pcx.h" />
     <ClInclude Include="resapi.h" />
     <ClInclude Include="resarq.h" />
@@ -207,6 +208,7 @@
     <ClCompile Include="mdlrstyp.cpp" />
     <ClCompile Include="palrstyp.cpp" />
     <ClCompile Include="pathutil.cpp" />
+    <ClCompile Include="portableinflate.cpp" />
     <ClCompile Include="pcx.cpp" />
     <ClCompile Include="resarq.cpp" />
     <ClCompile Include="resimage.cpp" />

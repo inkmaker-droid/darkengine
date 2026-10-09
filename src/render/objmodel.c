@@ -122,6 +122,21 @@ static TextureLoadFunc g_afnTextureLoadFuncs[] =
 // other globals
 static grs_bitmap *g_pDummyObjTmap;
 
+static void FreeDummyObjTmap(void)
+{
+   if (g_pDummyObjTmap)
+   {
+      // A resident texture stores its texture-manager ID in bm->bits.  Unload
+      // it first so the manager restores the allocation returned by texmem.
+      if (g_pDummyObjTmap->flags & BMF_LOADED)
+         lgd3d_unload_texture(g_pDummyObjTmap);
+
+      Free(g_pDummyObjTmap->bits);
+      Free(g_pDummyObjTmap);
+      g_pDummyObjTmap = NULL;
+   }
+}
+
 //////////////
 // lets do some managing of the ReplaceList
 static void init_replace_list(void)
@@ -898,11 +913,7 @@ void objmodelShutdown(void)
 
    objmodelFreePaths();
 
-   if (g_pDummyObjTmap)
-   {
-      Free(g_pDummyObjTmap->bits);
-      Free(g_pDummyObjTmap);
-   }
+   FreeDummyObjTmap();
 }
 
 void objmodelReset(void)
@@ -1090,10 +1101,7 @@ void objmodel_set_debug_tex(int type)
    extern BOOL g_bAllObjsUnlit; // from objlight.c
 
    if (type>=0&&type<(sizeof(f_table)/sizeof(*f_table))) {
-      if (g_pDummyObjTmap) {
-         Free(g_pDummyObjTmap->bits);
-         Free(g_pDummyObjTmap);
-      }
+      FreeDummyObjTmap();
       g_pDummyObjTmap=texmemBuildGradientTmap(8,f_table[type]);
       g_bTextureDebug=TRUE;
       g_bAllObjsUnlit=TRUE;
@@ -1292,7 +1300,7 @@ void objmodelSetupMeshTextures(ObjID obj, void *model, int idx)
            if (mats[i].type == MM_MAT_TMAP)
            {
                hateful_back_mapping[j]=i;  // this is too fucking horrible - dc // he, he you love it        
-               mats[i].handle=(ulong)_objmodelGetTexture(idx,j++);
+               mats[i].handle=mm_register_texture(_objmodelGetTexture(idx,j++));
            }
            if (rep_idx)
            {  // @HATEFUL: stay in synch with identical lines below      
@@ -1300,7 +1308,8 @@ void objmodelSetupMeshTextures(ObjID obj, void *model, int idx)
                if (RepTextures)
                    for (i=0; i<MAX_REPL_TXT; i++)  // make sure it is replaced, and we have one
                        if ((g_aReplaceList[rep_idx][i]!=REPL_LIST_UNUSED)&&RepTextures[i])
-                           mats[hateful_back_mapping[g_aReplaceList[rep_idx][i]]].handle=(ulong)IRes_DataPeek(RepTextures[i]);
+                           mats[hateful_back_mapping[g_aReplaceList[rep_idx][i]]].handle=
+                              mm_register_texture((r3s_texture)IRes_DataPeek(RepTextures[i]));
            }  
            
    }
@@ -1313,7 +1322,7 @@ void objmodelSetupMeshTextures(ObjID obj, void *model, int idx)
            if( pOlMat[i].type == MM_MAT_TMAP )
            {
                hateful_back_mapping[j] = i;  
-               pOlMat[i].handle        = (ulong)_objmodelGetTexture( idx, j++ );
+               pOlMat[i].handle = mm_register_texture(_objmodelGetTexture(idx, j++));
            }
        }
        
@@ -1325,8 +1334,8 @@ void objmodelSetupMeshTextures(ObjID obj, void *model, int idx)
                for( i = 0; i < MAX_REPL_TXT; i++ ) 
                {
                    if( (g_aReplaceList[rep_idx][i] != REPL_LIST_UNUSED ) && RepTextures[i] )
-                       mats[ hateful_back_mapping[ g_aReplaceList[rep_idx][i] ] ].handle 
-                       = (ulong) IRes_DataPeek( RepTextures[i] );
+                       pOlMat[hateful_back_mapping[g_aReplaceList[rep_idx][i]]].handle =
+                          mm_register_texture((r3s_texture)IRes_DataPeek(RepTextures[i]));
                }
            }
        }  

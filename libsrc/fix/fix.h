@@ -8,6 +8,7 @@
 #define __FIX_H
 
 #include <types.h>
+#include <stdint.h>
 
 //////////////////////////////
 //
@@ -160,76 +161,24 @@ extern const fixang asintab[128+1];
    their product is a*b*2^32, and edx is the integral part and eax is the
    fractional part.  the bottom 16 bits or edx and the top 16 bits of eax are
    the 32-bit fixed-point product. */
-#ifdef __WATCOMC__
-fix quick_fix_mul (fix a, fix b);
-#pragma aux quick_fix_mul =\
-   "imul    edx"     \
-   "shr     eax,16"  \
-   "shl     edx,16"  \
-   "or      eax,edx" \
-   parm [eax] [edx]  \
-   modify [eax edx];
-#else
 __inline fix quick_fix_mul(fix a, fix b)
 {
-	#pragma warning(disable : 4035)	// disables no return value warning
-	__asm
-	{
-		mov		eax, a
-		mov		edx, b
-		imul	edx
-		shr		eax, 16
-		shl		edx, 16
-		or		eax, edx
-	}
+   return (fix)(((int64_t)a * (int64_t)b) >> 16);
 }
-#endif
 
 // well, this turns out to be 2.2 or so times faster than the above on a 486
 // and about 1.4 times slower on a Pentium.
 // i love intel, sadly for now we probably should stay with 486 based optimizations
 // so im defaulting to this one for now....
-#ifdef __WATCOMC__
-fix fast_fix_mul (fix a, fix b);
-#pragma aux fast_fix_mul =\
-   "imul    edx"     \
-   "shrd    eax,edx,16" \
-   parm [eax] [edx]  \
-   modify [eax edx];
-#else
 __inline fix fast_fix_mul (fix a, fix b)
 {
-	#pragma warning(disable : 4035)	// disables no return value warning
-	__asm
-	{
-		mov		eax, a
-		mov		edx, b
-		imul	edx
-		shrd	eax, edx, 16
-	}
+   return (fix)(((int64_t)a * (int64_t)b) >> 16);
 }
-#endif
 
-#ifdef __WATCOMC__
-fix fast_fix_mul_int (fix a, fix b);
-#pragma aux fast_fix_mul_int =\
-   "imul    edx"     \
-   "mov     eax,edx" \
-   parm [eax] [edx]  \
-   modify [eax edx];
-#else
 __inline fix fast_fix_mul_int(fix a, fix b)
 {
-	#pragma warning(disable : 4035)	// disables no return value warning
-	__asm
-	{
-		mov		eax, a
-		mov		edx, b
-		imul	edx
-		mov		eax, edx
-	}
+   return (fix)(((int64_t)a * (int64_t)b) >> 32);
 }
-#endif
 
 extern char mul_test;
 
@@ -239,120 +188,39 @@ extern char mul_test;
 // rail to the top or bottom rails.
 
 fix safe_fix_mul (fix a, fix b);
-#ifdef __WATCOMC__
-fix safe_fix_mul_asm (fix a, fix b);
-#pragma aux safe_fix_mul_asm =\
-   "mov     mul_test,0"\
-   "imul    edx"       \
-   "shr     eax,16"    \
-   "ror     edx,15"    \
-   "mov     ebx,edx"   \
-   "inc     ebx"       \
-   "and     ebx,0x0001FFFF" \
-   "cmp     ebx,1"     \
-   "ja      overflow"  \
-   "ror     edx,1"     \
-   "mov     dx,0"      \
-   "or      eax,edx"   \
-   "jmp     done"      \
-"overflow:"            \
-   "rol     edx,15"    \
-   "sar     edx,31"    \
-   "mov     eax,0x7fffffff" \
-   "sub     eax,edx"   \
-   "sub     eax,edx"   \
-   "mov     mul_test,1" \
-"done:"                \
-   parm [eax] [edx]    \
-   modify [eax ebx edx];
-#else
 __inline fix safe_fix_mul_asm (fix a, fix b)
 {
-	#pragma warning(disable : 4035)	// disables no return value warning
-	__asm
-	{
-		mov		eax, a
-		mov		edx, b
-		mov		mul_test, 0
-		imul		edx
-		shr		eax, 16
-		ror		edx, 15
-		mov		ebx, edx
-		inc		ebx
-		and		ebx, 0x0001FFFF
-		cmp		ebx, 1
-		ja		overflow
-		ror		edx, 1
-		mov		dx, 0
-		or		eax, edx
-		jmp		done
-	overflow:
-		rol		edx, 15
-		sar		edx, 31
-		mov		eax, 0x7fffffff
-		sub		eax, edx
-		sub		eax, edx
-		mov		mul_test, 1
-	done:
-	}
+   int64_t result = ((int64_t)a * (int64_t)b) >> 16;
+   mul_test = 0;
+   if (result > FIX_MAX) {
+      mul_test = 1;
+      return FIX_MAX;
+   }
+   if (result < FIX_MIN) {
+      mul_test = 1;
+      return FIX_MIN;
+   }
+   return (fix)result;
 }
-#endif
 
 /* divide 2 fixed point numbers, return the result.  we want the result to be
    a/b*2^16 which is also a*2^32/b*2^16.  since a*2^16 is 32 bits, a*2^32 is
    48 bits, and has to span edx:eax.  the top 16 bits of a*2^16 get put in
    edx and the bottom 16 get shift up in eax.  the quotient is obtained by
    dividing by b*2^16. */
-#ifdef __WATCOMC__
-fix fix_div_fast (fix a, fix b);
-#pragma aux fix_div_fast =\
-   "mov     edx,eax" \
-   "sar     edx,16"  \
-   "shl     eax,16"  \
-   "idiv    ebx"     \
-   parm [eax] [ebx]  \
-   modify [eax edx];
-#else
 __inline fix fix_div_fast (fix a, fix b)
 {
-	#pragma warning(disable : 4035)	// disables no return value warning
-	__asm
-	{
-		mov		eax, a
-		mov		ebx, b
-		mov		edx, eax
-		sar		edx, 16
-		shl		eax, 16
-		idiv	ebx
-	}
+   return (fix)(((int64_t)a << 16) / b);
 }
-#endif
 
 extern fix fix_div_safe (fix a, fix b);
 
 /* Multiply two fixed-point numbers and divide by a third.
     Maintains the 64-bit intermediate result. */
-#ifdef __WATCOMC__
-fix fix_mul_div_fast (fix m0, fix m1, fix d);
-#pragma aux fix_mul_div_fast =\
-   "imul    edx"           \
-   "idiv    ebx"           \
-   parm [eax] [edx] [ebx]  \
-   modify [eax edx];
-#else
 __inline fix fix_mul_div_fast (fix m0, fix m1, fix d)
 {
-	#pragma warning(disable : 4035)	// disables no return value warning
-	__asm
-	{
-		mov		eax, m0
-		mov		edx, m1
-		mov		ebx, d
-		imul	edx
-		idiv	ebx
-	}
+   return (fix)(((int64_t)m0 * (int64_t)m1) / d);
 }
-#endif
 
 extern fix fix_mul_div_safe (fix m0, fix m1, fix d);
 
@@ -460,77 +328,20 @@ typedef long fix24;
 #define fix16_to_fix24(n) (fix24_from_fix16(n))
 #define fix24_to_fix16(n) (fix16_from_fix24(n))
 
-#ifdef __WATCOMC__
-fix24 fix24_mul (fix24 a, fix24 b);
-#pragma aux fix24_mul =\
-   "imul    edx"     \
-   "shr     eax,8"  \
-   "shl     edx,24"  \
-   "or      eax,edx" \
-   parm [eax] [edx]  \
-   modify [eax edx];
-#else
 __inline fix24 fix24_mul (fix24 a, fix24 b)
 {
-	#pragma warning(disable : 4035)	// disables no return value warning
-	__asm
-	{
-		mov		eax, a
-		mov		edx, b
-		imul	edx
-		shr		eax, 8
-		shl		edx, 24
-		or		eax, edx
-	}
+   return (fix24)(((int64_t)a * (int64_t)b) >> 8);
 }
-#endif
 
-#ifdef __WATCOMC__
-fix24 fix24_div (fix24 a, fix24 b);
-#pragma aux fix24_div =\
-   "mov     edx,eax" \
-   "sar     edx,24"  \
-   "shl     eax,8"  \
-   "idiv    ebx"     \
-   parm [eax] [ebx]  \
-   modify [eax edx];
-#else
 __inline fix24 fix24_div (fix24 a, fix24 b)
 {
-	#pragma warning(disable : 4035)	// disables no return value warning
-	__asm
-	{
-		mov		eax, a
-		mov		ebx, b
-		mov		edx, eax
-		sar		edx, 24
-		shl		eax, 8
-		idiv	ebx
-	}
+   return (fix24)(((int64_t)a << 8) / b);
 }
-#endif
 
-#ifdef __WATCOMC__
-fix24 fix24_mul_div (fix24 m0, fix24 m1, fix24 d);
-#pragma aux fix24_mul_div =\
-   "imul    edx"     \
-   "idiv    ebx"     \
-   parm [eax] [edx] [ebx]  \
-   modify [eax edx];
-#else
 __inline fix24 fix24_mul_div (fix24 m0, fix24 m1, fix24 d)
 {
-	#pragma warning(disable : 4035)	// disables no return value warning
-	__asm
-	{
-		mov		eax, m0
-		mov		edx, m1
-		mov		ebx, d
-		imul	edx
-		idiv	ebx
-	}
+   return (fix24)(((int64_t)m0 * (int64_t)m1) / d);
 }
-#endif
 
 fix24 fix24_pyth_dist (fix24 a, fix24 b);
 fix24 fix24_fast_pyth_dist (fix24 a, fix24 b);

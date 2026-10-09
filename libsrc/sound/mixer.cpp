@@ -1123,9 +1123,9 @@ cSndMixer::Set3DDeferMode( BOOL  deferOn )
 void CALLBACK
 cSndMixer::TimerCallback( UINT nTimerID,
                           UINT uReserved,
-                          DWORD dwUser,
-                          DWORD dwReserved1,
-                          DWORD dwReserved2 )
+                          DWORD_PTR dwUser,
+                          DWORD_PTR dwReserved1,
+                          DWORD_PTR dwReserved2 )
 {
 
    TLOG_INT_START(1);
@@ -1287,7 +1287,7 @@ cSndMixer::CheckTimer( void )
          TLOG1( "Mix:CheckTimer on resolution %d", resolution );
          mTimerId = timeSetEvent(kFadeGranularity, resolution,
                                  TimerCallback,
-                                 (DWORD)this, TIME_PERIODIC );
+                                 (DWORD_PTR)this, TIME_PERIODIC );
 
          if ( mTimerId == NULL ) {
 #ifndef SHIP

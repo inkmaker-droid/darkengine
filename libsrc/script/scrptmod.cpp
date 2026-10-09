@@ -14,12 +14,18 @@
 #include <scrptman.h>
 #include <allocapi.h>
 #include <filespec.h>
+#include <osm_emu/osm32mod.h>
+
+#include <string>
 
 ///////////////////////////////////////////////////////////////////////////////
 
 BOOL cScriptMan::LoadModule(const cFileSpec & fsModule, sScrModuleInfo * pInfo)
 {
    LGALLOC_AUTO_CREDIT();
+
+   pInfo->hModule = NULL;
+   pInfo->pModule = NULL;
 
    if ((pInfo->hModule = (HANDLE)LoadLibrary(fsModule.GetName())) != 0)
    {
@@ -33,7 +39,11 @@ BOOL cScriptMan::LoadModule(const cFileSpec & fsModule, sScrModuleInfo * pInfo)
       pInfo->hModule = NULL;
    }
 
-   pInfo->pModule = NULL;
+   std::string error;
+   if (LoadOsm32Module(fsModule.GetName(), fsModule.GetFileName(), this,
+                       &pInfo->pModule, &error))
+      return TRUE;
+
    return FALSE;
 }
 

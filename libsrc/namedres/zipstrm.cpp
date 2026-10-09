@@ -1,7 +1,7 @@
 #include <algorithm>
 
 #include <zipstrm.h>
-#include <zlib.h>
+#include <portableinflate.h>
 #include <dynfunc.h>
 
 #ifndef EXP_BUFFER_SIZE
@@ -243,98 +243,31 @@ int PkExplodeStreamToMem(IStoreStream* pSourceStream, void* pDest, int skip, int
 
 ///////////////////////////////////////
 
-void* ZAllocInterface(void*, unsigned int items, unsigned int size)
-{
-	return Malloc(size * items);
-}
-
-///////////////////////////////////////
-
-void ZFreeInterface(void*, void* addr)
-{
-	Free(addr);
-}
-
-///////////////////////////////////////
-
 int ZInflateStreamToMem(IStoreStream* pStream, int nStreamSize, void* pData, int nSize)
 {
-	static constexpr auto BufferSize = 0x10000;
-	if (!nStreamSize)
+	if (nStreamSize <= 0 || nSize < 0)
 		return 0;
 
-	auto inputBuffer = static_cast<char*>(Malloc(BufferSize));
-	auto fFlush = 0;
-	auto finished = false;
+	auto* inputBuffer = static_cast<unsigned char*>(Malloc(nStreamSize));
+	if (!inputBuffer)
+		return -1;
 
-	auto actualReadSize = pStream->Read(std::min(nStreamSize, BufferSize), inputBuffer);
-	if (!actualReadSize)
+	int totalReadSize = 0;
+	while (totalReadSize < nStreamSize)
 	{
-		CriticalMsg("Inflating empty file!");
-		Free(inputBuffer);
-		return 0;
+		const auto readSize = pStream->Read(nStreamSize - totalReadSize,
+			reinterpret_cast<char*>(inputBuffer + totalReadSize));
+		if (readSize <= 0)
+		{
+			Free(inputBuffer);
+			return -1;
+		}
+		totalReadSize += readSize;
 	}
 
-	auto totalReadSize = actualReadSize;
-	if (actualReadSize == nStreamSize)
-		fFlush = 4;
-
-	z_stream_s zBlock{};
-	zBlock.next_in = reinterpret_cast<Bytef*>(inputBuffer);
-	zBlock.avail_in = actualReadSize;
-	zBlock.next_out = reinterpret_cast<Bytef*>(pData);
-	zBlock.avail_out = nSize;
-	zBlock.zalloc = ZAllocInterface;
-	zBlock.zfree = ZFreeInterface;
-	zBlock.opaque = 0;
-
-	auto ret = inflateInit2(&zBlock, -15);
-	if (ret != Z_OK)
-		CriticalMsg1("zlib inflateInit failed with %d\n", ret);
-
-	do
-	{
-		if (!zBlock.avail_in && totalReadSize < nStreamSize)
-		{
-			actualReadSize = pStream->Read(
-				std::min(static_cast<long>(BufferSize), nStreamSize - totalReadSize),
-				inputBuffer);
-			if (actualReadSize <= 0)
-			{
-				inflateEnd(&zBlock);
-				Free(inputBuffer);
-				return -1;
-			}
-
-			zBlock.next_in = reinterpret_cast<Bytef*>(inputBuffer);
-			zBlock.avail_in = actualReadSize;
-			totalReadSize += actualReadSize;
-		}
-		ret = inflate(&zBlock, fFlush);
-		if (ret == Z_STREAM_END)
-		{
-			finished = true;
-		}
-		else
-		{
-			if (ret)
-			{
-				CriticalMsg1("zlib inflate returned %d!\n", ret);
-				inflateEnd(&zBlock);
-				Free(inputBuffer);
-				return -1;
-			}
-
-			if (!zBlock.avail_out)
-				CriticalMsg("zlib inflate: buffer full before end!");
-		}
-	} while (!finished);
-
-	auto actualRead = nSize - zBlock.avail_out;
-	inflateEnd(&zBlock);
+	const auto actualRead = RawDeflateExpand(inputBuffer, nStreamSize, pData, nSize);
 	Free(inputBuffer);
-
-	return actualRead;
+	return static_cast<int>(actualRead);
 }
 
 ///////////////////////////////////////

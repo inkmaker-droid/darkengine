@@ -68,7 +68,7 @@ private:
     // Hooks from cWinDisplayProvider
     //
 
-    virtual BOOL DoProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, long * pRetVal);
+    virtual BOOL DoProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT * pRetVal);
     virtual void DoGetInfo(sGrDeviceInfo *, sGrModeInfo *);
     virtual BOOL DoOpen(sGrModeCap *, int flags);
     virtual BOOL DoClose();

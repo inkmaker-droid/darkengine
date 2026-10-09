@@ -783,7 +783,7 @@ STDMETHODIMP_(DWORD) RES_BASE::GetAppData()
 ///////////////////////////////////////
 
 RES_BASE_TEMPLATE
-STDMETHODIMP_(void) RES_BASE::SetManData(DWORD ManData)
+STDMETHODIMP_(void) RES_BASE::SetManData(DWORD_PTR ManData)
 {
    AUTO_RES_THREAD_LOCK();
    m_ManData = ManData;
@@ -792,7 +792,7 @@ STDMETHODIMP_(void) RES_BASE::SetManData(DWORD ManData)
 ///////////////////////////////////////
 
 RES_BASE_TEMPLATE
-STDMETHODIMP_(DWORD) RES_BASE::GetManData()
+STDMETHODIMP_(DWORD_PTR) RES_BASE::GetManData()
 {
    AUTO_RES_THREAD_LOCK();
    return m_ManData;

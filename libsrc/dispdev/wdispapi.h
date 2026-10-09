@@ -46,7 +46,7 @@ DECLARE_INTERFACE_(IWinDisplayDevice, IUnknown)
     // message is entirely handled. pRetVal to specify return value from window
     // procedure, if handled.
     //
-    STDMETHOD_(BOOL, ProcessMessage)(THIS_ uint msg, uint wParam, long lParam, long * pRetVal) PURE;
+    STDMETHOD_(BOOL, ProcessMessage)(THIS_ UINT msg, WPARAM wParam, LPARAM lParam, LRESULT * pRetVal) PURE;
 
     //
     // Get the dimensions of the current mode

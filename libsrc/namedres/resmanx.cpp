@@ -309,7 +309,7 @@ IRes* cResMan::CreateResource(IStore* pStorage, const char* pName, const char* p
 		IResControl* pResControl;
 		if (SUCCEEDED(pResource->QueryInterface(IID_IResControl, (void**)&pResControl)))
 		{
-			pResControl->SetManData(reinterpret_cast<DWORD>(pTypeData));
+			pResControl->SetManData(reinterpret_cast<DWORD_PTR>(pTypeData));
 			pResControl->Release();
 		}
 	}

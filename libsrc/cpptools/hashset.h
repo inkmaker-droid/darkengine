@@ -285,7 +285,7 @@ public:
     //
     // Constructors and destructor
     //
-    cHashSet(unsigned n = cHashSetBase::kDefaultSize)   : cHashSetBase(n) { AssertMsg1(sizeof(NODE) == 4, "cHashSet node must be 32-bits. %s", (sizeof(NODE) < 4) ? "Use int." : "Use pointers"); }
+    cHashSet(unsigned n = cHashSetBase::kDefaultSize)   : cHashSetBase(n) { AssertMsg(sizeof(NODE) <= sizeof(tHashSetNode), "cHashSet node must fit in its pointer-sized storage"); }
     cHashSet(const cHashSet &)                          : cHashSetBase(*this) {}
 
     ///////////////////////////////////

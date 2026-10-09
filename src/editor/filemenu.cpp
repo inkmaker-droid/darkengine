@@ -169,7 +169,7 @@ void FileMenu(void)
    SafeRelease(pWA);
 
    // we also need the main app's HINSTANCE
-   hMainInst = (HINSTANCE) GetWindowLong(hMainWnd, GWL_HINSTANCE);
+   hMainInst = (HINSTANCE) GetWindowLongPtr(hMainWnd, GWLP_HINSTANCE);
 
    // set up the new window's class
    memset(&wc, 0, sizeof(WNDCLASS));
@@ -196,7 +196,7 @@ void FileMenu(void)
    UpdateWindow(hConWnd);
 
    // get our new window's HINSTANCE
-   hConInst = (HINSTANCE) GetWindowLong(hConWnd, GWL_HINSTANCE);
+   hConInst = (HINSTANCE) GetWindowLongPtr(hConWnd, GWLP_HINSTANCE);
 
    // and create the buttons on it
    CreateWindow("BUTTON", "Load world", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,

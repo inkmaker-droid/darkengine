@@ -12,6 +12,10 @@
 #define __SCRPTBAS_H
 
 #include <scrpttyp.h>
+#include <signal.h>
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 
 #ifdef SCRIPT
 
@@ -50,7 +54,11 @@ public:
          {
             (*g_pPrint)("Breaking: script %s on object %d getting %s.\n",
                         GetClassName(), pMsg->to, pMsg->message);
-            __asm { int 3 }
+#if defined(_MSC_VER)
+            __debugbreak();
+#else
+            raise(SIGTRAP);
+#endif
             break;
          }
 

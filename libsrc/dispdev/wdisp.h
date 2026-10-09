@@ -248,7 +248,7 @@ private:
     private:
         DECLARE_DELEGATION();
 
-        STDMETHOD_(BOOL, ProcessMessage)(UINT msg, WPARAM wParam, LPARAM lParam, long * pRetVal);
+        STDMETHOD_(BOOL, ProcessMessage)(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT * pRetVal);
         STDMETHOD_(void, GetWidthHeight)(unsigned * pWidth, unsigned * pHeight);
         STDMETHOD_(void, OnTaskSwitch)  (BOOL);
         STDMETHOD_(BOOL, GetDirectDraw) (IDirectDraw4 **);

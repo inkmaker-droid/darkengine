@@ -499,7 +499,7 @@ LinkEditor* LinkEditorCreate(ObjID objid_src, ObjID objid_dest, RelationID relid
    SafeRelease(pWA);
 
    // we also need the main app's HINSTANCE
-   hMainInst = (HINSTANCE) GetWindowLong(hMainWnd, GWL_HINSTANCE);
+   hMainInst = (HINSTANCE) GetWindowLongPtr(hMainWnd, GWLP_HINSTANCE);
 
    // set up the new window's class
    memset(&wc, 0, sizeof(WNDCLASS));
@@ -539,7 +539,7 @@ LinkEditor* LinkEditorCreate(ObjID objid_src, ObjID objid_dest, RelationID relid
    ed->hWndFont = CreateFontIndirect(&logFont);
 
    // get our new window's HINSTANCE
-   ed->hInst = (HINSTANCE) GetWindowLong(ed->hWnd, GWL_HINSTANCE);
+   ed->hInst = (HINSTANCE) GetWindowLongPtr(ed->hWnd, GWLP_HINSTANCE);
 
    SetProp(ed->hWnd, ID_LINKED, (HANDLE)ed);
    ed->hMainWnd = hMainWnd;

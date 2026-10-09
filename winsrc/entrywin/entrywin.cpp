@@ -184,7 +184,7 @@ static LONG WINAPI DarkUnhandledExceptionFilter(EXCEPTION_POINTERS* exceptionInf
     WriteCrashLine(output, line);
     WriteCrashLine(log, line);
 
-    wsprintfA(line, "Unhandled exception %08X at %08X\r\n",
+    wsprintfA(line, "Unhandled exception %08X at %p\r\n",
               exceptionInfo->ExceptionRecord->ExceptionCode,
               exceptionInfo->ExceptionRecord->ExceptionAddress);
     WriteCrashLine(output, line);
@@ -192,14 +192,25 @@ static LONG WINAPI DarkUnhandledExceptionFilter(EXCEPTION_POINTERS* exceptionInf
     if (exceptionInfo->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION &&
         exceptionInfo->ExceptionRecord->NumberParameters >= 2)
     {
-        wsprintfA(line, "  access=%s address=%08X eax=%08X ecx=%08X edx=%08X esp=%08X ebp=%08X\r\n",
+#if defined(_M_X64)
+        wsprintfA(line, "  access=%s address=%p rax=%p rcx=%p rdx=%p rsp=%p rbp=%p\r\n",
                   exceptionInfo->ExceptionRecord->ExceptionInformation[0] ? "write" : "read",
-                  (DWORD)exceptionInfo->ExceptionRecord->ExceptionInformation[1],
+                  (void *)exceptionInfo->ExceptionRecord->ExceptionInformation[1],
+                  (void *)exceptionInfo->ContextRecord->Rax,
+                  (void *)exceptionInfo->ContextRecord->Rcx,
+                  (void *)exceptionInfo->ContextRecord->Rdx,
+                  (void *)exceptionInfo->ContextRecord->Rsp,
+                  (void *)exceptionInfo->ContextRecord->Rbp);
+#else
+        wsprintfA(line, "  access=%s address=%p eax=%08X ecx=%08X edx=%08X esp=%08X ebp=%08X\r\n",
+                  exceptionInfo->ExceptionRecord->ExceptionInformation[0] ? "write" : "read",
+                  (void *)exceptionInfo->ExceptionRecord->ExceptionInformation[1],
                   exceptionInfo->ContextRecord->Eax,
                   exceptionInfo->ContextRecord->Ecx,
                   exceptionInfo->ContextRecord->Edx,
                   exceptionInfo->ContextRecord->Esp,
                   exceptionInfo->ContextRecord->Ebp);
+#endif
         WriteCrashLine(output, line);
         WriteCrashLine(log, line);
     }
@@ -209,19 +220,30 @@ static LONG WINAPI DarkUnhandledExceptionFilter(EXCEPTION_POINTERS* exceptionInf
     {
         CONTEXT context = *exceptionInfo->ContextRecord;
         STACKFRAME64 frame = {};
-        if (!context.Eip && context.Esp)
+#if defined(_M_X64)
+        const DWORD machineType = IMAGE_FILE_MACHINE_AMD64;
+        DWORD64 &programCounter = context.Rip;
+        DWORD64 &stackPointer = context.Rsp;
+        DWORD64 &framePointer = context.Rbp;
+#else
+        const DWORD machineType = IMAGE_FILE_MACHINE_I386;
+        DWORD &programCounter = context.Eip;
+        DWORD &stackPointer = context.Esp;
+        DWORD &framePointer = context.Ebp;
+#endif
+        if (!programCounter && stackPointer)
         {
             // A call through a null function pointer leaves the caller's
             // return address at the top of the stack. Start there so the
             // crash report still identifies the owning call site.
-            context.Eip = *reinterpret_cast<DWORD*>(context.Esp);
-            context.Esp += sizeof(DWORD);
+            programCounter = *reinterpret_cast<ULONG_PTR*>(stackPointer);
+            stackPointer += sizeof(ULONG_PTR);
         }
-        frame.AddrPC.Offset = context.Eip;
+        frame.AddrPC.Offset = programCounter;
         frame.AddrPC.Mode = AddrModeFlat;
-        frame.AddrFrame.Offset = context.Ebp;
+        frame.AddrFrame.Offset = framePointer;
         frame.AddrFrame.Mode = AddrModeFlat;
-        frame.AddrStack.Offset = context.Esp;
+        frame.AddrStack.Offset = stackPointer;
         frame.AddrStack.Mode = AddrModeFlat;
 
         for (int depth = 0; depth < 64 && frame.AddrPC.Offset; ++depth)
@@ -233,14 +255,14 @@ static LONG WINAPI DarkUnhandledExceptionFilter(EXCEPTION_POINTERS* exceptionInf
             DWORD64 displacement = 0;
 
             if (SymFromAddr(process, frame.AddrPC.Offset, &displacement, symbol))
-                wsprintfA(line, "  #%02d %08X %s+0x%X\r\n", depth,
-                          (DWORD)frame.AddrPC.Offset, symbol->Name, (DWORD)displacement);
+                wsprintfA(line, "  #%02d %p %s+0x%p\r\n", depth,
+                          (void *)frame.AddrPC.Offset, symbol->Name, (void *)displacement);
             else
-                wsprintfA(line, "  #%02d %08X\r\n", depth, (DWORD)frame.AddrPC.Offset);
+                wsprintfA(line, "  #%02d %p\r\n", depth, (void *)frame.AddrPC.Offset);
             WriteCrashLine(output, line);
             WriteCrashLine(log, line);
 
-            if (!StackWalk64(IMAGE_FILE_MACHINE_I386, process, GetCurrentThread(),
+            if (!StackWalk64(machineType, process, GetCurrentThread(),
                              &frame, &context, NULL, SymFunctionTableAccess64,
                              SymGetModuleBase64, NULL))
                 break;

@@ -157,14 +157,18 @@ public:
 
    STDMETHOD(Read)(sDatum* pval, IDataOpsFile* file, int )
    {
-      if (file->Read((void*)pval,sizeof(*pval)) == sizeof(*pval))
+      // Simple properties are a fixed 32-bit database format even when
+      // sDatum is pointer-sized in a 64-bit process.  Reading sizeof(sDatum)
+      // here would consume four bytes from the following serialized field.
+      pval->value = NULL;
+      if (file->Read(&pval->value,4) == 4)
          return S_OK;
       return E_FAIL;
    }
 
    STDMETHOD(Write)(sDatum val, IDataOpsFile* file)
    {
-      if (file->Write((void*)&val,sizeof(val)) == sizeof(val))
+      if (file->Write(&val.value,4) == 4)
          return S_OK;
       return E_FAIL;
    }

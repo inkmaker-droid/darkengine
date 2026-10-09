@@ -23,6 +23,7 @@
 #include <config.h>
 #include <cfgdbg.h>
 #include <mprintf.h>
+#include <cmdterm.h>
 #include <memall.h>
 #include <dbmem.h>   // must be last header! 
 
@@ -182,6 +183,7 @@ void StatusField(int x, const char *s)
 void Status(const char *s)
 {
    StatusField(SF_STATUS, s);
+   cmdterm_capture_status(s);
 #ifndef SHIP   
    if (*s != '\0' && config_is_defined("status"))
       mprintf("STATUS: %s\n",s);

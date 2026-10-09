@@ -1281,6 +1281,14 @@ int cIBInputMapper::ProcessMouseMove(uiMouseEvent* event)
 {
 	auto res_x = grd_canvas->bm.w;
 	auto res_y = grd_canvas->bm.h;
+	const auto* x_cmd = m_control_binds.Find("mouse_axisx");
+	const auto* y_cmd = m_control_binds.Find("mouse_axisy");
+
+	// UI/command contexts intentionally have no mouse-look bindings. Do not
+	// pin the pointer to the center unless this context consumes a relative
+	// axis; popup gadgets need ordinary absolute mouse motion.
+	if (x_cmd == nullptr && y_cmd == nullptr)
+		return 0;
 
 	auto old_mouse_mask = mouseMask;
 	mouseMask &= 254;
@@ -1293,7 +1301,7 @@ int cIBInputMapper::ProcessMouseMove(uiMouseEvent* event)
 	char str[64] = {};
 	char final[64] = {};
 
-	const auto* cmd = m_control_binds.Find("mouse_axisx");
+	const auto* cmd = x_cmd;
 	if (cmd)
 	{
 		StripControl(final, cmd);
@@ -1303,7 +1311,7 @@ int cIBInputMapper::ProcessMouseMove(uiMouseEvent* event)
 		g_IB_variable_manager->Cmd(final, 0);
 	}
 
-	cmd = m_control_binds.Find("mouse_axisy");
+	cmd = y_cmd;
 	if (cmd)
 	{
 		StripControl(final, cmd);

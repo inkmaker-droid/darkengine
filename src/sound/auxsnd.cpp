@@ -7,6 +7,7 @@
 // memory sound source stuff from Pat
 
 #include <stdio.h>
+#include <string.h>
 
 #include <lg.h>
 #include <sndsrc.h>
@@ -203,7 +204,7 @@ CreateMemSoundSourceLooped( ISndMixer           *pMixer,          // your mixer
    SSPLBranch           *pBranch;
    SSPLCallback         *pCallback;
    SSPLSetGate          *pSetGate;
-   long                 *pWoof;
+   uint32               *pCallbackData;
 
    if ( ppSndSrc != NULL ) {
       *ppSndSrc = NULL;
@@ -249,7 +250,7 @@ CreateMemSoundSourceLooped( ISndMixer           *pMixer,          // your mixer
    pPlaylistBase = (uint32 *)Malloc( sizeof(SSPLSetGate) +
                                      sizeof(SSPLLabel) +
                                      sizeof(SSPLMemSingle) +
-                                     sizeof(SSPLCallback) + sizeof(uint32) +
+                                     sizeof(SSPLCallback) + sizeof(void *) +
                                      sizeof(SSPLBranch) +
                                      sizeof(SSPLEndList)  + 32 );
          
@@ -277,12 +278,12 @@ CreateMemSoundSourceLooped( ISndMixer           *pMixer,          // your mixer
    pCallback = (SSPLCallback *) pListTmp;
    pCallback->op = plCallback;
    pCallback->func = loopCB;
-   pCallback->nArgs = 1;
+   pCallback->nArgs = sizeof(void *) / sizeof(uint32);
    pListTmp += sizeof( SSPLCallback );
    // add the single argument - the app callback data ptr
-   pWoof = (long *) pListTmp;
-   *pWoof++ = (long) pLoopCBData;
-   pListTmp += sizeof( long );
+   pCallbackData = (uint32 *)pListTmp;
+   memcpy(pCallbackData, &pLoopCBData, sizeof(pLoopCBData));
+   pListTmp += sizeof(pLoopCBData);
 
    // branch to label 0 if gate var 0 is not 0 after decrementing
    pBranch = (SSPLBranch *) pListTmp;
@@ -512,7 +513,7 @@ struct sSongSrcSegment
 {
    SSPLLabel         label;
    SSPLCallback      callback;
-   uint32            cbData;
+   uint32            cbData[sizeof(void *) / sizeof(uint32)];
    SSPLNRezSingle    nresSingle;
    SSPLBranch        loopBranch;
    SSPLBranch        segmentBranch;
@@ -609,11 +610,11 @@ CreateSongSoundSource ( ISndMixer           *pMixer,
       pCallback                 = &(pCurrSeg->callback);
       pCallback->op             = plCallback;
       pCallback->func           = segmentCB;
-      pCallback->nArgs          = 1;
+      pCallback->nArgs          = sizeof(void *) / sizeof(uint32);
 
       // Add the callback data.
-      pCallbackData             = &(pCurrSeg->cbData);
-      *pCallbackData            = (uint32)pSegmentCBData;
+      pCallbackData             = pCurrSeg->cbData;
+      memcpy(pCallbackData, &pSegmentCBData, sizeof(pSegmentCBData));
 
       // Add sample.
       pNRezSingle             = &(pCurrSeg->nresSingle);

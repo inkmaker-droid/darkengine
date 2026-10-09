@@ -545,6 +545,9 @@ errtype uiQueueEvent(uiEvent* ev)
          out.pos.y = mse.y;
          out.type = (mse.type == MOUSE_MOTION) ? UI_EVENT_MOUSE_MOVE :  UI_EVENT_MOUSE;
          out.action = mse.type;
+         out.tstamp = mse.timestamp;
+         out.buttons = mse.buttons;
+         out.wheel = mse.wheel;
          event_queue_add((uiEvent*)&out);
       }
    }
@@ -738,6 +741,7 @@ errtype uiMakeMotionEvent(uiMouseEvent* ev)
    ev->action = MOUSE_MOTION;
    ev->tstamp = mouse_get_time();
    ev->buttons = (ubyte)(ui_buttonstate|ui_joy_state);
+   ev->wheel = 0;
    return OK;
 }
 
@@ -930,6 +934,7 @@ errtype uiPoll(void)
             out.subtype = mse.type;
             mout->tstamp = mse.timestamp;
             mout->buttons = mse.buttons | ui_joy_state;
+            mout->wheel = mse.wheel;
             ui_dispatch_mouse_event(mout);
 //            uiDispatchEvent((uiEvent*)mout);
          }

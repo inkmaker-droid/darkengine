@@ -886,7 +886,9 @@ BOOL CreatureGetRenderHandle(const ObjID objID, long *pHandle)
    if(!CreatureExists(objID))
       return FALSE;
 
-   *pHandle=(long)CreatureFromObj(objID);
+   // mms_model::app_data is part of the legacy 32-bit mesh format.  Keep an
+   // object ID there instead of truncating a runtime creature pointer.
+   *pHandle=(long)objID;
    return TRUE;
 }
 
@@ -896,7 +898,7 @@ void CreatureMeshJointPosCallback(const mms_model *m, const int jointID, mxs_tra
 {
    AssertMsg(m->app_data,"Invalid Creature Pointer In Joint Callback");
 
-   ((cCreature *)(m->app_data))->MeshJointPosCallback(jointID,pTrans);
+   CreatureFromObj((ObjID)m->app_data)->MeshJointPosCallback(jointID,pTrans);
 }
 
 ///////////////////////////////////////////////////
@@ -905,7 +907,7 @@ void CreatureMeshStretchyJointCallback(const mms_model *m, const int jointID, mx
 {
    AssertMsg(m->app_data,"Invalid Creature Pointer In Joint Callback");
 
-   ((cCreature *)(m->app_data))->MeshStretchyJointCallback(jointID,pTrans,pRot);
+   CreatureFromObj((ObjID)m->app_data)->MeshStretchyJointCallback(jointID,pTrans,pRot);
 }
 
 ///////////////////////////////////////////////////

@@ -31,6 +31,23 @@ extern "C" {
 
 #define E398_HACK
 
+namespace
+{
+#pragma pack(push, 1)
+struct sMpsMotionDisk
+{
+   mps_motion_info info;
+   int num_components;
+   uint32 ignored_components;
+   int num_flags;
+   uint32 ignored_flags;
+};
+#pragma pack(pop)
+
+static_assert(sizeof(sMpsMotionDisk) == 112,
+              "Unexpected legacy mps_motion record size");
+}
+
 EXTERN void MotCompRotCallback(mps_motion_info *mi,mps_comp_motion *cm,float frame, quat *data);
 static void MotCompXlatCallback(multiped *mp, mps_motion_info *mi,mps_comp_motion *cm,float frame, mxs_vector *data);
 static void MotRootRotCallback(multiped *mp, mps_motion_info *mi,float frame, quat *data);
@@ -79,7 +96,7 @@ cMpsMotion::cMpsMotion(mps_motion *mot)
 
 void cMpsMotion::Read(ITagFile *pFile)
 {
-   mps_motion mot;
+   sMpsMotionDisk mot;
 
    // delete any existing alloced stuff
    if(flags)
@@ -102,7 +119,7 @@ void cMpsMotion::Read(ITagFile *pFile)
    if(mot.num_components)
    {
       components=(mps_comp_motion *) mp_alloc(sizeof(mps_comp_motion) * mot.num_components,__FILE__,__LINE__);
-      ITagFile_Read(pFile,(char *)components,sizeof(*mot.components)*mot.num_components);
+      ITagFile_Read(pFile,(char *)components,sizeof(mps_comp_motion)*mot.num_components);
    } else
    {
       components=NULL;
@@ -112,7 +129,7 @@ void cMpsMotion::Read(ITagFile *pFile)
    if(mot.num_flags)
 	{
 	   flags=(mps_motion_flag *) mp_alloc(sizeof(mps_motion_flag) * mot.num_flags,__FILE__,__LINE__);
-      ITagFile_Read(pFile,(char *)flags,sizeof(*mot.flags)*mot.num_flags);
+      ITagFile_Read(pFile,(char *)flags,sizeof(mps_motion_flag)*mot.num_flags);
 	} else
 	{
 	   flags=NULL;
@@ -121,14 +138,14 @@ void cMpsMotion::Read(ITagFile *pFile)
 
 void cMpsMotion::Write(ITagFile *pFile)
 {
-   mps_motion mot;
+   sMpsMotionDisk mot = {};
 
    AssertMsg(info.type==MT_CAPTURE,"cannot write virtual motion");
    mot.info=info;
    mot.num_components=num_components;
-   mot.components=NULL;
+   mot.ignored_components=0;
    mot.num_flags=num_flags;
-   mot.flags=NULL;
+   mot.ignored_flags=0;
    
    ITagFile_Write(pFile,(char *)&mot,sizeof(mot));
    ITagFile_Write(pFile,(char *)components,sizeof(*components)*num_components);

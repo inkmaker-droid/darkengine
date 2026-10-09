@@ -223,12 +223,26 @@ DECLARE_SCRIPT_SERVICE_IMPL(cLinkSrv, Link)
 
       if (pLinkManager->AnyLinks(recipients,self,LINKOBJ_WILDCARD))
       {
+         const char* comparisonField = NULL;
+         cAutoIPtr<IRelation> relation(pLinkManager->GetRelation(recipients));
+         if (relation != (IRelation*)NULL)
+         {
+            const sRelationDataDesc* dataDesc = relation->DescribeData();
+            const sStructDesc* structDesc = dataDesc ?
+               SdescTools()->Lookup(dataDesc->type) : NULL;
+            // Shipping builds historically fell through to the first field
+            // here when filtering a multi-field relation. Name it explicitly
+            // so PLAYTEST builds preserve that behavior without asserting.
+            if (structDesc && structDesc->nfields > 1)
+               comparisonField = structDesc->fields[0].name;
+         }
          ILinkQuery *Controls = pLinkManager->Query(self,LINKOBJ_WILDCARD,recipients);
          
          while (!Controls->Done())
          {
             // so maybe the linkdata should be interepreted in a questbit-specific way someday?
-            if (Controls->Data() == NULL || link(Controls->ID()).GetData() == linkdata)
+            if (Controls->Data() == NULL ||
+                link(Controls->ID()).GetData(comparisonField) == linkdata)
             {
                sLink slink;
 

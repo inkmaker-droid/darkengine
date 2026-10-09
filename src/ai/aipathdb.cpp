@@ -5431,6 +5431,21 @@ static BOOL OpenPathTagFile(ITagFile* pTagFile)
 
 #define ArrToMoveParm(arr) ((char *)((arr).AsPointer()))
 
+// AIPATH 3.3 is an x86-era on-disk format.  The final field was declared as
+// void * but actually stores a 32-bit waypoint ObjID.  Serializing the native
+// structure directly makes its record grow from 16 to 20 bytes on x64 and
+// shifts every field that follows it in the tag block.
+struct sAIPathCellObjMapDisk
+{
+   ObjID         objID;
+   tAIPathCellID cellID;
+   BOOL          prevPropState;
+   unsigned      data;
+};
+
+static_assert(sizeof(sAIPathCellObjMapDisk) == 16,
+              "AIPATH cell-object map disk record must remain 16 bytes");
+
 
 void AIPathFindRead(ITagFile * pTagFile)
 {
@@ -5489,7 +5504,17 @@ void AIPathFindRead(ITagFile * pTagFile)
 
       pTagFile->Move((char*)&g_AIPathDB.m_nCellObjMaps, sizeof(int));
       g_AIPathDB.m_CellObjMap.SetSize(g_AIPathDB.m_nCellObjMaps);
-      pTagFile->Move(ArrToMoveParm(g_AIPathDB.m_CellObjMap), sizeof(sAIPathCellObjMap) * g_AIPathDB.m_nCellObjMaps);
+      for (i = 0; i < g_AIPathDB.m_nCellObjMaps; ++i)
+      {
+         sAIPathCellObjMapDisk disk = {};
+         pTagFile->Move((char *)&disk, sizeof(disk));
+
+         sAIPathCellObjMap &map = g_AIPathDB.m_CellObjMap[i];
+         map.objID = disk.objID;
+         map.cellID = disk.cellID;
+         map.prevPropState = disk.prevPropState;
+         map.data = (void *)(uintptr_t)disk.data;
+      }
 
       // New for 3.2, multiple pathfinding zones:
       for (i = 0; i < kAIZone_Num; i++)
@@ -5679,7 +5704,17 @@ void AIPathFindWrite(ITagFile * pTagFile)
       pTagFile->Move(ArrToMoveParm(g_AIPathDB.m_ObjHints), sizeof(tAIPathCellID) * g_AIPathDB.m_nObjHints);
 
       pTagFile->Move((char*)&g_AIPathDB.m_nCellObjMaps, sizeof(int));
-      pTagFile->Move(ArrToMoveParm(g_AIPathDB.m_CellObjMap), sizeof(sAIPathCellObjMap) * g_AIPathDB.m_nCellObjMaps);
+      for (i = 0; i < g_AIPathDB.m_nCellObjMaps; ++i)
+      {
+         const sAIPathCellObjMap &map = g_AIPathDB.m_CellObjMap[i];
+         sAIPathCellObjMapDisk disk = {
+            map.objID,
+            map.cellID,
+            map.prevPropState,
+            (unsigned)(uintptr_t)map.data,
+         };
+         pTagFile->Move((char *)&disk, sizeof(disk));
+      }
 
       long zero = 0;
 

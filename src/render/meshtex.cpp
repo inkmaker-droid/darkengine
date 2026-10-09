@@ -476,7 +476,7 @@ void MeshTexPrerender(ObjID Obj, mms_model *pModel)
       g_aszDefaultMaterial[i]
          = pMaterial[pTextureSubst[i].m_iMaterialIndex].handle;
       pMaterial[pTextureSubst[i].m_iMaterialIndex].handle
-         = (ulong) pTextureSubst[i].m_pBitmap;
+         = mm_register_texture(pTextureSubst[i].m_pBitmap);
    }
 
    FacePrerender(Obj, pModel);

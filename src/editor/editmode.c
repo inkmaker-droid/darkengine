@@ -41,6 +41,7 @@
 #include <scrnmode.h>
 #include <scrnman.h>
 #include <status.h>
+#include <cmdterm.h>
 #include <testloop.h>
 #include <gen_bind.h>
 #include <ailoop.h>
@@ -508,6 +509,7 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
          StatusField(SF_TIME,asctime(&time_of_day));
          StatusUpdate();
          GFHUpdate(GFH_FRAME);
+          cmdterm_redraw();
          if(g_InMotionEditor)
             MotEditUpdate(info.frame->dTicks); 
 

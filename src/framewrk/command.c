@@ -123,7 +123,8 @@ bool CommandParse(const char *inp, Command **res_1, const char **res_2)
    return TRUE;
 }
 
-static const char *fail_return = "No such Command";
+static char fail_return[] = "No such Command";
+static char context_fail_return[] = "Command is not available in this mode";
 char *CommandExecute(const char *inp)
 {
    // parse out to the first blank
@@ -133,6 +134,10 @@ char *CommandExecute(const char *inp)
    if ((inp==NULL)||(inp[0]=='\0')||(inp[0]==';'))
       return fail_return;  // bonus null command fun
    if (CommandParse(inp, &cmd, &s)) {
+      if (!(cmd->contexts & *command_context_ptr)) {
+         Warning(("CommandExecute: Invalid context for '%s'\n", cmd->name));
+         return context_fail_return;
+      }
       CommandExecuteParsed(cmd, s);
       return NULL;
    } else {
@@ -145,6 +150,10 @@ bool CommandExecuteParam(const char *inp, char *parm)
 {
    Command *cmd = CommandFindString(inp);
    if (cmd) {
+      if (!(cmd->contexts & *command_context_ptr)) {
+         Warning(("CommandExecuteParam: Invalid context for '%s'\n", cmd->name));
+         return FALSE;
+      }
       CommandExecuteParsed(cmd, parm);
       return TRUE;
    } else {
@@ -327,9 +336,71 @@ static const char *type_name[] =
    "integer toggle"
 };
 
+static bool help_text_contains(const char *text, const char *query,
+                               int query_len)
+{
+   int text_len;
+   int i;
+
+   if (!text || !query || query_len <= 0)
+      return FALSE;
+   text_len = strlen(text);
+   if (query_len > text_len)
+      return FALSE;
+
+   for (i = 0; i <= text_len - query_len; ++i)
+      if (!strnicmp(text + i, query, query_len))
+         return TRUE;
+   return FALSE;
+}
+
 static void help_commands(const char *s)
 {
-   if (s && *s) 
+   int matches = 0;
+   const char *query = s;
+   const char *query_end;
+   int query_len;
+
+   while (query && *query && isspace((unsigned char)*query))
+      ++query;
+   query_end = query ? query + strlen(query) : query;
+   while (query_end && query_end > query &&
+          isspace((unsigned char)query_end[-1]))
+      --query_end;
+   query_len = query_end && query ? (int)(query_end - query) : 0;
+
+#ifdef EDITOR
+   // DromEd registers thousands of commands. Its existing searchable command
+   // reference is more useful than streaming the entire registry into the
+   // embedded console. A filtered query remains available in the console.
+   if (!query_len)
+   {
+      Command *window_help = CommandFindString("show_command_help");
+      if (window_help && (window_help->contexts & *command_context_ptr))
+      {
+         CommandExecute("show_command_help");
+         return;
+      }
+   }
+#endif
+
+#ifdef THIEF2_GAME
+   // Thief's PLAYTEST build exposes a large legacy registry. Lead with the
+   // useful families and keep the full context-filtered registry searchable.
+   if (!query_len)
+   {
+      mprintf("Gameplay console command families:\n");
+      mprintf("  Mission:  open_mission, list_missions\n");
+      mprintf("  Player:   immunity, flying, player_physics, invisible\n");
+      mprintf("  Inspect:  reticle, reticle_info (ret_info)\n");
+      mprintf("  Scripts:  list_scripts, debug_scripts\n");
+      mprintf("Legacy PLAYTEST commands are also active in this mode.\n");
+      mprintf("Use help <keyword> to search active names and descriptions.\n");
+      return;
+   }
+#endif
+
+   if (query_len)
    {
       int j;
 
@@ -341,20 +412,23 @@ static void help_commands(const char *s)
 
          for (i=0; i < count; ++i)
          {
-            int k;
-            int len = strlen(set[i].name);
-            int n = strlen(s);
-            for(k = 0; k <= len - n; k++)
-               if (strnicmp(set[i].name+k,s,n) == 0)
-               {
-                  Command *cmd = &set[i];
-                  mprintf("%s ",set[i].name);
-                  if (cmd->comment)
-                     mprintf("(%s): %s\n", type_name[cmd->type], cmd->comment);
-                  else
-                     mprintf("(%s)\n", type_name[cmd->type]);
-               }
+            Command *cmd = &set[i];
+            const char *type = (cmd->type >= FUNC_VOID &&
+                                cmd->type <= TOGGLE_INT)
+                             ? type_name[cmd->type] : "unknown";
+            if (!(set[i].contexts & *command_context_ptr))
+               continue;
+            if (!help_text_contains(cmd->name, query, query_len) &&
+                !help_text_contains(cmd->comment, query, query_len) &&
+                !help_text_contains(type, query, query_len))
+               continue;
 
+            ++matches;
+            mprintf("%s ",cmd->name);
+            if (cmd->comment)
+               mprintf("(%s): %s\n", type, cmd->comment);
+            else
+               mprintf("(%s)\n", type);
          }
 
       }
@@ -363,12 +437,16 @@ static void help_commands(const char *s)
    {
       int j,i,cnt=0;
       char holding_pen[21];
+      mprintf("Commands available in this mode:\n");
       holding_pen[19]='\0';
       holding_pen[20]='\0';
       for (j=0; j < command_list_size; ++j)
          for (i=0; i < command_count[j]; ++i)
          {
+            if (!(command_list[j][i].contexts & *command_context_ptr))
+               continue;
             strncpy(holding_pen,command_list[j][i].name,19);
+            ++matches;
             if ((++cnt)&3)  // ie line 0,1,2...
                mprintf("%020s", holding_pen);
             else
@@ -379,6 +457,9 @@ static void help_commands(const char *s)
          }
       if (cnt&3) mprintf("\n"); // clean up with a return
    }
+
+   if (!matches)
+      mprintf("No matching commands are available in this mode.\n");
 }
 
 // track command finds
@@ -397,6 +478,8 @@ const char *command_find(const char *prefix, BOOL restart)
       Command *set=command_list[which_list];
       for (; which_cmd < command_count[which_list]; which_cmd++)
       {
+         if (!(set[which_cmd].contexts & *command_context_ptr))
+            continue;
          if (match_len)
          {
             if (strnicmp(set[which_cmd].name,prefix,match_len)==0)

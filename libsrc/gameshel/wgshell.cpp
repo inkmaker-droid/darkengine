@@ -378,7 +378,19 @@ STDMETHODIMP_(BOOL) cWinGameShell::Exec(const char * pszCommandLine )
 
 STDMETHODIMP_(BOOL) cWinGameShell::SetFlags(int fFlags )
 {
+    const BOOL cursorChanged = !!(m_fCreateFlags & kShowNativeCursor) !=
+                               !!(fFlags & kShowNativeCursor);
     m_fCreateFlags = fFlags;
+
+    // This flag can change after the game window class is registered. Keep
+    // the class cursor in sync so modal gameplay UI can reveal the arrow.
+    if (cursorChanged && m_hWnd)
+    {
+        HCURSOR cursor = (fFlags & kShowNativeCursor)
+                       ? LoadCursor(NULL, IDC_ARROW) : NULL;
+        SetClassLongPtr(m_hWnd, GCLP_HCURSOR, (LONG_PTR)cursor);
+        SetCursor(cursor);
+    }
 
     return TRUE;
 }
@@ -619,7 +631,7 @@ void cWinGameShell::OnActivateApp(BOOL fActive)
 
 ///////////////////////////////////////
 
-long FAR PASCAL cWinGameShell::StaticWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK cWinGameShell::StaticWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     // If this is the first meaningful message sent to the window...
     if (msg == WM_CREATE)
@@ -748,11 +760,11 @@ BOOL cWinGameShell::PreTranslateMessage(MSG * pMsg)
 
 ///////////////////////////////////////
 
-long cWinGameShell::WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT cWinGameShell::WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 {
     // Begin Scope
     {
-    long retVal = 0;
+    LRESULT retVal = 0;
 
     // Allow primitive input device manager first dibs to message if we're active
     if (IsActive() && m_WinInputDevices.ProcessMessage(msg, wParam, lParam, retVal))

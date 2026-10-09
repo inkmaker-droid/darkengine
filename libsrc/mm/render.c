@@ -6,6 +6,7 @@
 #include <xformseg.h>
 #include <r3d.h>
 #include <mmd.h>
+#include <string.h>
 
 // global variables
 int current_smatr_id=-1;
@@ -46,6 +47,151 @@ mxs_trans   *mmd_buff_attach_trans;  // attachments are oriented by segment
 
 // Texture
 ulong       mmd_tmap_mode=R3_PL_TEXTURE;  // default to perspective
+
+// A mesh material's handle is part of the legacy on-disk format and must stay
+// 32 bits wide.  It used to contain a bitmap pointer, which is not viable in a
+// 64-bit process.  These tables give the field an architecture-neutral token
+// while retaining constant-time lookup in both directions.
+typedef struct _mms_texture_entry
+{
+   r3s_texture texture;
+   ulong handle;
+} mms_texture_entry;
+
+static mms_texture_entry *mmd_texture_hash;
+static uint mmd_texture_hash_capacity;
+static uint mmd_texture_hash_count;
+static r3s_texture *mmd_textures_by_handle;
+static uint mmd_texture_handle_capacity;
+static uint mmd_texture_handle_count;
+
+static uint mm_texture_hash(r3s_texture texture)
+{
+   size_t value = (size_t) texture;
+
+   value ^= value >> 4;
+   value ^= value >> 9;
+   value ^= value >> 17;
+   return (uint) value;
+}
+
+static BOOL mm_grow_texture_hash(uint new_capacity)
+{
+   mms_texture_entry *new_hash;
+   uint i;
+
+   new_hash = (mms_texture_entry *) Malloc(new_capacity * sizeof(*new_hash));
+   if (!new_hash)
+      return FALSE;
+   memset(new_hash, 0, new_capacity * sizeof(*new_hash));
+
+   for (i = 0; i < mmd_texture_hash_capacity; ++i)
+   {
+      mms_texture_entry entry = mmd_texture_hash[i];
+      uint slot;
+
+      if (!entry.texture)
+         continue;
+      slot = mm_texture_hash(entry.texture) & (new_capacity - 1);
+      while (new_hash[slot].texture)
+         slot = (slot + 1) & (new_capacity - 1);
+      new_hash[slot] = entry;
+   }
+
+   if (mmd_texture_hash)
+      Free(mmd_texture_hash);
+   mmd_texture_hash = new_hash;
+   mmd_texture_hash_capacity = new_capacity;
+   return TRUE;
+}
+
+static BOOL mm_grow_texture_handles(uint new_capacity)
+{
+   r3s_texture *new_handles;
+
+   new_handles = (r3s_texture *) Malloc(new_capacity * sizeof(*new_handles));
+   if (!new_handles)
+      return FALSE;
+   if (mmd_texture_handle_count)
+      memcpy(new_handles, mmd_textures_by_handle,
+             mmd_texture_handle_count * sizeof(*new_handles));
+   if (mmd_textures_by_handle)
+      Free(mmd_textures_by_handle);
+   mmd_textures_by_handle = new_handles;
+   mmd_texture_handle_capacity = new_capacity;
+   return TRUE;
+}
+
+ulong mm_register_texture(r3s_texture texture)
+{
+   uint slot;
+   ulong handle;
+
+   if (!texture)
+      return 0;
+
+   if (!mmd_texture_hash_capacity && !mm_grow_texture_hash(256))
+   {
+      CriticalMsg("Could not allocate mesh texture token table");
+      return 0;
+   }
+   if ((mmd_texture_hash_count + 1) * 4 >= mmd_texture_hash_capacity * 3
+       && !mm_grow_texture_hash(mmd_texture_hash_capacity * 2))
+   {
+      CriticalMsg("Could not grow mesh texture token table");
+      return 0;
+   }
+
+   slot = mm_texture_hash(texture) & (mmd_texture_hash_capacity - 1);
+   while (mmd_texture_hash[slot].texture)
+   {
+      if (mmd_texture_hash[slot].texture == texture)
+         return mmd_texture_hash[slot].handle;
+      slot = (slot + 1) & (mmd_texture_hash_capacity - 1);
+   }
+
+   if (mmd_texture_handle_count == mmd_texture_handle_capacity)
+   {
+      uint new_capacity = mmd_texture_handle_capacity
+                        ? mmd_texture_handle_capacity * 2 : 256;
+      if (!mm_grow_texture_handles(new_capacity))
+      {
+         CriticalMsg("Could not grow mesh texture handle table");
+         return 0;
+      }
+   }
+
+   handle = (ulong) ++mmd_texture_handle_count;
+   mmd_textures_by_handle[handle - 1] = texture;
+   mmd_texture_hash[slot].texture = texture;
+   mmd_texture_hash[slot].handle = handle;
+   ++mmd_texture_hash_count;
+   return handle;
+}
+
+r3s_texture mm_resolve_texture(ulong handle)
+{
+   if (!handle || handle > mmd_texture_handle_count)
+   {
+      Warning(("Invalid mesh texture token %lu\n", handle));
+      return NULL;
+   }
+   return mmd_textures_by_handle[handle - 1];
+}
+
+static void mm_clear_texture_handles(void)
+{
+   if (mmd_texture_hash)
+      Free(mmd_texture_hash);
+   if (mmd_textures_by_handle)
+      Free(mmd_textures_by_handle);
+   mmd_texture_hash = NULL;
+   mmd_texture_hash_capacity = 0;
+   mmd_texture_hash_count = 0;
+   mmd_textures_by_handle = NULL;
+   mmd_texture_handle_capacity = 0;
+   mmd_texture_handle_count = 0;
+}
 
 // internal for knowing where stuff is
 static int buff_norm_off;  // where the norm values are start
@@ -233,6 +379,7 @@ void mm_init()
 
 void mm_close()
 {
+   mm_clear_texture_handles();
 }
 
 // returns previous one
@@ -594,8 +741,9 @@ static void mm_setup_material(int index)
 
    if(r->type==MM_MAT_TMAP)
    {
+      r3s_texture texture = mm_resolve_texture(r->handle);
       r3_set_polygon_context(gouraud | R3_PL_POLYGON | mmd_tmap_mode);
-      r3_set_texture((r3s_texture)r->handle);
+      r3_set_texture(texture);
    } else
    {
       r3_set_polygon_context(gouraud | R3_PL_POLYGON);

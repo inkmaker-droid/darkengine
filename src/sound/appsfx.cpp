@@ -1,6 +1,8 @@
 // $Header: r:/t2repos/thief2/src/sound/appsfx.cpp,v 1.127 2000/03/24 22:57:27 adurant Exp $
 // remedial sound system for DromEd/Dark/AIR/So on
 
+#include <string.h>
+
 #include <dynarray.h>
 #include <math.h>
 #include <arqapi.h>
@@ -720,11 +722,9 @@ static void _sfx_end_callback(ISndSample *pSample, void *pCBD)
 static void _sfx_loop_callback(ISndSource *pSndSource, uint32 *pCBD)
 {
    _sfx *fx;
-   long *pTmp;
 
    // skip first param (arg count), next param is sfx ptr
-   pTmp = (long *) pCBD;
-   fx = (_sfx *) pTmp[1];
+   memcpy(&fx, pCBD + 1, sizeof(fx));
 
    if (fx && fx->parm.loop_callback)
       fx->parm.loop_callback(fx->ID, fx->parm.user_data);

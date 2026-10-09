@@ -47,7 +47,7 @@ void cStdAlloc::Init()
 
 ///////////////////////////////////////
 
-STDMETHODIMP_(void *) cStdAlloc::Alloc(ULONG cb)
+STDMETHODIMP_(void *) cStdAlloc::Alloc(SIZE_T cb)
 {
 #ifdef DARKENGINE_MODERN_CRT_ALLOCATOR
     return malloc(cb);
@@ -58,7 +58,7 @@ STDMETHODIMP_(void *) cStdAlloc::Alloc(ULONG cb)
 
 ///////////////////////////////////////
 
-STDMETHODIMP_(void *) cStdAlloc::Realloc(void * pv, ULONG cb)
+STDMETHODIMP_(void *) cStdAlloc::Realloc(void * pv, SIZE_T cb)
 {
 #ifdef DARKENGINE_MODERN_CRT_ALLOCATOR
     return realloc(pv, cb);
@@ -80,7 +80,7 @@ STDMETHODIMP_(void) cStdAlloc::Free(void * pv)
 
 ///////////////////////////////////////
 
-STDMETHODIMP_(ULONG) cStdAlloc::GetSize(void * pv)
+STDMETHODIMP_(SIZE_T) cStdAlloc::GetSize(void * pv)
 {
 #ifdef DARKENGINE_MODERN_CRT_ALLOCATOR
     return pv ? (ULONG)_msize(pv) : 0;

@@ -53,6 +53,7 @@ screen*.pcx
 ReleaseGame/
 src/win32/
 .codex-build/
+build/
 
 # Local game state and diagnostics. Retail Thief 2 data is never part of this
 # repository.

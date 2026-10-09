@@ -41,7 +41,7 @@ private:
 
     ///////////////
 
-    virtual BOOL DoProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, long * pRetVal);
+    virtual BOOL DoProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT * pRetVal);
 
     friend class cGDIModeOps;
 

@@ -134,7 +134,7 @@ STDMETHODIMP_(void) cMTWinGameShell::PumpEvents(int fPumpFlags)
 // Window procedure
 //
 
-long cMTWinGameShell::WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT cMTWinGameShell::WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HWND hWnd = GetHwnd();
     long retVal;

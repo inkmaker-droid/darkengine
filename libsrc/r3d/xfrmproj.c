@@ -16,7 +16,6 @@
 #include <matrix.h>
 #include <clip_.h>
 
-#define USE_ASM
 extern void r3_projectspace_code_points(int, r3s_point *); // HACK HACK HACK
 
 void r3_rotate_block_proj(int n, r3s_point *dst, mxs_vector *src)
@@ -60,30 +59,13 @@ void r3_project_block_proj(int n, r3s_point *p_list)
       r3_projectspace_code_points(n, p_list);
 }
 
-#ifdef USE_ASM
- // assembly declarations
-extern void r3_transform_block_proj_clip(int n, r3s_point *dest, mxs_vector *src, mxs_trans *t);
-extern void r3_transform_block_proj_noclip(int n, r3s_point *dest, mxs_vector *src, mxs_trans *t);
-#endif
-
 void r3_transform_block_proj(int n, r3s_point *dest, mxs_vector *src)
 {
-#ifdef USE_ASM
-   TEST_IN_BLOCK("r3_transform_block_proj");
-
-   if (r3d_clip_mode != R3_CLIP)
-      r3_transform_block_proj_noclip(n, dest, src, X2TRANS(&cx.o2c));
-   else
-      r3_transform_block_proj_clip(n, dest, src, X2TRANS(&cx.o2c));
-
-   if (r3d_clip_mode != R3_NO_CLIP && r3d_num_planes)
-      r3_std_code_points(n, dest);
-#else
    uchar *cur, *last;
 
    TEST_IN_BLOCK("r3_transform_block_proj");
 
-   cur = (uchar *)p_list;
+   cur = (uchar *)dest;
    last = cur + n * r3d_glob.cur_stride;
 
    while (cur < last) {
@@ -100,7 +82,6 @@ void r3_transform_block_proj(int n, r3s_point *dest, mxs_vector *src)
 
    if (r3d_clip_mode != R3_NO_CLIP)
       r3_projectspace_code_points(n, dest);
-#endif
 }
 
 r3s_xform_tab r3d_xform_tab_proj = {

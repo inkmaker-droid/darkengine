@@ -6,6 +6,14 @@
          the shared executable project is built directly. -->
     <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
     <BuildThief2 Condition="'$(BuildThief2)' == ''">true</BuildThief2>
+    <!-- Keep all generated files under build, grouped first by configuration
+         and then by the MSBuild platform name (Win32 or x64). -->
+    <DarkBuildRoot>$(MSBuildThisFileDirectory)build\</DarkBuildRoot>
+    <DarkPlatformOutputDir>$(DarkBuildRoot)$(Configuration)\$(Platform)\</DarkPlatformOutputDir>
+    <DarkIntermediateRoot>$(DarkBuildRoot)obj\$(Configuration)\$(Platform)\</DarkIntermediateRoot>
+    <DarkLibraryOutputDir>$(DarkPlatformOutputDir)</DarkLibraryOutputDir>
+    <OutDir>$(DarkPlatformOutputDir)</OutDir>
+    <IntDir>$(DarkIntermediateRoot)$(MSBuildProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <!-- Dark's persisted structures and cross-library ABI use byte packing. -->
@@ -15,7 +23,6 @@
            MSVC's legacy C mode accepts the syntax but initializes entries
            sequentially, producing corrupt function-pointer tables. -->
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <PreprocessorDefinitions>WINDOWS_IGNORE_PACKING_MISMATCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
 </Project>

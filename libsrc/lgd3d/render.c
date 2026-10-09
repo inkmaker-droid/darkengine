@@ -729,6 +729,15 @@ static int modern_tex_id1=TDRV_ID_INVALID;
 void SetTextureId(int n)
 {
 #ifdef MODERN_D3D11
+   // The legacy manager exposes one callback bitmap globally.  Deferring a
+   // callback until draw time loses the first bitmap when both multitexture
+   // levels request a new upload before the draw.  Resolve it while the
+   // manager's callback bitmap still identifies this texture and retain the
+   // resulting concrete ID in the appropriate texture level.
+   if (n == TDRV_ID_CALLBACK) {
+      g_tmgr->set_texture_callback();
+      return;
+   }
    if (g_ModernTextureLevel != 0) {
       modern_next_id1 = n;
       return;
@@ -754,9 +763,9 @@ static void doPolySetup(int n)
 #ifdef MODERN_D3D11
    int trans = 0;
    Flush();
-   if (n == TDRV_ID_SOLID)
+   if (n == TDRV_ID_SOLID) {
       D3D11LegacyBindTexture(0, g_ModernWhiteTexture);
-   else {
+   } else {
       AssertMsg1((n>=0)&&(n<LGD3D_MAX_TEXTURES), "Invalid texture id: %i", n);
       D3D11LegacyBindTexture(0, g_ModernTextures[n]);
       if (g_ModernBitmaps[n] != NULL)

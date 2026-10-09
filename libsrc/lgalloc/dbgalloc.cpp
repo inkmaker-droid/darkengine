@@ -20,7 +20,7 @@
 
 #pragma code_seg("lgalloc")
 
-EXTERN __declspec(dllimport) BOOL __stdcall IsBadReadPtr(const void *, uint ucb);
+EXTERN __declspec(dllimport) BOOL __stdcall IsBadReadPtr(const void *, UINT_PTR ucb);
 EXTERN __declspec(dllimport) unsigned long __stdcall timeGetTime   (void);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -185,14 +185,14 @@ inline void cHeapDebug::SetDebug(void * p, size_t clientSize)
 
 ///////////////////////////////////////
 
-STDMETHODIMP_(void *) cHeapDebug::Alloc(ULONG size)
+STDMETHODIMP_(void *) cHeapDebug::Alloc(SIZE_T size)
 {
     return AllocEx(size, NULL, 0);
 }
 
 ///////////////////////////////////////
 
-STDMETHODIMP_(void *) cHeapDebug::Realloc(void * pOld, ULONG newClientSize)
+STDMETHODIMP_(void *) cHeapDebug::Realloc(void * pOld, SIZE_T newClientSize)
 {
     return ReallocEx(pOld, newClientSize, NULL, 0);
 }
@@ -206,7 +206,7 @@ STDMETHODIMP_(void) cHeapDebug::Free(void * p)
 
 ///////////////////////////////////////
 
-STDMETHODIMP_(ULONG) cHeapDebug::GetSize(void * p)
+STDMETHODIMP_(SIZE_T) cHeapDebug::GetSize(void * p)
 {
     if (VerifyAlloc(p) == S_OK)
         return SizeLessDebug(m_pNext->GetSize(ClientToDebug(p)));
@@ -229,7 +229,7 @@ STDMETHODIMP_(void) cHeapDebug::HeapMinimize()
 
 ///////////////////////////////////////
 
-STDMETHODIMP_(void *) cHeapDebug::AllocEx(ulong size, const char * pszFile, 
+STDMETHODIMP_(void *) cHeapDebug::AllocEx(SIZE_T size, const char * pszFile,
                                           int line)
 {
     if (!size)
@@ -254,7 +254,7 @@ STDMETHODIMP_(void *) cHeapDebug::AllocEx(ulong size, const char * pszFile,
 
 ///////////////////////////////////////
 
-STDMETHODIMP_(void *) cHeapDebug::ReallocEx(void * pOld, ULONG newClientSize, const char * pszFile, int line)
+STDMETHODIMP_(void *) cHeapDebug::ReallocEx(void * pOld, SIZE_T newClientSize, const char * pszFile, int line)
 {
     // Handle "exception" behaviors here...
     if (!pOld)

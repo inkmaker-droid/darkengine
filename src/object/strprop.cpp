@@ -18,7 +18,7 @@ cStringDataOps cStringDataOps::gOps;
 
 STDMETHODIMP cStringDataOps::Read(sDatum* pdat, IDataOpsFile* file, int version)
 {
-   if (!pdat)
+   if (!pdat->value)
       pdat->value = new cStr; 
 
    cStr& str = *(cStr*)pdat->value; 

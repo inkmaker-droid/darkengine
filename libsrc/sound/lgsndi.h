@@ -134,7 +134,7 @@ public:
 	void Inform(cSndSample *sample, eSndTraceEvent action);
 	int32 NumberOfChannels();
 
-   static void CALLBACK TimerCallback( UINT tid, UINT r1, DWORD duser, DWORD r2, DWORD r3 );
+   static void CALLBACK TimerCallback( UINT tid, UINT r1, DWORD_PTR duser, DWORD_PTR r2, DWORD_PTR r3 );
    void CheckTimer( void );
    void StartTimer( void );
 

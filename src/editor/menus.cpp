@@ -996,7 +996,7 @@ static std::string BuildCommandHelpText(const char *filterText)
 
    text = "DromEd command reference\r\n"
           "========================\r\n\r\n"
-          "Enter commands in DromEd's command pane (the default shortcut is : ).\r\n"
+          "Enter commands in DromEd's command pane (the default shortcuts are : and ; ).\r\n"
           "The console command 'help <text>' also prints matching entries; "
           "'dump_cmds <file>' writes the registry to a file.\r\n\r\n";
 
@@ -1182,7 +1182,7 @@ static Command g_EditorHelpCommands[] = {
    {"show_keyboard_shortcuts", FUNC_VOID, ShowKeyboardShortcuts,
     "open the modeless keyboard and mouse reference", HK_EDITOR},
    {"show_command_help", FUNC_VOID, ShowCommandHelp,
-    "open the modeless searchable command reference", HK_EDITOR},
+     "open the modeless searchable command reference", HK_ALL},
 };
 
 static void RegisterEditorHelpCommands()

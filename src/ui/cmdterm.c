@@ -9,6 +9,10 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+#include <kb.h>
 #include <kbcook.h>
 #include <keydefs.h>
 #include <2d.h>
@@ -19,6 +23,7 @@
 #include <guistyle.h>
 #include <hotkey.h>
 #include <appagg.h>
+#include <gshelapi.h>
 #include <resapi.h>
 #include <fonrstyp.h>
 
@@ -51,20 +56,25 @@ struct _CmdTerm
    LGadTextBox outputbox;
    LGadTextBox textbox;
    LGadBox scrollbar;
-   char titlebuf[80];
+   char titlebuf[128];
    char outputbuf[32768];
    char cmdbuf[256];
    int visiblelines;
    int scroll;
    int scrollbarwidth;
    int scrolldragoffset;
-   int mousehandler;
+   Region* mousehandlerregions[4];
+   int mousehandlers[4];
+   int mousehandlercount;
    BOOL scrolldragging;
-   BOOL mousehandlerinstalled;
    guiStyle style;
    IRes* fontres;
+   LGadRoot* parentroot;
+   Rect bounds;
    grs_canvas* previousguicanvas;
    BOOL canvasredirected;
+   int previousgameshellflags;
+   BOOL popupcursoractive;
    ulong flags;
    ulong statebits;
 } CmdTerm;
@@ -75,6 +85,88 @@ struct _CmdTerm
 static char CmdTermLines[CMDTERM_MAX_LINES][CMDTERM_LINE_LENGTH];
 static int CmdTermLineCount = 0;
 static int CmdTermNextLine = 0;
+static char CmdTermCaptureLine[CMDTERM_LINE_LENGTH];
+static int CmdTermCaptureLength = 0;
+static volatile LONG CmdTermCommandCaptureDepth = 0;
+static volatile LONG CmdTermDiagnosticCapture = FALSE;
+static BOOL CmdTermOutputHookInstalled = FALSE;
+static void (*CmdTermPreviousMonoHook)(char*,int) = NULL;
+static CRITICAL_SECTION CmdTermModelLock;
+static BOOL CmdTermModelLockInitialized = FALSE;
+static volatile LONG CmdTermPendingFontDelta = 0;
+static volatile LONG CmdTermFontChangeDeferred = FALSE;
+
+// Keep both profiles on the non-antialiased bitmap fonts. The AA resources
+// render through Dark's legacy lighting table and acquire scaling artifacts
+// when the gameplay overlay is composed into a fitted output viewport.
+// Ctrl+wheel changes the preference for the active profile independently.
+static const char* CmdTermEditorFontNames[] =
+{
+   "smalfont", "textfont"
+};
+static const char* CmdTermPopupFontNames[] =
+{
+   "smalfont", "textfont"
+};
+static int CmdTermFontIndices[2] = { 0, 1 };
+
+#define CMDTERM_EDITOR_FONT_COUNT \
+   (sizeof(CmdTermEditorFontNames) / sizeof(CmdTermEditorFontNames[0]))
+#define CMDTERM_POPUP_FONT_COUNT \
+   (sizeof(CmdTermPopupFontNames) / sizeof(CmdTermPopupFontNames[0]))
+
+static void cmdterm_activate_focus(BOOL position_cursor);
+static BOOL cmdterm_apply_pending_font_change(void);
+static void cmdterm_deferred_font_change(void* unused);
+
+static void cmdterm_set_popup_cursor(BOOL active)
+{
+   IGameShell* shell;
+   int flags;
+
+   if (!(CmdTerm.flags & kCmdTermHideUnfocused) ||
+       active == CmdTerm.popupcursoractive)
+      return;
+
+   shell = AppGetObj(IGameShell);
+   if (!shell)
+      return;
+
+   if (active)
+   {
+      IGameShell_GetFlags(shell, &flags);
+      CmdTerm.previousgameshellflags = flags;
+      CmdTerm.popupcursoractive = TRUE;
+      flags |= kShowNativeCursor;
+   }
+   else
+   {
+      flags = CmdTerm.previousgameshellflags;
+      CmdTerm.popupcursoractive = FALSE;
+   }
+   IGameShell_SetFlags(shell, flags);
+   SafeRelease(shell);
+}
+
+static void cmdterm_model_init(void)
+{
+   if (!CmdTermModelLockInitialized)
+   {
+      InitializeCriticalSection(&CmdTermModelLock);
+      CmdTermModelLockInitialized = TRUE;
+   }
+}
+
+static void cmdterm_model_lock(void)
+{
+   cmdterm_model_init();
+   EnterCriticalSection(&CmdTermModelLock);
+}
+
+static void cmdterm_model_unlock(void)
+{
+   LeaveCriticalSection(&CmdTermModelLock);
+}
 
 static BOOL cmdterm_is_scrollable(void)
 {
@@ -83,19 +175,29 @@ static BOOL cmdterm_is_scrollable(void)
 
 static int cmdterm_max_scroll(void)
 {
-   int max_scroll = CmdTermLineCount - CmdTerm.visiblelines;
+   int max_scroll;
+
+   cmdterm_model_lock();
+   max_scroll = CmdTermLineCount - CmdTerm.visiblelines;
+   cmdterm_model_unlock();
    return max_scroll > 0 ? max_scroll : 0;
 }
 
 static void cmdterm_set_scroll(int scroll)
 {
-   int max_scroll = cmdterm_max_scroll();
+   int max_scroll;
+
+   cmdterm_model_lock();
+   max_scroll = CmdTermLineCount - CmdTerm.visiblelines;
+   if (max_scroll < 0)
+      max_scroll = 0;
 
    if (scroll < 0)
       scroll = 0;
    if (scroll > max_scroll)
       scroll = max_scroll;
    CmdTerm.scroll = scroll;
+   cmdterm_model_unlock();
 }
 
 static void cmdterm_scroll_by(int lines)
@@ -153,9 +255,13 @@ static void cmdterm_rebuild_output(void)
    int i;
    int used = 0;
 
+   cmdterm_model_lock();
    CmdTerm.outputbuf[0] = '\0';
    if (CmdTerm.visiblelines <= 0 || CmdTermLineCount <= 0)
+   {
+      cmdterm_model_unlock();
       return;
+   }
 
    max_scroll = CmdTermLineCount - CmdTerm.visiblelines;
    if (max_scroll < 0)
@@ -177,7 +283,7 @@ static void cmdterm_rebuild_output(void)
    {
       const char* line = CmdTermLines[(oldest + first + i)
                                       % CMDTERM_MAX_LINES];
-      int length = strlen(line);
+      int length = (int)strlen(line);
       if (used + length + 2 >= (int)sizeof(CmdTerm.outputbuf))
          break;
       if (used)
@@ -186,10 +292,13 @@ static void cmdterm_rebuild_output(void)
       used += length;
       CmdTerm.outputbuf[used] = '\0';
    }
+   cmdterm_model_unlock();
 }
 
-static void cmdterm_add_line(const char* text, int length)
+static void cmdterm_add_line_locked(const char* text, int length)
 {
+   int max_scroll;
+
    if (length >= CMDTERM_LINE_LENGTH)
       length = CMDTERM_LINE_LENGTH - 1;
    memcpy(CmdTermLines[CmdTermNextLine], text, length);
@@ -197,6 +306,16 @@ static void cmdterm_add_line(const char* text, int length)
    CmdTermNextLine = (CmdTermNextLine + 1) % CMDTERM_MAX_LINES;
    if (CmdTermLineCount < CMDTERM_MAX_LINES)
       ++CmdTermLineCount;
+
+   // Keep the same historical lines on screen while the user is browsing.
+   // When already following the newest output, continue to follow it.
+   if (CmdTerm.scroll > 0)
+      ++CmdTerm.scroll;
+   max_scroll = CmdTermLineCount - CmdTerm.visiblelines;
+   if (max_scroll < 0)
+      max_scroll = 0;
+   if (CmdTerm.scroll > max_scroll)
+      CmdTerm.scroll = max_scroll;
 }
 
 void cmdterm_print(const char* text)
@@ -206,6 +325,7 @@ void cmdterm_print(const char* text)
    if (!text)
       return;
 
+   cmdterm_model_lock();
    start = text;
    while (*start)
    {
@@ -214,15 +334,15 @@ void cmdterm_print(const char* text)
          ++end;
 
       if (end == start)
-         cmdterm_add_line("", 0);
+         cmdterm_add_line_locked("", 0);
       else
       {
          while (end - start >= CMDTERM_LINE_LENGTH)
          {
-            cmdterm_add_line(start, CMDTERM_LINE_LENGTH - 1);
+            cmdterm_add_line_locked(start, CMDTERM_LINE_LENGTH - 1);
             start += CMDTERM_LINE_LENGTH - 1;
          }
-         cmdterm_add_line(start, end - start);
+         cmdterm_add_line_locked(start, (int)(end - start));
       }
 
       if (!*end)
@@ -231,14 +351,110 @@ void cmdterm_print(const char* text)
       if (*end == '\r' && *start == '\n')
          ++start;
    }
+   cmdterm_model_unlock();
+}
 
-   CmdTerm.scroll = 0;
-   cmdterm_rebuild_output();
+static void cmdterm_capture_flush_locked(void)
+{
+   if (CmdTermCaptureLength > 0)
+   {
+      cmdterm_add_line_locked(CmdTermCaptureLine, CmdTermCaptureLength);
+      CmdTermCaptureLength = 0;
+   }
+}
+
+static void cmdterm_capture_stream(const char* text, int length)
+{
+   int i;
+
+   if (!text || length <= 0)
+      return;
+
+   cmdterm_model_lock();
+   for (i = 0; i < length; ++i)
+   {
+      char c = text[i];
+      if (c == '\r')
+         continue;
+      if (c == '\n')
+      {
+         cmdterm_capture_flush_locked();
+         if (CmdTermCaptureLength == 0 && i > 0 && text[i - 1] == '\n')
+            cmdterm_add_line_locked("", 0);
+         continue;
+      }
+      if (CmdTermCaptureLength == CMDTERM_LINE_LENGTH - 1)
+         cmdterm_capture_flush_locked();
+      CmdTermCaptureLine[CmdTermCaptureLength++] = c;
+   }
+   cmdterm_model_unlock();
+}
+
+static void cmdterm_mono_output(char* text, int length)
+{
+   if (CmdTermPreviousMonoHook)
+      CmdTermPreviousMonoHook(text, length);
+   if (InterlockedCompareExchange(&CmdTermCommandCaptureDepth, 0, 0) > 0 ||
+       InterlockedCompareExchange(&CmdTermDiagnosticCapture, 0, 0))
+      cmdterm_capture_stream(text, length);
+}
+
+static void cmdterm_install_output_hook(void)
+{
+   cmdterm_model_init();
+   if (!CmdTermOutputHookInstalled)
+   {
+      CmdTermPreviousMonoHook = mono_spc_func;
+      mono_spc_func = cmdterm_mono_output;
+      CmdTermOutputHookInstalled = TRUE;
+   }
+}
+
+static void cmdterm_remove_output_hook(void)
+{
+   if (CmdTermOutputHookInstalled)
+   {
+      if (mono_spc_func == cmdterm_mono_output)
+         mono_spc_func = CmdTermPreviousMonoHook;
+      CmdTermPreviousMonoHook = NULL;
+      CmdTermOutputHookInstalled = FALSE;
+   }
+}
+
+static void cmdterm_begin_command_capture(void)
+{
+   InterlockedIncrement(&CmdTermCommandCaptureDepth);
+   // Installing mono_spc_func makes legacy mprintf calls format their output
+   // even when no monochrome screen or log is active. Limit that behavior to
+   // an executing console command unless diagnostics were explicitly enabled.
+   cmdterm_install_output_hook();
+}
+
+static void cmdterm_end_command_capture(void)
+{
+   if (InterlockedCompareExchange(&CmdTermCommandCaptureDepth, 0, 0) > 0)
+      InterlockedDecrement(&CmdTermCommandCaptureDepth);
+   cmdterm_model_lock();
+   cmdterm_capture_flush_locked();
+   cmdterm_model_unlock();
+   if (InterlockedCompareExchange(&CmdTermCommandCaptureDepth, 0, 0) == 0 &&
+       !InterlockedCompareExchange(&CmdTermDiagnosticCapture, 0, 0))
+      cmdterm_remove_output_hook();
+}
+
+void cmdterm_capture_status(const char* text)
+{
+   if (InterlockedCompareExchange(&CmdTermCommandCaptureDepth, 0, 0) > 0 &&
+       text && *text)
+      cmdterm_print(text);
 }
 
 void cmdterm_redraw(void)
 {
    if (!(CmdTerm.statebits & kStateInUse))
+      return;
+
+   if (cmdterm_apply_pending_font_change())
       return;
 
    if (!cmdterm_is_scrollable())
@@ -251,6 +467,7 @@ void cmdterm_redraw(void)
    if (!(CmdTerm.statebits & kStateVisible))
       return;
 
+   cmdterm_rebuild_output();
    LGadUpdateTextBox(&CmdTerm.outputbox);
    LGadUpdateTextBox(&CmdTerm.textbox);
    LGadDrawBox(VB(&CmdTerm.root),NULL);
@@ -267,6 +484,34 @@ static void cmdterm_scroll_and_draw(int lines)
    cmdterm_scroll_by(lines);
    cmdterm_rebuild_output();
    cmdterm_draw();
+}
+
+static BOOL cmdterm_control_down(void)
+{
+   return (GetAsyncKeyState(VK_CONTROL) & 0x8000) ||
+          kb_state(KBC_LCTRL) == KBS_DOWN ||
+          kb_state(KBC_RCTRL) == KBS_DOWN;
+}
+
+static BOOL cmdterm_handle_wheel(short wheel)
+{
+   if (!wheel)
+      return FALSE;
+
+   if (cmdterm_control_down())
+   {
+      InterlockedExchangeAdd(&CmdTermPendingFontDelta, wheel);
+      if (InterlockedCompareExchange(&CmdTermFontChangeDeferred,
+                                     TRUE, FALSE) == FALSE)
+      {
+         if (uiDefer(cmdterm_deferred_font_change, NULL) != OK)
+            InterlockedExchange(&CmdTermFontChangeDeferred, FALSE);
+      }
+      return TRUE;
+   }
+
+   cmdterm_scroll_and_draw(3 * wheel);
+   return TRUE;
 }
 
 static void cmdterm_scrollbar_draw(void* data, LGadBox* box)
@@ -297,38 +542,48 @@ static void cmdterm_scrollbar_draw(void* data, LGadBox* box)
 static bool cmdterm_scrollbar_mouse(short x, short y, short action,
                                     short wheel, LGadBox* box)
 {
-   Rect absolute;
    int thumb_top;
    int thumb_height;
+   int local_y;
+   int height = RectHeight(LGadBoxRect(box));
 
    (void)x;
 
-   region_abs_rect(LGadBoxRegion(box), LGadBoxRect(box), &absolute);
-   cmdterm_scrollbar_geometry(RectHeight(&absolute), &thumb_top,
-                              &thumb_height);
+   cmdterm_scrollbar_geometry(height, &thumb_top, &thumb_height);
+   local_y = y - LGadBoxRegion(box)->abs_y;
 
    if (wheel)
-   {
-      cmdterm_scroll_and_draw(3 * wheel);
-      return TRUE;
-   }
+      return cmdterm_handle_wheel(wheel);
 
    if (action & MOUSE_LDOWN)
    {
-      int local_y = y - absolute.ul.y;
+      int max_scroll = cmdterm_max_scroll();
+      int travel = height - 2 - thumb_height;
+      int new_top;
 
-      if (local_y >= thumb_top &&
-          local_y < thumb_top + thumb_height && cmdterm_max_scroll() > 0)
+      if (max_scroll > 0)
       {
          CmdTerm.scrolldragging = TRUE;
-         CmdTerm.scrolldragoffset = local_y - thumb_top;
+         if (local_y >= thumb_top && local_y < thumb_top + thumb_height)
+            CmdTerm.scrolldragoffset = local_y - thumb_top;
+         else
+            CmdTerm.scrolldragoffset = thumb_height / 2;
+
          uiGrabFocus(LGadBoxRegion(box), UI_EVENT_MOUSE | UI_EVENT_MOUSE_MOVE);
-         LGadDrawBox(box, NULL);
+         uiSetMouseMotionPolling(TRUE);
+
+         new_top = local_y - CmdTerm.scrolldragoffset;
+         if (new_top < 1)
+            new_top = 1;
+         if (new_top > 1 + travel)
+            new_top = 1 + travel;
+         if (travel > 0)
+            cmdterm_set_scroll(max_scroll -
+               (int)(((long)(new_top - 1) * max_scroll + travel / 2) /
+                     travel));
+         cmdterm_rebuild_output();
+         cmdterm_draw();
       }
-      else if (local_y < thumb_top)
-         cmdterm_scroll_and_draw(CmdTerm.visiblelines);
-      else if (local_y >= thumb_top + thumb_height)
-         cmdterm_scroll_and_draw(-CmdTerm.visiblelines);
       return TRUE;
    }
 
@@ -336,6 +591,7 @@ static bool cmdterm_scrollbar_mouse(short x, short y, short action,
    {
       CmdTerm.scrolldragging = FALSE;
       uiReleaseFocus(LGadBoxRegion(box), UI_EVENT_MOUSE | UI_EVENT_MOUSE_MOVE);
+      uiSetMouseMotionPolling(TRUE);
       LGadDrawBox(box, NULL);
       return TRUE;
    }
@@ -345,23 +601,21 @@ static bool cmdterm_scrollbar_mouse(short x, short y, short action,
 
 static bool cmdterm_scrollbar_motion(short x, short y, LGadBox* box)
 {
-   Rect absolute;
    int thumb_top;
    int thumb_height;
    int travel;
    int max_scroll;
+   int height = RectHeight(LGadBoxRect(box));
 
    (void)x;
 
    if (!CmdTerm.scrolldragging)
       return FALSE;
 
-   region_abs_rect(LGadBoxRegion(box), LGadBoxRect(box), &absolute);
-   cmdterm_scrollbar_geometry(RectHeight(&absolute), &thumb_top,
-                              &thumb_height);
-   travel = RectHeight(&absolute) - 2 - thumb_height;
+   cmdterm_scrollbar_geometry(height, &thumb_top, &thumb_height);
+   travel = height - 2 - thumb_height;
    max_scroll = cmdterm_max_scroll();
-   thumb_top = y - absolute.ul.y - CmdTerm.scrolldragoffset;
+   thumb_top = y - LGadBoxRegion(box)->abs_y - CmdTerm.scrolldragoffset;
 
    if (thumb_top < 1)
       thumb_top = 1;
@@ -390,62 +644,240 @@ static BOOL cmdterm_mouse_handler(uiEvent* event, Region* region, void* state)
        !(CmdTerm.statebits & kStateVisible))
       return FALSE;
 
-   cmdterm_scroll_and_draw(3 * mouse->wheel);
+   return cmdterm_handle_wheel(mouse->wheel);
+}
+
+static void cmdterm_install_mouse_handler(Region* region)
+{
+   int handler;
+
+   if (!region || CmdTerm.mousehandlercount >= 4)
+      return;
+   if (uiInstallRegionHandler(region, UI_EVENT_MOUSE, cmdterm_mouse_handler,
+                              NULL, &handler) == OK)
+   {
+      CmdTerm.mousehandlerregions[CmdTerm.mousehandlercount] = region;
+      CmdTerm.mousehandlers[CmdTerm.mousehandlercount] = handler;
+      ++CmdTerm.mousehandlercount;
+   }
+}
+
+static BOOL cmdterm_set_clipboard_text(const char* text)
+{
+   HGLOBAL memory;
+   char* destination;
+   size_t length = text ? strlen(text) : 0;
+
+   memory = GlobalAlloc(GMEM_MOVEABLE, length + 1);
+   if (!memory)
+      return FALSE;
+   destination = (char*)GlobalLock(memory);
+   if (!destination)
+   {
+      GlobalFree(memory);
+      return FALSE;
+   }
+   if (length)
+      memcpy(destination, text, length);
+   destination[length] = '\0';
+   GlobalUnlock(memory);
+
+   if (!OpenClipboard(NULL))
+   {
+      GlobalFree(memory);
+      return FALSE;
+   }
+   EmptyClipboard();
+   if (!SetClipboardData(CF_TEXT, memory))
+   {
+      CloseClipboard();
+      GlobalFree(memory);
+      return FALSE;
+   }
+   CloseClipboard();
    return TRUE;
 }
 
-static void cmdterm_print_help(const char* command)
+static BOOL cmdterm_copy_output(BOOL all)
 {
-   const char* argument = command;
+   int oldest;
+   int first;
+   int shown;
+   int i;
+   size_t capacity;
+   size_t used = 0;
+   char* text;
+   BOOL result;
 
-   while (*argument && isspace((unsigned char)*argument))
-      ++argument;
-   if (strnicmp(argument, "help", 4) ||
-       (argument[4] && !isspace((unsigned char)argument[4])))
-      return;
-
-   argument += 4;
-   while (*argument && isspace((unsigned char)*argument))
-      ++argument;
-
-   if (!*argument)
+   cmdterm_model_lock();
+   shown = all ? CmdTermLineCount :
+      (CmdTermLineCount < CmdTerm.visiblelines
+         ? CmdTermLineCount : CmdTerm.visiblelines);
+   first = all ? 0 : CmdTermLineCount - shown - CmdTerm.scroll;
+   if (first < 0)
+      first = 0;
+   oldest = (CmdTermNextLine - CmdTermLineCount + CMDTERM_MAX_LINES)
+          % CMDTERM_MAX_LINES;
+   capacity = (size_t)shown * (CMDTERM_LINE_LENGTH + 2) + 1;
+   text = (char*)Malloc(capacity);
+   if (!text)
    {
-      cmdterm_print("Commands:");
-      cmdterm_print("help [command]                 show command help");
-      cmdterm_print("openmission [number/shortname] open an installed mission");
-      cmdterm_print("listmissions                   list installed missions");
-      cmdterm_print("immunity [on/off]              toggle player damage");
-      cmdterm_print("flying [on/off]                toggle gravity");
-      cmdterm_print("playerphysics [on/off]          toggle collision and gravity");
-      cmdterm_print("invisible [on/off]             toggle invisibility");
-      cmdterm_print("reticle [on/off]               toggle center reticle");
-      cmdterm_print("retinfo                        describe reticle target");
-      cmdterm_print("listscripts                    list loaded scripts");
-      cmdterm_print("debugscripts [on/off]          toggle script logging");
-      return;
+      cmdterm_model_unlock();
+      return FALSE;
    }
 
+   for (i = 0; i < shown && first + i < CmdTermLineCount; ++i)
    {
-      char name[64];
-      char line[256];
-      int length = 0;
-      Command* found;
-
-      while (argument[length] &&
-             !isspace((unsigned char)argument[length]) &&
-             length < (int)sizeof(name) - 1)
-         ++length;
-      memcpy(name, argument, length);
-      name[length] = '\0';
-      found = CommandFindString(name);
-      if (found)
+      const char* line = CmdTermLines[(oldest + first + i)
+                                      % CMDTERM_MAX_LINES];
+      size_t length = strlen(line);
+      if (used)
       {
-         _snprintf(line, sizeof(line) - 1, "%s: %s", found->name,
-                   found->comment ? found->comment : "no description");
-         line[sizeof(line) - 1] = '\0';
-         cmdterm_print(line);
+         text[used++] = '\r';
+         text[used++] = '\n';
       }
+      memcpy(text + used, line, length);
+      used += length;
    }
+   text[used] = '\0';
+   cmdterm_model_unlock();
+
+   result = cmdterm_set_clipboard_text(text);
+   Free(text);
+   return result;
+}
+
+static BOOL cmdterm_copy_command(void)
+{
+   return cmdterm_set_clipboard_text(CmdTerm.cmdbuf);
+}
+
+static BOOL cmdterm_paste_command(LGadTextBox* box)
+{
+   HANDLE data;
+   const char* clipboard;
+   char insertion[sizeof(CmdTerm.cmdbuf)];
+   int insertion_length = 0;
+   int cursor = LGadTextBoxCursor(box);
+   int current_length = (int)strlen(CmdTerm.cmdbuf);
+   int available = sizeof(CmdTerm.cmdbuf) - current_length - 1;
+   int i;
+
+   if (available <= 0 || !OpenClipboard(NULL))
+      return FALSE;
+   data = GetClipboardData(CF_TEXT);
+   if (!data)
+   {
+      CloseClipboard();
+      return FALSE;
+   }
+   clipboard = (const char*)GlobalLock(data);
+   if (!clipboard)
+   {
+      CloseClipboard();
+      return FALSE;
+   }
+
+   while (*clipboard && insertion_length < available)
+   {
+      char c = *clipboard++;
+      if (c == '\r')
+         continue;
+      if (c == '\n' || c == '\t')
+         c = ' ';
+      insertion[insertion_length++] = c;
+   }
+   GlobalUnlock(data);
+   CloseClipboard();
+   if (!insertion_length)
+      return FALSE;
+
+   memmove(CmdTerm.cmdbuf + cursor + insertion_length,
+           CmdTerm.cmdbuf + cursor, current_length - cursor + 1);
+   for (i = 0; i < insertion_length; ++i)
+      CmdTerm.cmdbuf[cursor + i] = insertion[i];
+   LGadUpdateTextBox(box);
+   LGadTextBoxSetCursor(box, cursor + insertion_length);
+   LGadTextBoxClrFlag(box, TEXTBOX_EDIT_BRANDNEW);
+   return TRUE;
+}
+
+static BOOL cmdterm_argument_is(const char* argument, const char* value)
+{
+   size_t length;
+
+   if (!argument)
+      return FALSE;
+   while (*argument && isspace((unsigned char)*argument))
+      ++argument;
+   length = strlen(value);
+   if (_strnicmp(argument, value, length))
+      return FALSE;
+   argument += length;
+   while (*argument && isspace((unsigned char)*argument))
+      ++argument;
+   return *argument == '\0';
+}
+
+static void cmdterm_console_copy(char* argument)
+{
+   while (argument && *argument && isspace((unsigned char)*argument))
+      ++argument;
+
+   if (cmdterm_argument_is(argument, "all"))
+   {
+      cmdterm_print(cmdterm_copy_output(TRUE)
+         ? "Copied all console output." : "Unable to copy console output.");
+   }
+   else if (cmdterm_argument_is(argument, "command"))
+   {
+      cmdterm_print(cmdterm_copy_command()
+         ? "Copied the command line." : "Unable to copy the command line.");
+   }
+   else if (!argument || !*argument || cmdterm_argument_is(argument, "visible"))
+      cmdterm_print(cmdterm_copy_output(FALSE)
+         ? "Copied visible console output." : "Unable to copy console output.");
+   else
+      cmdterm_print("Usage: console_copy [visible/all/command]");
+}
+
+static void cmdterm_console_diagnostics(char* argument)
+{
+   while (argument && *argument && isspace((unsigned char)*argument))
+      ++argument;
+
+   if (!argument || !*argument)
+   {
+      cmdterm_print(InterlockedCompareExchange(&CmdTermDiagnosticCapture,
+                                               0, 0)
+         ? "Diagnostic output capture is on."
+         : "Diagnostic output capture is off.");
+      return;
+   }
+   if (cmdterm_argument_is(argument, "on") ||
+       cmdterm_argument_is(argument, "1") ||
+       cmdterm_argument_is(argument, "true"))
+   {
+      InterlockedExchange(&CmdTermDiagnosticCapture, TRUE);
+      cmdterm_install_output_hook();
+   }
+   else if (cmdterm_argument_is(argument, "off") ||
+            cmdterm_argument_is(argument, "0") ||
+            cmdterm_argument_is(argument, "false"))
+   {
+      InterlockedExchange(&CmdTermDiagnosticCapture, FALSE);
+      if (InterlockedCompareExchange(&CmdTermCommandCaptureDepth, 0, 0) == 0)
+         cmdterm_remove_output_hook();
+   }
+   else
+   {
+      cmdterm_print("Usage: console_diagnostics [on/off]");
+      return;
+   }
+
+   cmdterm_print(InterlockedCompareExchange(&CmdTermDiagnosticCapture, 0, 0)
+      ? "Diagnostic output capture enabled."
+      : "Diagnostic output capture disabled.");
 }
 
 void cmdterm_setup_cmds(void);
@@ -702,6 +1134,9 @@ static short speckeys[] =
    KB_FLAG_DOWN|KB_FLAG_CTRL|'g',
    KB_FLAG_DOWN|KB_FLAG_CTRL|'n',
    KB_FLAG_DOWN|KB_FLAG_CTRL|'p',
+   KB_FLAG_DOWN|KB_FLAG_CTRL|'v',
+   KB_FLAG_DOWN|KB_FLAG_CTRL|'c',
+   KB_FLAG_DOWN|KB_FLAG_CTRL|KB_FLAG_SHIFT|'c',
    KB_FLAG_DOWN|KEY_TAB,
    KB_FLAG_DOWN|KEY_PGUP,
    KB_FLAG_DOWN|KEY_PAD_PGUP,
@@ -723,10 +1158,18 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
    char* text = LGadTextBoxText(box);
    BOOL update = FALSE, clear = FALSE, new_base=FALSE;
    int cursor_pos;
+
+   if (event == TEXTBOX_BUTTON && (evdata & BUTTONGADG_LCLICK))
+   {
+      // TextGadg grabs keyboard focus itself, but gameplay also needs the
+      // command input context and pause state that the hotkey establishes.
+      cmdterm_activate_focus(FALSE);
+      return TRUE;
+   }
    
    if (event == TEXTBOX_SPECKEY)
    {
-      char *tmp=NULL, *ret;
+      const char *tmp=NULL, *ret;
       unsigned long context;
 
       switch(evdata)
@@ -746,8 +1189,14 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
             if (context == HK_COMMAND_MODE && HotkeyContext == HK_GAME_MODE)
                IInputBinder_SetContext (g_pInputBinder, HK_GAME_MODE, TRUE);
 
-            if ((ret = IInputBinder_ProcessCmd (g_pInputBinder, text)) != NULL)
+            cmdterm_begin_command_capture();
+            ret = IInputBinder_ProcessCmd (g_pInputBinder, text);
+            cmdterm_end_command_capture();
+            if (ret != NULL)
+            {
                Status(ret);
+               cmdterm_print(ret);
+            }
             else
                history_add(text);
             *text = '\0';
@@ -759,6 +1208,7 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
          if (text && *text)
          {
             char entered[sizeof(CmdTerm.cmdbuf) + 3];
+            cmdterm_set_scroll(0);
             _snprintf(entered, sizeof(entered) - 1, "> %s", text);
             entered[sizeof(entered) - 1] = '\0';
             cmdterm_print(entered);
@@ -776,19 +1226,19 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
             if (context == HK_COMMAND_MODE && HotkeyContext == HK_GAME_MODE)
                IInputBinder_SetContext (g_pInputBinder, HK_GAME_MODE, TRUE);
 
+            cmdterm_begin_command_capture();
             ret = IInputBinder_ProcessCmd (g_pInputBinder, text);
+            cmdterm_end_command_capture();
             if (ret != NULL)
             {
                Status(ret);
                cmdterm_print(ret);
             }
             else
-            {
                history_add(text);
-               cmdterm_print_help(text);
-            }
 
-            if (CmdTerm.statebits & kStateInUse)
+            if ((CmdTerm.statebits & kStateInUse) &&
+                !(CmdTerm.flags & kCmdTermNoPause))
             {
                SimStatePause();
                CmdTerm.statebits |= kStatePaused;
@@ -799,6 +1249,18 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
          }
          *text = '\0';
          update = TRUE;
+         break;
+      case KB_FLAG_DOWN|KB_FLAG_CTRL|'v':
+         update = cmdterm_paste_command(box);
+         break;
+      case KB_FLAG_DOWN|KB_FLAG_CTRL|KB_FLAG_SHIFT|'c':
+         cmdterm_copy_output(TRUE);
+         break;
+      case KB_FLAG_DOWN|KB_FLAG_CTRL|'c':
+         if (text && *text)
+            cmdterm_copy_command();
+         else
+            cmdterm_copy_output(FALSE);
          break;
       case KB_FLAG_DOWN|KB_FLAG_CTRL|'g':
       case KB_FLAG_DOWN|KEY_ESC:
@@ -813,15 +1275,21 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
          clear = TRUE;
          break;
       case KB_FLAG_DOWN|KB_FLAG_CTRL|'p':
-         tmp=history_get(-1);
-         cursor_pos=move_cursor_into_command(tmp,sizeof(CmdTerm.cmdbuf));
+      {
+         char* history = history_get(-1);
+         cursor_pos=move_cursor_into_command(history,sizeof(CmdTerm.cmdbuf));
+         tmp=history;
          LGadTextBoxSetCursor(box,cursor_pos);   // cp was strlen(tmp)
          break;
+      }
       case KB_FLAG_DOWN|KB_FLAG_CTRL|'n':
-         tmp=history_get(+1);
-         cursor_pos=move_cursor_into_command(tmp,sizeof(CmdTerm.cmdbuf));
+      {
+         char* history = history_get(+1);
+         cursor_pos=move_cursor_into_command(history,sizeof(CmdTerm.cmdbuf));
+         tmp=history;
          LGadTextBoxSetCursor(box,cursor_pos);
          break;
+      }
       case KB_FLAG_DOWN|KEY_PGUP:
       case KB_FLAG_DOWN|KEY_PAD_PGUP:
          if (cmdterm_is_scrollable())
@@ -901,7 +1369,8 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
       {
          if (cmdterm_is_scrollable())
          {
-            CmdTerm.statebits &= ~kStateVisible;
+            if (CmdTerm.flags & kCmdTermHideUnfocused)
+               CmdTerm.statebits &= ~kStateVisible;
             if (CmdTerm.scrolldragging)
             {
                uiReleaseFocus(LGadBoxRegion(&CmdTerm.scrollbar),
@@ -919,8 +1388,10 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
          }
          if (cmdterm_is_scrollable())
             cmdterm_restore_canvas();
+         cmdterm_set_popup_cursor(FALSE);
       }
-      else if (!(CmdTerm.statebits & kStatePaused))
+      else if (!(CmdTerm.flags & kCmdTermNoPause) &&
+               !(CmdTerm.statebits & kStatePaused))
       {
          SimStatePause();
          CmdTerm.statebits |= kStatePaused;
@@ -936,6 +1407,8 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
 void CreateCommandTerminal(LGadRoot* root, Rect* bounds, ulong flags)
 {
    IResMan* resman;
+   const char* font_name;
+   int font_profile;
    short font_width;
    short font_height;
    short row_height;
@@ -947,9 +1420,13 @@ void CreateCommandTerminal(LGadRoot* root, Rect* bounds, ulong flags)
       DestroyCommandTerminal();
    memset(&CmdTerm,0,sizeof(CmdTerm));
    CmdTerm.flags = flags;
+   CmdTerm.parentroot = root;
+   CmdTerm.bounds = *bounds;
+   if (InterlockedCompareExchange(&CmdTermDiagnosticCapture, 0, 0))
+      cmdterm_install_output_hook();
 
-   // DromEd owns a compact, permanently embedded command-entry pane.  Keep
-   // that legacy presentation separate from the optional in-game overlay.
+   // Retain the compact profile for other historical game targets. Thief 2
+   // and DromEd both select the shared scrollable profile below.
    if (!cmdterm_is_scrollable())
    {
       LGadTextBoxDesc tdesc;
@@ -981,16 +1458,22 @@ void CreateCommandTerminal(LGadRoot* root, Rect* bounds, ulong flags)
       return;
    }
 
-   // Use the same larger bitmap font as Thief's in-game messages. The normal
-   // UI font was designed for the low-resolution menus and is hard to read
-   // when the game canvas is 1080p or larger.
+   // Editor and gameplay consoles share the implementation but have different
+   // available space. Each keeps its own runtime-adjustable font preference.
    if (GetCurrentStyle())
       memcpy(&CmdTerm.style, GetCurrentStyle(), sizeof(CmdTerm.style));
+   font_profile = (flags & kCmdTermHideUnfocused) ? 1 : 0;
+   font_name = font_profile
+      ? CmdTermPopupFontNames[CmdTermFontIndices[font_profile]]
+      : CmdTermEditorFontNames[CmdTermFontIndices[font_profile]];
    resman = AppGetObj(IResMan);
    if (resman)
    {
-      CmdTerm.fontres = IResMan_Bind(resman, "textfont", RESTYPE_FONT,
+      CmdTerm.fontres = IResMan_Bind(resman, font_name, RESTYPE_FONT,
                                     NULL, "intrface", 0);
+      if (!CmdTerm.fontres && strcmp(font_name, "textfont"))
+         CmdTerm.fontres = IResMan_Bind(resman, "textfont", RESTYPE_FONT,
+                                       NULL, "intrface", 0);
       SafeRelease(resman);
    }
    if (CmdTerm.fontres)
@@ -1028,8 +1511,12 @@ void CreateCommandTerminal(LGadRoot* root, Rect* bounds, ulong flags)
       tdesc.editbuf = CmdTerm.titlebuf;
       tdesc.editbuflen = sizeof(CmdTerm.titlebuf);
       tdesc.style = &CmdTerm.style;
-      strcpy(CmdTerm.titlebuf,
-             "Console - wheel/Page Up/Page Down/Home/End scroll; Esc closes");
+      if (flags & kCmdTermHideUnfocused)
+         strcpy(CmdTerm.titlebuf,
+                "Console - wheel scroll; Ctrl+wheel font; Ctrl+V paste; Esc closes");
+      else
+         strcpy(CmdTerm.titlebuf,
+                "Console :/; focus | wheel scroll | Ctrl+wheel font");
 
       LGadCreateTextBoxDesc(&CmdTerm.titlebox,&CmdTerm.root,&tdesc);
       LGadTextBoxClrFlag(&CmdTerm.titlebox,
@@ -1068,11 +1555,6 @@ void CreateCommandTerminal(LGadRoot* root, Rect* bounds, ulong flags)
       LGadBoxFlags(&CmdTerm.scrollbar)|BOXFLAG_FLIP);
    LGadBoxMouseMotion(&CmdTerm.scrollbar, cmdterm_scrollbar_motion);
 
-   if (uiInstallRegionHandler(LGadBoxRegion(&CmdTerm.root), UI_EVENT_MOUSE,
-                              cmdterm_mouse_handler, NULL,
-                              &CmdTerm.mousehandler) == OK)
-      CmdTerm.mousehandlerinstalled = TRUE;
-
    // Make the editable command line on the bottom row.
    {   
       LGadTextBoxDesc tdesc;
@@ -1093,9 +1575,18 @@ void CreateCommandTerminal(LGadRoot* root, Rect* bounds, ulong flags)
       LGadBoxSetFlags(&CmdTerm.textbox,
          LGadBoxFlags(&CmdTerm.textbox)|BOXFLAG_FLIP);
    }
+
+   // Child gadgets normally consume mouse events before their parent sees
+   // them. Install wheel handling on every console surface so scrolling and
+   // Ctrl+wheel font sizing work wherever the pointer is within the terminal.
+   cmdterm_install_mouse_handler(LGadBoxRegion(&CmdTerm.root));
+   cmdterm_install_mouse_handler(LGadBoxRegion(&CmdTerm.titlebox));
+   cmdterm_install_mouse_handler(LGadBoxRegion(&CmdTerm.outputbox));
+   cmdterm_install_mouse_handler(LGadBoxRegion(&CmdTerm.textbox));
+
    CmdTerm.statebits = kStateInUse;
    if (!CmdTermLineCount)
-      cmdterm_print("Thief 2 console ready. Type help for commands.");
+      cmdterm_print("Console ready. Type help for commands.");
    else
       cmdterm_rebuild_output();
    if (flags & kCmdTermBeginFocused)
@@ -1106,6 +1597,12 @@ void CreateCommandTerminal(LGadRoot* root, Rect* bounds, ulong flags)
    {
       region_set_invisible(LGadBoxRegion(&CmdTerm.root),TRUE);
    }
+   else
+   {
+      // DromEd keeps the shared console visible in its layout even when the
+      // command line does not own keyboard focus.
+      CmdTerm.statebits |= kStateVisible;
+   }
    LGadDrawBox(VB(&CmdTerm.root),NULL);
    cmdterm_setup_cmds();
 }
@@ -1113,7 +1610,9 @@ void CreateCommandTerminal(LGadRoot* root, Rect* bounds, ulong flags)
 void DestroyCommandTerminal(void)
 {
    unsigned long context;
+   int i;
 
+   cmdterm_set_popup_cursor(FALSE);
    if (CmdTerm.statebits & kStatePaused)
    {
       SimStateUnpause();
@@ -1132,12 +1631,10 @@ void DestroyCommandTerminal(void)
                      UI_EVENT_MOUSE | UI_EVENT_MOUSE_MOVE);
       CmdTerm.scrolldragging = FALSE;
    }
-   if (CmdTerm.mousehandlerinstalled)
-   {
-      uiRemoveRegionHandler(LGadBoxRegion(&CmdTerm.root),
-                            CmdTerm.mousehandler);
-      CmdTerm.mousehandlerinstalled = FALSE;
-   }
+   for (i = CmdTerm.mousehandlercount - 1; i >= 0; --i)
+      uiRemoveRegionHandler(CmdTerm.mousehandlerregions[i],
+                            CmdTerm.mousehandlers[i]);
+   CmdTerm.mousehandlercount = 0;
    LGadDestroyTextBox(&CmdTerm.textbox);
    if (cmdterm_is_scrollable())
    {
@@ -1147,10 +1644,79 @@ void DestroyCommandTerminal(void)
    }
    LGadDestroyRoot(&CmdTerm.root);
    SafeRelease(CmdTerm.fontres);
+   cmdterm_model_lock();
+   cmdterm_capture_flush_locked();
+   cmdterm_model_unlock();
+   cmdterm_remove_output_hook();
    
 }
 
-void cmdterm_focus(char* prefix)
+static BOOL cmdterm_apply_pending_font_change(void)
+{
+   LONG delta = InterlockedExchange(&CmdTermPendingFontDelta, 0);
+   LGadRoot* parent;
+   Rect bounds;
+   ulong flags;
+   int profile;
+   int index;
+   int font_count;
+   int scroll;
+   BOOL focused;
+   BOOL visible;
+   char command[sizeof(CmdTerm.cmdbuf)];
+
+   if (!delta || !(CmdTerm.statebits & kStateInUse) ||
+       !cmdterm_is_scrollable())
+      return FALSE;
+
+   profile = (CmdTerm.flags & kCmdTermHideUnfocused) ? 1 : 0;
+   font_count = profile ? (int)CMDTERM_POPUP_FONT_COUNT
+                        : (int)CMDTERM_EDITOR_FONT_COUNT;
+   index = CmdTermFontIndices[profile] + delta;
+   if (index < 0)
+      index = 0;
+   if (index >= font_count)
+      index = font_count - 1;
+   if (index == CmdTermFontIndices[profile])
+      return FALSE;
+
+   parent = CmdTerm.parentroot;
+   bounds = CmdTerm.bounds;
+   flags = CmdTerm.flags;
+   scroll = CmdTerm.scroll;
+   focused = LGadTextBoxEditing(&CmdTerm.textbox) != 0;
+   visible = (CmdTerm.statebits & kStateVisible) != 0;
+   strncpy(command, CmdTerm.cmdbuf, sizeof(command));
+   command[sizeof(command) - 1] = '\0';
+
+   CmdTermFontIndices[profile] = index;
+   DestroyCommandTerminal();
+   CreateCommandTerminal(parent, &bounds, flags);
+   strncpy(CmdTerm.cmdbuf, command, sizeof(CmdTerm.cmdbuf));
+   CmdTerm.cmdbuf[sizeof(CmdTerm.cmdbuf) - 1] = '\0';
+   LGadUpdateTextBox(&CmdTerm.textbox);
+   cmdterm_set_scroll(scroll);
+   cmdterm_rebuild_output();
+
+   if (focused)
+      cmdterm_activate_focus(FALSE);
+   else if (visible)
+   {
+      CmdTerm.statebits |= kStateVisible;
+      region_set_invisible(LGadBoxRegion(&CmdTerm.root), FALSE);
+      cmdterm_draw();
+   }
+   return TRUE;
+}
+
+static void cmdterm_deferred_font_change(void* unused)
+{
+   (void)unused;
+   InterlockedExchange(&CmdTermFontChangeDeferred, FALSE);
+   cmdterm_apply_pending_font_change();
+}
+
+static void cmdterm_activate_focus(BOOL position_cursor)
 {
    char* buf = &CmdTerm.cmdbuf[0];
    int bufsiz = sizeof(CmdTerm.cmdbuf);
@@ -1160,11 +1726,6 @@ void cmdterm_focus(char* prefix)
    if (!(CmdTerm.statebits & kStateInUse))
       return;
 
-   if (prefix)
-      strncpy(buf,prefix,bufsiz);
-   else
-      strcpy(buf,"");
-   buf[bufsiz-1] = '\0';
    // make the region visible, if necessary
    region_set_invisible(LGadBoxRegion(&CmdTerm.root),FALSE);
    if (cmdterm_is_scrollable())
@@ -1177,7 +1738,8 @@ void cmdterm_focus(char* prefix)
          CmdTerm.canvasredirected = TRUE;
       }
    }
-   cursor_pos=move_cursor_into_command(buf,bufsiz);
+   cursor_pos = position_cursor
+      ? move_cursor_into_command(buf,bufsiz) : (int)strlen(buf);
 
    LGadTextBoxSetCursor(&CmdTerm.textbox,cursor_pos);
    LGadUpdateTextBox(&CmdTerm.textbox);
@@ -1190,15 +1752,36 @@ void cmdterm_focus(char* prefix)
    }
    else
       LGadDrawBox(VB(&CmdTerm.textbox),NULL);
-   // pause the sim state
-   SimStatePause();
+   // Gameplay pauses while the console owns input. The editor uses the same
+   // view without changing its distinct simulation lifecycle.
+   if (!(CmdTerm.flags & kCmdTermNoPause))
+      SimStatePause();
    
 
    IInputBinder_GetContext (g_pInputBinder, &context);
    if (context == HK_GAME_MODE)
       IInputBinder_SetContext (g_pInputBinder, HK_COMMAND_MODE, TRUE);
+
+   cmdterm_set_popup_cursor(TRUE);
    
-   CmdTerm.statebits |= kStatePaused;
+   if (!(CmdTerm.flags & kCmdTermNoPause))
+      CmdTerm.statebits |= kStatePaused;
+}
+
+void cmdterm_focus(char* prefix)
+{
+   char* buf = &CmdTerm.cmdbuf[0];
+   int bufsiz = sizeof(CmdTerm.cmdbuf);
+
+   if (!(CmdTerm.statebits & kStateInUse))
+      return;
+
+   if (prefix)
+      strncpy(buf,prefix,bufsiz);
+   else
+      strcpy(buf,"");
+   buf[bufsiz-1] = '\0';
+   cmdterm_activate_focus(TRUE);
 }
 
 static void new_cmdterm(char *prefix)
@@ -1225,6 +1808,10 @@ static Command commands[] =
 {
    { "edit_command", FUNC_STRING, new_cmdterm, "edit a command in the command editor: edit_command <cmd>",HK_ALL},
    { "history_cmd", FUNC_INT, history_cmdterm, "edit command from history offset" },
+   { "console_copy", FUNC_STRING, cmdterm_console_copy,
+     "copy console_copy [visible/all/command] to the clipboard", HK_ALL },
+   { "console_diagnostics", FUNC_STRING, cmdterm_console_diagnostics,
+     "capture console_diagnostics [on/off] mprintf diagnostics", HK_ALL },
 #ifdef DBG_ON   
    { "history_dump", FUNC_VOID, history_show },
 #endif   

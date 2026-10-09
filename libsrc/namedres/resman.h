@@ -57,7 +57,7 @@ public:
 	uint STDMETHODCALLTYPE GetResourceLockCount(IRes* pRes) override;
 	int STDMETHODCALLTYPE DropResource(IRes* pRes) override;
 	long STDMETHODCALLTYPE GetResourceSize(IRes* pRes) override;
-	void STDMETHODCALLTYPE UnregisterResource(IRes* pRes, ulong ManData) override;
+	void STDMETHODCALLTYPE UnregisterResource(IRes* pRes, DWORD_PTR ManData) override;
 
 	int STDMETHODCALLTYPE AsyncLock(IRes* pRes, int nPriority) override;
 	int STDMETHODCALLTYPE AsyncExtract(IRes* pRes, int nPriority, void* pBuf, long bufSize) override;

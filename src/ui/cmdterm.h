@@ -24,6 +24,7 @@ enum CmdTermFlags
    kCmdTermHideUnfocused = (1 << 0), 
    kCmdTermBeginFocused = (1 << 1), 
    kCmdTermScrollable = (1 << 2),
+   kCmdTermNoPause = (1 << 3),
 };
 
 
@@ -31,6 +32,7 @@ EXTERN void CreateCommandTerminal(struct _LGadRoot* root, struct Rect* bounds, u
 EXTERN void DestroyCommandTerminal(void);
 EXTERN void cmdterm_print(const char* text);
 EXTERN void cmdterm_redraw(void);
+EXTERN void cmdterm_capture_status(const char* text);
 
 #endif // __CMDTERM_H
 

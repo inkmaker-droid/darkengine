@@ -41,10 +41,7 @@ extern int stat_num_spans_drawn;
 
 // enable various asm routines in ptmapper
 
-#define UNCLIPPED_ASM
-#define USE_ASM_OUTER_LOOP
-#define CLIPPED_ASM
-#define RPI_UNLIT_ASM
+/* Portable C scan conversion and span assembly are selected below. */
 
 
 int g2pt_start_y;
@@ -155,7 +152,7 @@ static void scan_convert(grs_point *p1, grs_point *p2)
          ++y1;
       }
    } else {
-#if 1
+#if 0
       g2pt_scan_convert(x, &xdata[y1][left], dx, y2 - y1);
 #else
       // now generate all crossings for this edge
@@ -320,7 +317,7 @@ static void scan_convert_uv(r3s_point *p1, r3s_point *p2)
          ++y1;
       }
    } else {
-#if 1
+#if 0
       g2pt_scan_convert_uv(&info, &xdata[y1][0], &uvdata[y1][0], y2-y1);
 #else
       this_x = fix_cint(x);
@@ -465,21 +462,13 @@ static void real_render_poly_float(int y0, int y1)
             end_c = c + (len-1) * g2pt_fdc;
          }
 
-         pixel_count[length_mapping[len]] += len;
-
-#if 1
          {
-            while (len--) {
-               fix u = a/c + fix_make(2,0), v = b/c + fix_make(2,0);
-               a += g2pt_fda;
-               b += g2pt_fdb;
-               c += g2pt_fdc;
-               *dest++ = g2pt_tmap_ptr[256*(v >> 16) + (u >> 16)]; 
-            }
+            double abc[3];
+            abc[0] = a;
+            abc[1] = b;
+            abc[2] = c;
+            g2ptmap_perspective_run(len, abc, dest);
          }
-#else
-         g2ptmap_do_perspective_lit_run_implicit(dest, len, a, b, c);
-#endif
       }
       destcore += row;
       ma += g2pt_tmap_data[6];

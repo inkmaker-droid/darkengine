@@ -1,7 +1,9 @@
 #ifndef __D3D11SCENE_H
 #define __D3D11SCENE_H
 
+#pragma pack(push, 8)
 #include <d3d11.h>
+#pragma pack(pop)
 #include <string.h>
 
 #include "d3d11legacy.h"

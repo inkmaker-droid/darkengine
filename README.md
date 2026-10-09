@@ -12,7 +12,8 @@ Age* is required to run the game.
 ## Current status
 
 The Release/x86 Thief 2 and DromEd targets build successfully with the Visual
-Studio 2022 v143 toolset. Both use the modern D3D11 renderer and presentation
+Studio 2022 v143 toolset. Release/x64 builds also compile and run, but remain
+under runtime validation. Both use the modern D3D11 renderer and presentation
 path. Thief 2 can use an external retail installation and retains the standard
 startup sequence, mission loading, game UI, inventory, and automap. The DromEd
 build can load, inspect, and playtest legacy Thief 2 missions in a normal
@@ -20,6 +21,12 @@ resizable window, using the full client area when the window size changes.
 Treat it as a viewer, not a reliable editor: editing and saving workflows are
 not yet stable or comprehensively validated, and NewDark formats and features
 are not supported.
+
+Native x64 builds include a compatibility runtime for legacy 32-bit `.osm`
+script modules. It reads PE32 modules, interprets the IA-32 code, and bridges
+the supported script-manager and engine-service calls into the 64-bit process.
+This is separate from NewDark's Squirrel support and is still being expanded
+and validated against third-party OSMs.
 
 The runner currently provides:
 
@@ -29,22 +36,22 @@ The runner currently provides:
   resolution;
 - borderless fullscreen and resizable windowed presentation;
 - the standard splash/startup, intro movie, and main-menu flow; and
-- a configurable in-game command console, defaulting to backslash when free.
+- a configurable command console, defaulting to `:` and `;` in every mode.
 
 ## Requirements
 
-- 64-bit Windows 10 or Windows 11 capable of running 32-bit applications
+- 64-bit Windows 10 or Windows 11
 - Visual Studio 2022 or Visual Studio 2022 Build Tools
 - The **Desktop development with C++** workload, including:
-  - MSVC v143 x86 build tools
+  - MSVC v143 x86/x64 build tools
   - a Windows 10 or Windows 11 SDK
-  - MASM support installed with the C++ toolchain
 - A retail Thief 2 installation containing `cam.cfg` and either `DARK.GAM` or
   `MISS1.MIS`
 
 The legacy DirectX headers and import libraries still needed by engine-facing
 interfaces are under `3rdparty/dx7sdk`. Current Windows output uses a D3D11
-swap chain and Windows Media Foundation. The build target is 32-bit x86.
+swap chain and Windows Media Foundation. No assembler is required by the
+active x86 or x64 build.
 
 ## Build instructions
 
@@ -53,7 +60,8 @@ swap chain and Windows Media Foundation. The build target is 32-bit x86.
 1. Open `thief2.sln` in Visual Studio 2022.
 2. Select the `Release` configuration and `x86` solution platform.
 3. Build the solution with **Build > Build Solution**.
-4. The resulting executable is `Release\Thief2.exe`.
+4. The resulting executable is
+   `build\Release\Win32\Thief2\Thief2.exe`.
 
 `Directory.Build.props` selects the Thief 2 target by default and applies the
 packing and C-language compatibility settings required by the legacy code.
@@ -68,7 +76,8 @@ From an **x86 Native Tools Command Prompt for VS 2022**, run:
 msbuild thief2.sln /m /t:Build /p:Configuration=Release /p:Platform=x86
 ```
 
-The command should finish with `Release\Thief2.exe`.
+The command should finish with
+`build\Release\Win32\Thief2\Thief2.exe`.
 
 To build DromEd from the same project, run:
 
@@ -76,7 +85,8 @@ To build DromEd from the same project, run:
 msbuild thief2.sln /m /t:dromed /p:Configuration=Release /p:Platform=x86 /p:BuildThief2=false
 ```
 
-The command should finish with `Release\DromEd.exe`. The editor switch also
+The command should finish with
+`build\Release\Win32\DromEd\DromEd.exe`. The editor switch also
 works for a direct project build; `Directory.Build.props` supplies the solution
 root needed by the legacy include and library paths:
 
@@ -84,9 +94,22 @@ root needed by the legacy include and library paths:
 msbuild src\dromed.vcxproj /m /t:Build /p:Configuration=Release /p:Platform=Win32 /p:BuildThief2=false
 ```
 
+Use `Platform=x64` for a native 64-bit direct build. Final executables and
+their object files are separated by architecture, configuration, and target:
+
+```text
+build\Release\Win32\Thief2\Thief2.exe
+build\Release\Win32\DromEd\DromEd.exe
+build\Release\x64\Thief2\Thief2.exe
+build\Release\x64\DromEd\DromEd.exe
+```
+
+Static libraries remain shared between Thief2 and DromEd within a given
+architecture. They must not vary with `BuildThief2`.
+
 ## Run instructions
 
-1. Start `Release\Thief2.exe`.
+1. Start `build\Release\Win32\Thief2\Thief2.exe`.
 2. On the first launch, select the root of the Thief 2 installation. This is
    the directory containing `cam.cfg` and `DARK.GAM` or `MISS1.MIS`.
 3. The runner changes the working directory to the selected installation and
@@ -112,7 +135,7 @@ DromEd uses the same Thief 2 data-directory selection as the game runner. Start
 it directly from the build output:
 
 ```bat
-Release\DromEd.exe
+build\Release\Win32\DromEd\DromEd.exe
 ```
 
 The viewer reuses the `GameDataPath` registry value shown above. If no valid
@@ -135,6 +158,12 @@ reference. It includes every active editor binding (including the complete
 built-in fallback set), non-conflicting shortcut annotations from the loaded
 `menus.cfg`, and direct mouse/viewport gestures. Controls are grouped and
 ordered by purpose, with modifier keys shown before the base key.
+
+DromEd keeps its scrollable command console visible in the lower-right editor
+pane. Press `:` or `;` to give its command line keyboard focus; **Escape**
+releases focus without hiding the pane. It uses the same scrollback, command
+history, completion, clipboard controls, and output path as the pop-up console
+in gameplay and play preview.
 
 The historical editing commands are present, but this build is not yet a
 dependable mission-authoring environment. Work from backups and do not rely on
@@ -163,11 +192,11 @@ resolution is the fixed internal render size, not a maximum window size.
 Entering Windowed mode opens the client area at that size (clamped to the
 monitor work area); resizing the window afterward only resizes the swap-chain
 output and scales that fixed render canvas. Select **Fit** instead of a fixed
-resolution to render the 3D scene directly at the aspect-fitted client area in
-Windowed mode or at the display's native pixel area in Fullscreen mode. During
-an interactive window resize, the last completed scene is scaled; the single
-scene/depth pair is resized once the drag ends. The settings can also be
-changed in `cam.cfg` with `game_full_screen 1` or `game_full_screen 0` and
+resolution to render the 3D scene directly across the full client area in
+Windowed mode or across the display's native pixel area in Fullscreen mode.
+During an interactive window resize, the last completed scene is scaled; the
+single scene/depth pair is resized once the drag ends. The settings can also
+be changed in `cam.cfg` with `game_full_screen 1` or `game_full_screen 0` and
 `game_screen_fit 1` or `game_screen_fit 0`.
 
 On a multi-monitor system, the display containing the game window determines
@@ -183,34 +212,58 @@ retail movie directory contains both formats, the runner uses the H.264 MP4
 through Windows Media Foundation instead of requiring the obsolete Indeo 5
 codec used by the original AVI.
 
-## In-game console
+## Command console
 
 The console appears as **Console** under **Options > Controls > Customize
-Controls**. It defaults to backslash (`\`) when that key is free and no console
-binding already exists. It can be rebound like any other control, and the
-selection is saved in `user.bnd`.
+Controls**. It defaults to both `:` and `;` in DromEd, DromEd play preview,
+and Thief2 gameplay when those keys are free. Existing commands assigned to
+either key are preserved. The console can be rebound like any other control,
+and the selection is saved in `user.bnd`.
 
 The console pauses gameplay while open. Press **Enter** to run a command and
-keep the console open. Use the **mouse wheel**, the draggable scrollbar, or
-**Page Up** and **Page Down** to move through its 4,096-line scrollback;
-**Home** jumps to the oldest retained output and **End** returns to the newest.
-Press **Escape** to close the console and resume play.
+keep the console open. Use the **mouse wheel**, drag anywhere on the scrollbar
+track, or use **Page Up** and **Page Down** to move through its 4,096-line
+scrollback; **Home** jumps to the oldest retained output and **End** returns to
+the newest.
+Hold **Ctrl** and turn the mouse wheel over the console to change its font
+size. The permanently visible DromEd pane starts with the compact editor font,
+while the pop-up gameplay console starts with a larger font; each profile
+remembers its adjustment for the current run. Clicking the command-entry row
+gives it keyboard focus.
+Press **Ctrl+V** to paste into the command line. **Ctrl+C** copies the command
+line when it is nonempty, or the visible output otherwise; **Ctrl+Shift+C**
+copies all retained output. Press **Escape** to close the console and resume
+play.
+
+`help <keyword>` searches the names, descriptions, and argument types of the
+commands available in the current mode. Plain `help` opens DromEd's searchable
+command-reference window; in gameplay it prints the available command names.
 
 Available commands:
 
-- `help [command]` - show built-in command help
-- `openmission [number/shortname]` - start an installed mission
-- `listmissions` - list installed missions and their short names
+- `help [keyword]` - search the currently available command help
+- `open_mission [number/shortname]` - start an installed mission
+- `list_missions` - list installed missions and their short names
 - `immunity [on/off]` - prevent player damage
 - `flying [on/off]` - disable or restore player gravity
-- `playerphysics [on/off]` - toggle player collision and gravity for noclip
+- `player_physics [on/off]` - toggle player collision and gravity for noclip
   free-flight while leaving world physics active
 - `invisible [on/off]` - toggle the existing player-invisibility property
 - `reticle [on/off]` - show or hide the center reticle
-- `retinfo` - describe the object and mesh under the reticle
-- `listscripts` - list loaded script classes
-- `debugscripts [on/off]` - log dispatched script messages to
+- `reticle_info` - describe the object and mesh under the reticle
+- `list_scripts` - list loaded script classes
+- `debug_scripts [on/off]` - log dispatched script messages to
   `script-debug.log`
+- `console_copy [visible/all/command]` - copy console text to the clipboard
+- `console_diagnostics [on/off]` - optionally include general `mprintf`
+  diagnostic output in the console
+
+In DromEd, bare `help` opens the searchable **Command Reference** window
+instead of printing the complete editor command registry. Use `help <text>`
+to print only matching commands in the console.
+
+The earlier spellings `openmission`, `listmissions`, `playerphysics`,
+`retinfo`, `listscripts`, and `debugscripts` remain compatibility aliases.
 
 Long mission and script listings are appended to `thief-console.log`. Both log
 files are ignored by Git.
@@ -235,16 +288,19 @@ repository.
 
 ## Known limitations and remaining work
 
-- The x64 solution configurations are not supported or validated. The working
-  target is Release/x86.
+- The x64 targets build and pass initial smoke tests, but are not yet as fully
+  runtime-validated as Release/x86. The embedded compatibility runtime covers
+  the IA-32 instructions, imports, and engine services exercised by tested
+  legacy `.osm` modules; broader third-party script coverage remains ongoing.
 - Modern rendering is still exposed through the historical `lgd3d` API as a
   compatibility facade over D3D11. The unusable legacy Direct3D device path is
   disabled, but dormant D3D2-era branches, files, and build definitions remain
   to be removed after the remaining texture, lightmap, and render-state
   behavior has been ported and validated.
-- A native 64-bit build is not yet supported; the current target remains x86.
-  The renderer also still uses a 16-bit internal canvas despite presenting a
-  32-bit D3D11 image, so full 32-bit scene rendering remains to be implemented.
+- The native 64-bit build still needs broader mission, save/load, and editing
+  validation. The renderer also still uses a 16-bit internal canvas despite
+  presenting a 32-bit D3D11 image, so full 32-bit scene rendering remains to
+  be implemented.
 - Native-resolution, high-DPI, window resizing, and ultrawide behavior need
   testing across more GPUs and display configurations.
 - Gamma correction is implemented in the D3D11 presentation path. Visual
@@ -268,7 +324,8 @@ repository.
   controls therefore have no audio effect until a modern environmental-audio
   backend is added.
 - Squirrel scripting support required by NewDark-era fan missions and mods,
-  including *The Black Parade*, is not implemented.
+  including *The Black Parade*, is not implemented. The x64 legacy-OSM
+  compatibility runtime does not provide Squirrel support.
 - Broader NewDark mod compatibility remains to be implemented and tested,
   including replacement models, textures, and other art assets.
 - There is no installer or redistributable package. The executable is run
@@ -276,12 +333,12 @@ repository.
 - Console scrollback retains the latest 4,096 output lines; command recall is
   a separate 256-command history. Long mission and script listings are also
   written to `thief-console.log`.
-- `flying` disables gravity while preserving collision. Use `playerphysics off`
+- `flying` disables gravity while preserving collision. Use `player_physics off`
   for noclip free-flight; its movement behavior still needs broader mission
   testing.
 - `invisible` uses the engine's existing invisibility/render property. AI
   perception behavior has not been exhaustively verified for every mission.
-- Keyboard-layout behavior for the default backslash console binding needs
+- Keyboard-layout behavior for the default `:` and `;` console bindings needs
   broader testing on non-US layouts.
 - The full build still emits numerous warnings inherited from the legacy
   source. They require separate review before warning levels can be tightened.

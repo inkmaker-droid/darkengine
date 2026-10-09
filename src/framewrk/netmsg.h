@@ -28,6 +28,7 @@
 #define __NETMSG_H
 
 #include <stdarg.h>
+#include <stdint.h>
 #include <comtools.h>
 #include <objtype.h>
 #include <nettypes.h>
@@ -322,7 +323,7 @@ protected:
 
    // Get a specific parameter. (Zero-based.) The caller is responsible
    // for casting the value appropriately.
-   DWORD GetParam(int index);
+   uintptr_t GetParam(int index);
 
    // Send the message off to an outside handler
    void SendToHandler();
@@ -350,7 +351,10 @@ protected:
 
    // The unmarshalled parameters. You will generally get at these through
    // GetParam.
-   DWORD *m_ppParams;
+   // Parameters can contain pointers as well as 32-bit wire values.  DWORD
+   // was sufficient for the original x86 build but truncates loopback and
+   // unmarshalled pointers in a native 64-bit process.
+   uintptr_t *m_ppParams;
 
    // TRUE iff we should always spew this particular message:
    BOOL m_bSpewMe;
@@ -417,7 +421,7 @@ private:
 
 //////////
 
-inline DWORD cNetMsg::GetParam(int index)
+inline uintptr_t cNetMsg::GetParam(int index)
 {
    return m_ppParams[index];
 }

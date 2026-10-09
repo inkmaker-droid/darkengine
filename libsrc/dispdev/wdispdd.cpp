@@ -6,9 +6,11 @@
 //
 
 // Core headers
+#pragma pack(push, 8)
 #include <windows.h>
-#include <lg.h>
 #include <ddraw.h>
+#pragma pack(pop)
+#include <lg.h>
 
 // Component APIs
 #include <comtools.h>
@@ -364,7 +366,7 @@ HRESULT CALLBACK
 
 ///////////////////////////////////////
 
-BOOL cDDProvider::DoProcessMessage(UINT msg, WPARAM /*wParam*/, LPARAM /*lParam*/, long * pRetVal)
+BOOL cDDProvider::DoProcessMessage(UINT msg, WPARAM /*wParam*/, LPARAM /*lParam*/, LRESULT * pRetVal)
 {
     // If we haven't been initialized...
     if (!m_pDisplayDevice->IsModeSet())

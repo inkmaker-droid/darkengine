@@ -81,6 +81,88 @@
 // Must be last header
 #include <dbmem.h>
 
+namespace
+{
+constexpr size_t kDiskPointerSize = sizeof(uint32);
+
+template <class T>
+void ReadPointerPrefixedPhysRecord(PhysReadWrite func, T* value, size_t diskSize)
+{
+   unsigned char diskRecord[sizeof(T)];
+   Assert_(diskSize <= sizeof(diskRecord));
+   func(diskRecord, diskSize, 1);
+   memset(value, 0, sizeof(*value));
+   memcpy(reinterpret_cast<unsigned char*>(value) + sizeof(void*),
+          diskRecord + kDiskPointerSize,
+          diskSize - kDiskPointerSize);
+}
+
+template <class T>
+void WritePointerPrefixedPhysRecord(PhysReadWrite func, const T* value, size_t diskSize)
+{
+   unsigned char diskRecord[sizeof(T)] = {};
+   Assert_(diskSize <= sizeof(diskRecord));
+   memcpy(diskRecord + kDiskPointerSize,
+          reinterpret_cast<const unsigned char*>(value) + sizeof(void*),
+          diskSize - kDiskPointerSize);
+   func(diskRecord, diskSize, 1);
+}
+
+constexpr size_t kPhysPosPayloadSize = sizeof(Position) * 3;
+constexpr size_t kPhysPosPointerOffset =
+   (kPhysPosPayloadSize + kDiskPointerSize - 1) & ~(kDiskPointerSize - 1);
+constexpr size_t kPhysPosDiskSize = kPhysPosPointerOffset + kDiskPointerSize;
+constexpr size_t kPhysDynDataDiskSize = sizeof(cPhysDynData) - sizeof(void*) + kDiskPointerSize;
+constexpr size_t kPhysCtrlDataDiskSize = sizeof(cPhysCtrlData) - sizeof(void*) + kDiskPointerSize;
+
+static_assert(kPhysPosDiskSize == 72, "Unexpected legacy cPhysPos record size");
+static_assert(kPhysDynDataDiskSize == 116, "Unexpected legacy cPhysDynData record size");
+static_assert(kPhysCtrlDataDiskSize == 76, "Unexpected legacy cPhysCtrlData record size");
+
+void ReadPhysPos(PhysReadWrite func, cPhysPos* value)
+{
+   func(&value->m_position, sizeof(Position), 1);
+   func(&value->m_endposition, sizeof(Position), 1);
+   func(&value->m_targetposition, sizeof(Position), 1);
+   unsigned char ignoredPadding[kPhysPosPointerOffset - kPhysPosPayloadSize];
+   func(ignoredPadding, sizeof(ignoredPadding), 1);
+   uint32 ignoredModelPointer;
+   func(&ignoredModelPointer, sizeof(ignoredModelPointer), 1);
+   value->m_pModel = NULL;
+}
+
+void WritePhysPos(PhysReadWrite func, const cPhysPos* value)
+{
+   func((void*)&value->m_position, sizeof(Position), 1);
+   func((void*)&value->m_endposition, sizeof(Position), 1);
+   func((void*)&value->m_targetposition, sizeof(Position), 1);
+   unsigned char padding[kPhysPosPointerOffset - kPhysPosPayloadSize] = {};
+   func(padding, sizeof(padding), 1);
+   uint32 ignoredModelPointer = 0;
+   func(&ignoredModelPointer, sizeof(ignoredModelPointer), 1);
+}
+
+void ReadPhysDynData(PhysReadWrite func, cPhysDynData* value)
+{
+   ReadPointerPrefixedPhysRecord(func, value, kPhysDynDataDiskSize);
+}
+
+void WritePhysDynData(PhysReadWrite func, const cPhysDynData* value)
+{
+   WritePointerPrefixedPhysRecord(func, value, kPhysDynDataDiskSize);
+}
+
+void ReadPhysCtrlData(PhysReadWrite func, cPhysCtrlData* value)
+{
+   ReadPointerPrefixedPhysRecord(func, value, kPhysCtrlDataDiskSize);
+}
+
+void WritePhysCtrlData(PhysReadWrite func, const cPhysCtrlData* value)
+{
+   WritePointerPrefixedPhysRecord(func, value, kPhysCtrlDataDiskSize);
+}
+}
+
 extern BOOL gInsideMT;
 
 mxs_real kSpringCapMag = 25.0; //extern deffed in phconst
@@ -312,6 +394,10 @@ cPhysModel::cPhysModel(PhysReadWrite func) :
    func((void *)&m_nSubModels, sizeof(int), 1);
    func((void *)&m_flags, sizeof(unsigned), 1);
 
+   if (m_nSubModels < 0 || m_nSubModels > 256)
+      Error(1, "Invalid physics submodel count %d for object %d\n",
+            m_nSubModels, m_objID);
+
    BOOL facevel;
    if (g_pPhysFaceVelProp->Get(m_objID, &facevel) && facevel)
       m_flags |= kPMF_FacesVel;
@@ -439,7 +525,10 @@ cPhysModel::cPhysModel(PhysReadWrite func) :
    // Allocate and Read positions for each submodel
    m_pPosition = new cPhysPos[m_nSubModels];
    if (g_PhysVersion >= 9)
-      func(m_pPosition, sizeof(cPhysPos), m_nSubModels);
+   {
+      for (i=0; i<m_nSubModels; ++i)
+         ReadPhysPos(func, &m_pPosition[i]);
+   }
    else
    {
       for (i=0; i<m_nSubModels; i++)
@@ -447,18 +536,20 @@ cPhysModel::cPhysModel(PhysReadWrite func) :
          func(&m_pPosition[i].m_position, sizeof(Position), 1);
          func(&m_pPosition[i].m_endposition, sizeof(Position), 1);
          func(&dummy, sizeof(tPhysRef), 1);
-         func(&m_pPosition[i].m_pModel, sizeof(cPhysModel *), 1);
+         uint32 ignoredModelPointer;
+         func(&ignoredModelPointer, sizeof(ignoredModelPointer), 1);
       }
    }
 
    if (g_PhysVersion >= 9)
-      func((void *)&m_pos, sizeof(cPhysPos), 1);
+      ReadPhysPos(func, &m_pos);
    else
    {
       func(&m_pos.m_position, sizeof(Position), 1);
       func(&m_pos.m_endposition, sizeof(Position), 1);
       func(&dummy, sizeof(tPhysRef), 1);
-      func(&m_pos.m_pModel, sizeof(cPhysModel *), 1);
+      uint32 ignoredModelPointer;
+      func(&ignoredModelPointer, sizeof(ignoredModelPointer), 1);
    }
 
    // Update pointers
@@ -515,7 +606,7 @@ cPhysModel::cPhysModel(PhysReadWrite func) :
       if (g_PhysVersion <= 11)
          m_DynamicsData.LoadV11(func);
       else
-         func(&m_DynamicsData, sizeof(cPhysDynData), 1);
+         ReadPhysDynData(func, &m_DynamicsData);
       m_pDynamicsData.SetSize(0);
    }
    else
@@ -526,7 +617,7 @@ cPhysModel::cPhysModel(PhysReadWrite func) :
          if (g_PhysVersion <= 11)
             m_DynamicsData.LoadV11(func);
          else
-            func(&m_DynamicsData, sizeof(cPhysDynData), 1);
+            ReadPhysDynData(func, &m_DynamicsData);
       }
       if (g_PhysVersion <= 11)
       {
@@ -540,10 +631,13 @@ cPhysModel::cPhysModel(PhysReadWrite func) :
             int size;
 
             func(&size, sizeof(int), 1);
+             if (size < 0 || size > 256)
+                Error(1, "Invalid physics dynamics count %d for object %d\n",
+                      size, m_objID);
             m_pDynamicsData.SetSize(size);
 
             for (i=0; i<size; i++)
-               func(&m_pDynamicsData[i], sizeof(cPhysDynData), 1);
+               ReadPhysDynData(func, &m_pDynamicsData[i]);
          }
          else
          {
@@ -553,13 +647,13 @@ cPhysModel::cPhysModel(PhysReadWrite func) :
 
                m_pDynamicsData.SetSize(0);
                for (i=0; i<m_nSubModels; i++)
-                  func(&dummy, sizeof(cPhysDynData), 1);
+                  ReadPhysDynData(func, &dummy);
             }
             else
             {
                m_pDynamicsData.SetSize(m_nSubModels);
                for (i=0; i<m_nSubModels; i++)
-                  func(&m_pDynamicsData[i], sizeof(cPhysDynData), 1);
+                  ReadPhysDynData(func, &m_pDynamicsData[i]);
             }
          }
       }
@@ -568,23 +662,26 @@ cPhysModel::cPhysModel(PhysReadWrite func) :
    func(&flag, sizeof(int), 1);
    if (flag == 0x0001)
    {
-      func(&m_ControlData, sizeof(cPhysCtrlData), 1);
+      ReadPhysCtrlData(func, &m_ControlData);
       m_pControlData.SetSize(0);
    }
    else
    if (flag == 0x0002)
    {
       if (g_PhysVersion >= 7)
-         func(&m_ControlData, sizeof(cPhysCtrlData), 1);
+         ReadPhysCtrlData(func, &m_ControlData);
       if (g_PhysVersion >= 28)
       {
          int size;
 
          func(&size, sizeof(int), 1);
+         if (size < 0 || size > 256)
+            Error(1, "Invalid physics control count %d for object %d\n",
+                  size, m_objID);
          m_pControlData.SetSize(size);
 
          for(i=0; i<size; i++)
-            func(&m_pControlData[i], sizeof(cPhysCtrlData), 1);
+            ReadPhysCtrlData(func, &m_pControlData[i]);
       }
       else
       {
@@ -594,13 +691,13 @@ cPhysModel::cPhysModel(PhysReadWrite func) :
 
             m_pControlData.SetSize(0);
             for (i=0; i<m_nSubModels; i++)
-               func(&dummy, sizeof(cPhysCtrlData), 1);
+               ReadPhysCtrlData(func, &dummy);
          }
          else
          {
             m_pControlData.SetSize(m_nSubModels);
             for (i=0; i<m_nSubModels; i++)
-               func(&m_pControlData[i], sizeof(cPhysCtrlData), 1);
+               ReadPhysCtrlData(func, &m_pControlData[i]);
          }
       }
    }
@@ -737,10 +834,11 @@ void cPhysModel::Write(PhysReadWrite func) const
    func((void *)&m_lastSquishTime, sizeof(long), 1);
 
    // Write positions for each submodel
-   func(m_pPosition, sizeof(cPhysPos), m_nSubModels);
+   for (i=0; i<m_nSubModels; ++i)
+      WritePhysPos(func, &m_pPosition[i]);
 
    // Write overall model position & cog offset
-   func((void *)&m_pos, sizeof(cPhysPos), 1);
+   WritePhysPos(func, &m_pos);
    func((void *)&m_cog, sizeof(mxs_vector), 1);
 
    for (i=0; i<m_nSubModels; i++)
@@ -773,16 +871,16 @@ void cPhysModel::Write(PhysReadWrite func) const
 
          flag = 0x0002;
          func(&flag, sizeof(int), 1);
-         func((void *)&m_DynamicsData, sizeof(cPhysDynData), 1);
+         WritePhysDynData(func, &m_DynamicsData);
          func(&size, sizeof(int), 1);
          for (i=0; i<size; i++)
-            func((void *)&m_pDynamicsData[i], sizeof(cPhysDynData), 1);
+            WritePhysDynData(func, &m_pDynamicsData[i]);
       }
       else
       {
          flag = 0x0001;
          func(&flag, sizeof(int), 1);
-         func((void *)&m_DynamicsData, sizeof(cPhysDynData), 1);
+         WritePhysDynData(func, &m_DynamicsData);
       }
    }
    else
@@ -799,16 +897,16 @@ void cPhysModel::Write(PhysReadWrite func) const
 
          flag = 0x0002;
          func(&flag, sizeof(int), 1);
-         func((void *)&m_ControlData, sizeof(cPhysCtrlData), 1);
+         WritePhysCtrlData(func, &m_ControlData);
          func(&size, sizeof(int), 1);
          for (i=0; i<size; i++)
-            func((void *)&m_pControlData[i], sizeof(cPhysCtrlData), 1);
+            WritePhysCtrlData(func, &m_pControlData[i]);
       }
       else
       {
          flag = 0x0001;
          func(&flag, sizeof(int), 1);
-         func((void *)&m_ControlData, sizeof(cPhysCtrlData), 1);
+         WritePhysCtrlData(func, &m_ControlData);
       }
    }
    else

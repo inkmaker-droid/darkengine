@@ -7,8 +7,10 @@
 // This is the one file where every concrete type is known.
 //
 
+#pragma pack(push, 8)
 #include <windows.h>
 #include <ddraw.h>
+#pragma pack(pop)
 
 #include <lg.h>
 #include <comtools.h>

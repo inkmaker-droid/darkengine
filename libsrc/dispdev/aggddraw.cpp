@@ -10,12 +10,14 @@
 // while as reference.
 //
 
+#pragma pack(push, 8)
 #include <windows.h>
+#include <ddraw.h>
+#pragma pack(pop)
 #include <lg.h>
 #ifdef _MSC_VER
 #pragma message ("Add DirectX directory as a global - use Tools:Options")
 #endif
-#include <ddraw.h>
 #include <comtools.h>
 #include <aggmemb.h>
 #include <aggddraw.h>

@@ -12,6 +12,7 @@
 #include <lg.h>
 #include <scrobj.h>
 #include <scrptman.h>
+#include <osm_emu/osm32mod.h>
 #include <cfgdbg.h>
 
 #include <allocapi.h>
@@ -49,7 +50,11 @@ HRESULT cScrObj::Connect()
    {
       if ((pDesc = g_pScriptMan->GetClass(pInfo->className)) != NULL)
       {
-         pInfo->pScript = (*pDesc->pfnFactory)(pInfo->className, m_ObjId);
+         BOOL handled;
+         pInfo->pScript = CreateOsm32Script(pDesc, pInfo->className, m_ObjId,
+                                             &handled);
+         if (!handled && pDesc->pfnFactory)
+            pInfo->pScript = (*pDesc->pfnFactory)(pInfo->className, m_ObjId);
       }
 
       if (!pInfo->pScript)

@@ -86,7 +86,8 @@ typedef struct _lgMouseEvent
    uchar type; // Event mask, bits defined below
    ulong timestamp;
    uchar buttons;
-   char pad[6];  // pad to sixteen bytes
+   char wheel;   // signed wheel detents; zero for other mouse events
+   char pad[5];  // pad to sixteen bytes
 } lgMouseEvent;
 
 #if 0
@@ -105,6 +106,7 @@ typedef struct _lgMouseEvent mouse_event;
 #define MOUSE_RUP      16
 #define MOUSE_CDOWN    32
 #define MOUSE_CUP      64
+#define MOUSE_WHEEL   128
 
 
 // Mask of events that are allowed into the queue.

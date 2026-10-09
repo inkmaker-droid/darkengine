@@ -288,6 +288,8 @@ STDMETHODIMP cWinDisplayDevice::Open(sGrModeCap * pModeCap, int fFlags)
 
 STDMETHODIMP cWinDisplayDevice::Close()
 {
+    cAutoDisplayMutex mutex(this);
+
     AssertMsg(m_pDisplayProvider, "Bad call to cWinDisplayDevice: no display provider");
     AssertMsg(!IsLocked(), "Cannot close locked display device!\n(Also verify mouse cursor has been turned off before closing device)");
 
@@ -311,6 +313,7 @@ STDMETHODIMP cWinDisplayDevice::Close()
 STDMETHODIMP cWinDisplayDevice::SetMode(eGrDispMode dispMode, int flags)
 {
     cAutoDisplayMutex mutex(this);
+    cWinDisplayModeOperations *pNewModeOperations;
 
     BEGIN_DEBUG_MSG("cWinDisplayDevice::SetMode()");
     AssertMsg(m_pDisplayProvider, "Bad call to cWinDisplayDevice: no display provider");
@@ -333,17 +336,19 @@ STDMETHODIMP cWinDisplayDevice::SetMode(eGrDispMode dispMode, int flags)
     m_CurrentDispMode = dispMode;
 
     // Now try to set the mode
-    if ((m_pDisplayModeOperations = m_pDisplayProvider->DoSetMode(EnumModeToModeInfo(dispMode), flags, m_pModeInfo)) != 0)
+    pNewModeOperations = m_pDisplayProvider->DoSetMode(EnumModeToModeInfo(dispMode), flags, m_pModeInfo);
+    if (pNewModeOperations != 0)
     {
+        m_pDisplayModeOperations = pNewModeOperations;
         DebugMsgEx(SETMODE, "Created mode-specific operations");
         // Mode changes replace the operations object. Reapply the gamma
         // value owned by the display device to the newly created backend.
-        m_pDisplayModeOperations->DoSetGamma(m_Gamma);
+        pNewModeOperations->DoSetGamma(m_Gamma);
         DebugMsg("SetMode() returns success");
 
         // @TBD (toml 09-10-96): Too much state retention m_CurrentDispMode and GetCurrentModeInfo() MUST be
         // eliminated in favor of sGrModeInfoEx stored in mode ops
-        m_CurrentDispMode = GetMode(NULL);
+        m_CurrentDispMode = pNewModeOperations->DoGetMode(NULL);
 
 #if ENABLE_LATER
         result = (m_CurrentDispMode == dispMode) ? S_OK : S_FALSE; // @Note (toml 09-10-96): Kevin should enable this code when 2d can handle "soft failure" of set mode
@@ -357,10 +362,27 @@ STDMETHODIMP cWinDisplayDevice::SetMode(eGrDispMode dispMode, int flags)
         result = E_FAIL;
     }
 
+    // Initialize the monitored surface pointers before publishing the new
+    // mode to the window thread.  Calling the public Lock()/Unlock() pair
+    // used to clear kSettingMode first, exposing a half-committed mode to
+    // callbacks that can run concurrently with this transition.
+    if (result == S_OK)
+    {
+        m_pDisplayModeOperations = pNewModeOperations;
+        if (pNewModeOperations->DoLock(m_pModeInfo))
+        {
+            Sync2DPointers();
+            if (pNewModeOperations->DoUnlock())
+            {
+                if (m_flags & kStrictMonitors)
+                    InvalidateBasePointers();
+                Sync2DPointers();
+            }
+        }
+        else
+            result = E_FAIL;
+    }
     m_flags &= ~kSettingMode;
-    // Reset any monitored pointers
-    Lock();
-    Unlock();
 
     RestoreLock(iPreviousLock);
 
@@ -927,7 +949,7 @@ IMPLEMENT_DELEGATION(cWinDisplayDevice::cIWinDisplayDeviceProxy);
 
 ///////////////////////////////////////
 
-STDMETHODIMP_(BOOL) cWinDisplayDevice::cIWinDisplayDeviceProxy::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, long * pRetVal)
+STDMETHODIMP_(BOOL) cWinDisplayDevice::cIWinDisplayDeviceProxy::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT * pRetVal)
 {
     if (m_pOuter->m_pDisplayProvider && m_pOuter->m_pDisplayModeOperations)
         return m_pOuter->m_pDisplayProvider->DoProcessMessage(msg, wParam, lParam, pRetVal);

@@ -75,7 +75,7 @@ BOOL cWinInputDevices::IsJapaneseNec98()
 // Handle a message from owning cWinGameShell instance
 //
 
-BOOL cWinInputDevices::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, long & RetVal)
+BOOL cWinInputDevices::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT & RetVal)
 {
     if (!m_Sinks.Count())
         return FALSE;
@@ -120,7 +120,8 @@ BOOL cWinInputDevices::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, lo
                     DebugMsgEx1(KEYBOARD, "Received keyboard event (%s)", LogStrWinMsg(m_pOuter->GetHwnd(), msg, wParam, lParam));
         }
     }
-    else if (msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST)
+    else if ((msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST) ||
+             msg == WM_MOUSEWHEEL)
     {
         DispatchMouseEvent(msg, wParam, lParam);
         
@@ -345,35 +346,51 @@ BOOL cWinInputDevices::WinKeyToLGKey(UINT msg, WPARAM /*wParam*/, LPARAM lParam,
 // Function to convert Windows message to mouse events. Does no x/y adjustment
 //
 
-BOOL cWinInputDevices::WinMouseToLGMouse(UINT msg, WPARAM /*wParam*/, LPARAM lParam, sInpMouseEvent & Result)
+BOOL cWinInputDevices::WinMouseToLGMouse(UINT msg, WPARAM wParam, LPARAM lParam, sInpMouseEvent & Result)
 {
     memset(&Result, 0, sizeof(sInpMouseEvent));
 
-    static uchar uMouseFlags[] =
+    switch (msg)
     {
-        MOUSE_MOTION,                  // WM_MOUSEMOVE/WM_MOUSEFIRST
-        MOUSE_LDOWN,                   // WM_LBUTTONDOWN
-        MOUSE_LUP,                     // WM_LBUTTONUP
-        0,                             // WM_LBUTTONDBLCLK (we shouldn't be
-                                       // getting these because the game
-                                       // wndclass.style should not have
-                                       // the CS_DBLCLK flag set)
-        MOUSE_RDOWN,                   // WM_RBUTTONDOWN
-        MOUSE_RUP,                     // WM_RBUTTONUP
-        0,
-        MOUSE_CDOWN,                   // WM_MBUTTONDOWN
-        MOUSE_CUP,                     // WM_MBUTTONUP
-        0                              // WM_MBUTTONDBLCLK/WM_MOUSELAST
-    };
+        case WM_MOUSEMOVE:   Result.type = MOUSE_MOTION; break;
+        case WM_LBUTTONDOWN: Result.type = MOUSE_LDOWN;  break;
+        case WM_LBUTTONUP:   Result.type = MOUSE_LUP;    break;
+        case WM_RBUTTONDOWN: Result.type = MOUSE_RDOWN;  break;
+        case WM_RBUTTONUP:   Result.type = MOUSE_RUP;    break;
+        case WM_MBUTTONDOWN: Result.type = MOUSE_CDOWN;  break;
+        case WM_MBUTTONUP:   Result.type = MOUSE_CUP;    break;
+        case WM_MOUSEWHEEL:
+        {
+            int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+            int detents = delta / WHEEL_DELTA;
+            if (!detents)
+                detents = delta > 0 ? 1 : -1;
+            if (detents > 127)
+                detents = 127;
+            if (detents < -127)
+                detents = -127;
+            Result.type = MOUSE_WHEEL;
+            Result.wheel = (char)detents;
+            break;
+        }
+        default:
+            return FALSE;
+    }
 
     // Scale mouse coordinates and make the lgMouseEvent
-    int x = LOWORD(lParam);
-    int y = HIWORD(lParam);
+    int x = (short)LOWORD(lParam);
+    int y = (short)HIWORD(lParam);
+    if (msg == WM_MOUSEWHEEL)
+    {
+        POINT point = { x, y };
+        ScreenToClient(m_pOuter->GetHwnd(), &point);
+        x = point.x;
+        y = point.y;
+    }
     m_pOuter->ClientToGamePoint(x, y);
 
     Result.x = (short) x;
     Result.y = (short) y;
-    Result.type = uMouseFlags[msg - WM_MOUSEFIRST];
     Result.timestamp = m_pOuter->WindowsTimeToGameTime(GetMessageTime());
 
     // @TBD: Is this field actually used as-is? If so, this faking is not entirely correct

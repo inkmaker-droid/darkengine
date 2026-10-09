@@ -521,7 +521,7 @@ void BuildUI(PropertyListEditor* ed, PropertyListEditorDesc* editdesc)
    SafeRelease(pWA);
 
    // we also need the main app's HINSTANCE
-   hMainInst = (HINSTANCE) GetWindowLong(ed->hMainWnd, GWL_HINSTANCE);
+   hMainInst = (HINSTANCE) GetWindowLongPtr(ed->hMainWnd, GWLP_HINSTANCE);
 
    // set up the new window's class
    memset(&wc, 0, sizeof(WNDCLASS));
@@ -568,7 +568,7 @@ void BuildUI(PropertyListEditor* ed, PropertyListEditorDesc* editdesc)
    top = MARGIN_Y;
 
    // get our new window's HINSTANCE
-   ed->hInst = (HINSTANCE) GetWindowLong(ed->hWnd, GWL_HINSTANCE);
+   ed->hInst = (HINSTANCE) GetWindowLongPtr(ed->hWnd, GWLP_HINSTANCE);
 
    // now, let's create the meta property box
    ed->hWndMetaBox = CreateWindow("LISTBOX", "MetaProperties", WS_VISIBLE | WS_CHILD | LBS_STANDARD,

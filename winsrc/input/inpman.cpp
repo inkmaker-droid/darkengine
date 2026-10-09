@@ -173,7 +173,7 @@ HRESULT cInputManager::Init()
    SafeRelease(pWA);
 
    // we also need the main app's HINSTANCE
-   HINSTANCE hMainInst = (HINSTANCE) GetWindowLong(hMainWnd, GWL_HINSTANCE);
+   HINSTANCE hMainInst = (HINSTANCE)GetWindowLongPtr(hMainWnd, GWLP_HINSTANCE);
 
    // create the DirectInput interface object
    if (DynDirectInputCreate(hMainInst, DIRECTINPUT_VERSION, &m_pDI, NULL) == DI_OK)

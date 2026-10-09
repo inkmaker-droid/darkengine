@@ -931,7 +931,7 @@ void FacePrerender(ObjID Obj, mms_model *pModel)
    g_pMaterial = mm_smatr_list(pModel) + pNames->m_iMaterialIndex;
    g_nDefaultMaterial = g_pMaterial->handle;
    if (pBitmap)
-      g_pMaterial->handle = (ulong) pBitmap;
+      g_pMaterial->handle = mm_register_texture(pBitmap);
 }
 
 

@@ -182,7 +182,13 @@ void LGAPI _CriticalMsg(const char * cond, const char * file, unsigned uLine)
     mprintf("[%s@%d] %s\n", pszTrimmedFile, uLine, pszMessage);
 
 #ifdef _WIN32
-    if (!g_fQuietAssert)
+    // Automated architecture smoke tests must be able to record assertions
+    // without stopping on a modal dialog. Normal interactive behavior is
+    // unchanged unless this explicit environment override is present.
+    const char * pszAssertAction = getenv("DARK_ASSERT_ACTION");
+    const BOOL fIgnoreAssert = pszAssertAction &&
+        stricmp(pszAssertAction, "ignore") == 0;
+    if (!g_fQuietAssert && !fIgnoreAssert)
     {
         const char * pszMessageBoxCriticalMsg = "%s  (File: %s, Line: %d)\n(Yes to trap, No to exit, Cancel to ignore)";
         const char * pszMessageBoxCriticalMsgNoFileLine = "%s\n(Yes to trap, No to exit, Cancel to ignore)";
@@ -219,6 +225,10 @@ void LGAPI _CriticalMsg(const char * cond, const char * file, unsigned uLine)
                 (*pfnNotificationHandler)(kCritMsgIgnoring);
             g_fQuietAssert = TRUE; // ho-hum
         }
+    }
+    else if (fIgnoreAssert)
+    {
+        _LogWriteMsgFileLine("    Continuing (DARK_ASSERT_ACTION=ignore)...", pszFile, uLine);
     }
 
 #else

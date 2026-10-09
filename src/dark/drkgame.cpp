@@ -463,7 +463,6 @@ static void console_message(const char* format, ...)
 
    DarkMessage(message);
    mprintf("%s\n", message);
-   cmdterm_print(message);
 }
 
 static int console_on_off(const char* value, BOOL current)
@@ -519,7 +518,7 @@ static void console_open_mission(char* value)
    const sConsoleMission* mission = console_find_mission(value);
    if (!mission)
    {
-      console_message("Unknown mission. Use listmissions for valid numbers and short names.");
+      console_message("Unknown mission. Use list_missions for valid numbers and short names.");
       return;
    }
 
@@ -556,15 +555,6 @@ static void console_list_missions(void)
 
       mprintf("%2d %-14s %s\n", gConsoleMissions[i].number,
               gConsoleMissions[i].short_name, gConsoleMissions[i].title);
-      {
-         char line[128];
-         _snprintf(line, sizeof(line) - 1, "%2d %-14s %s",
-                   gConsoleMissions[i].number,
-                   gConsoleMissions[i].short_name,
-                   gConsoleMissions[i].title);
-         line[sizeof(line) - 1] = '\0';
-         cmdterm_print(line);
-      }
       if (log)
          fprintf(log, "%2d %-14s %s\n", gConsoleMissions[i].number,
                  gConsoleMissions[i].short_name, gConsoleMissions[i].title);
@@ -616,7 +606,7 @@ static void console_player_physics(char* value)
 
    if (state < 0)
    {
-      console_message("Usage: playerphysics [on/off]");
+      console_message("Usage: player_physics [on/off]");
       return;
    }
 
@@ -735,13 +725,6 @@ static void console_list_scripts(void)
    {
       mprintf("%s (%s)\n", script->pszClass,
               script->pszModule ? script->pszModule : "unknown module");
-      {
-         char line[192];
-         _snprintf(line, sizeof(line) - 1, "%s (%s)", script->pszClass,
-                   script->pszModule ? script->pszModule : "unknown module");
-         line[sizeof(line) - 1] = '\0';
-         cmdterm_print(line);
-      }
       if (log)
          fprintf(log, "%s (%s)\n", script->pszClass,
                  script->pszModule ? script->pszModule : "unknown module");
@@ -760,7 +743,7 @@ static void console_debug_scripts(char* value)
    int state = console_on_off(value, ScriptDebugIsEnabled());
    if (state < 0)
    {
-      console_message("Usage: debugscripts [on/off]");
+      console_message("Usage: debug_scripts [on/off]");
       return;
    }
    ScriptDebugSetEnabled(state);
@@ -770,16 +753,23 @@ static void console_debug_scripts(char* value)
 
 static Command thief_console_commands[] =
 {
-   { "openmission",  FUNC_STRING, console_open_mission,  "openmission [number/shortname]" },
-   { "listmissions", FUNC_VOID,   console_list_missions, "list installed missions" },
+   { "open_mission", FUNC_STRING, console_open_mission,  "open_mission [number/shortname]" },
+   { "list_missions", FUNC_VOID,  console_list_missions, "list installed missions" },
    { "immunity",     FUNC_STRING, console_immunity,      "immunity [on/off]" },
    { "flying",       FUNC_STRING, console_flying,        "flying [on/off]" },
-   { "playerphysics", FUNC_STRING, console_player_physics, "playerphysics [on/off]" },
+   { "player_physics", FUNC_STRING, console_player_physics, "player_physics [on/off]" },
    { "invisible",    FUNC_STRING, console_invisible,     "invisible [on/off]" },
    { "reticle",      FUNC_STRING, console_reticle,       "reticle [on/off]" },
-   { "retinfo",      FUNC_VOID,   console_retinfo,       "describe the object under the reticle" },
-   { "listscripts",  FUNC_VOID,   console_list_scripts,  "list loaded script classes" },
-   { "debugscripts", FUNC_STRING, console_debug_scripts, "debugscripts [on/off]" },
+   { "reticle_info", FUNC_VOID,   console_retinfo,       "describe the object under the reticle" },
+   { "list_scripts", FUNC_VOID,   console_list_scripts,  "list loaded script classes" },
+   { "debug_scripts", FUNC_STRING, console_debug_scripts, "debug_scripts [on/off]" },
+   { "openmission",  FUNC_STRING, console_open_mission,  "compatibility alias for open_mission" },
+   { "listmissions", FUNC_VOID,   console_list_missions, "compatibility alias for list_missions" },
+   { "playerphysics", FUNC_STRING, console_player_physics, "compatibility alias for player_physics" },
+   { "retinfo",      FUNC_VOID,   console_retinfo,       "compatibility alias for reticle_info" },
+   { "ret_info",     FUNC_VOID,   console_retinfo,       "compatibility alias for reticle_info" },
+   { "listscripts",  FUNC_VOID,   console_list_scripts,  "compatibility alias for list_scripts" },
+   { "debugscripts", FUNC_STRING, console_debug_scripts, "compatibility alias for debug_scripts" },
 };
 
 #endif // THIEF2_GAME

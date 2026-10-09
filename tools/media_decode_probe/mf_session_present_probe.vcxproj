@@ -14,12 +14,13 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)Release\</OutDir><IntDir>$(SolutionDir)Release\mf_session_present_probe\</IntDir>
+    <OutDir>$(DarkPlatformOutputDir)</OutDir><IntDir>$(DarkIntermediateRoot)mf_session_present_probe\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile><WarningLevel>Level4</WarningLevel><Optimization>MaxSpeed</Optimization>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary></ClCompile>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <StructMemberAlignment>Default</StructMemberAlignment></ClCompile>
     <Link><SubSystem>Console</SubSystem></Link>
   </ItemDefinitionGroup>
   <ItemGroup><ClCompile Include="mf_session_present_probe.cpp" /></ItemGroup>

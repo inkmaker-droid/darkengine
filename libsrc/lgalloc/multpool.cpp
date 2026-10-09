@@ -363,7 +363,7 @@ void cMultiPool::Init()
 // Allocation
 //
 
-STDMETHODIMP_(void *) cMultiPool::Alloc(ULONG cb)
+STDMETHODIMP_(void *) cMultiPool::Alloc(SIZE_T cb)
 {
     void *pMem = SelectAlloc(cb);
 
@@ -380,7 +380,7 @@ STDMETHODIMP_(void *) cMultiPool::Alloc(ULONG cb)
 // Reallocation
 //
 
-STDMETHODIMP_(void *) cMultiPool::Realloc(void * pMem, ULONG cb)
+STDMETHODIMP_(void *) cMultiPool::Realloc(void * pMem, SIZE_T cb)
 {
     DebugMsgEx(HEAP, "MultiPool reallocating");
 
@@ -456,7 +456,7 @@ STDMETHODIMP_(void) cMultiPool::Free(void * pMem)
 //  Get the usable size of a block.
 //
 
-unsigned long cMultiPool::GetSize(void *pMem)
+SIZE_T cMultiPool::GetSize(void *pMem)
 {
     DebugMsgEx1(HEAP, "cMultiPool::GetSize %p", pMem);
 

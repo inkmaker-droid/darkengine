@@ -252,7 +252,9 @@ void EditorCreateGUI(void)
    vmCreateGUI(root,get_layout_rect(lay,REFINDEX(REF_RECT_layViewMan)));
    StatusSetRect(get_layout_rect(lay,REFINDEX(REF_RECT_layStatus)));
    CreateBrushGFH(get_layout_rect(lay,REFINDEX(REF_RECT_layGFH)));
-   CreateCommandTerminal(LGadCurrentRoot(), get_layout_rect(lay,REFINDEX(REF_RECT_layCommand)),kCmdTermNoFlags);
+   CreateCommandTerminal(LGadCurrentRoot(),
+                         get_layout_rect(lay,REFINDEX(REF_RECT_layCommand)),
+                         kCmdTermScrollable | kCmdTermNoPause);
 
    // make sure the windows common controls are loaded
    InitCommonControls();

@@ -505,7 +505,7 @@ inline size_t cHeap::FixSize(size_t size)
 // Allocate a block from the heap
 //
 
-void * cHeap::Alloc(unsigned long size)
+void * cHeap::Alloc(SIZE_T size)
 {
     DebugMsg1("Allocating %d bytes", size);
 
@@ -612,7 +612,7 @@ void * cHeap::Alloc(unsigned long size)
 // Reallocate a block
 //
 
-void * cHeap::Realloc(void * pAlloc, unsigned long size)
+void * cHeap::Realloc(void * pAlloc, SIZE_T size)
 {
     DebugMsg2("Realloc 0x%x to %d", pAlloc, size);
 
@@ -890,7 +890,7 @@ STDMETHODIMP_(void) cHeap::HeapMinimize()
 //  Get the usable size of a block.
 //
 
-unsigned long cHeap::GetSize(void *pAlloc)
+SIZE_T cHeap::GetSize(void *pAlloc)
 {
     DebugMsg1("GetSize 0x%x", pAlloc);
 

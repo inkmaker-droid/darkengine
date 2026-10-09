@@ -1,15 +1,17 @@
 #include "d3d11present.h"
 #include "d3d11legacy.h"
 #include "d3d11scene.h"
+#pragma pack(push, 8)
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <ddraw.h>
+#include <windows.h>
+#pragma pack(pop)
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
-#include <windows.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -25,6 +27,7 @@ template <class T> static void ReleaseInterface(T *&p) {
 struct sCompositeConstants {
   float gamma, hasScene, pointSample, padding0;
   float sourceScale[2], padding[2];
+  float overlayScale[2], overlayOffset[2];
 };
 struct sSceneConstants {
   float width, height, fogEnabled, useTexture1;
@@ -58,7 +61,8 @@ static BOOL g_D3D11CaptureConfigured = FALSE;
 static BOOL g_D3D11CaptureComplete = FALSE;
 
 static RECT ComputePresentationViewport(DWORD sourceWidth, DWORD sourceHeight,
-                                        DWORD outputWidth, DWORD outputHeight) {
+                                        DWORD outputWidth, DWORD outputHeight,
+                                        BOOL fitToOutput) {
   RECT viewport = {0, 0, (LONG)outputWidth, (LONG)outputHeight};
   LONG width, height;
 
@@ -66,6 +70,11 @@ static RECT ComputePresentationViewport(DWORD sourceWidth, DWORD sourceHeight,
     return viewport;
 
   if (g_D3D11ScaleToWindow) {
+    // Fit is the dynamic-resolution choice: use every available client pixel
+    // for both the hardware scene and the final composite. Fixed logical
+    // resolutions retain their aspect-preserving presentation below.
+    if (fitToOutput)
+      return viewport;
     if ((__int64)outputWidth * sourceHeight >
         (__int64)outputHeight * sourceWidth) {
       height = (LONG)outputHeight;
@@ -510,7 +519,7 @@ BOOL cD3D11Presenter::EnsureSceneSize() {
       m_pImpl->backBufferWidth && m_pImpl->backBufferHeight) {
     RECT viewport = ComputePresentationViewport(
         m_pImpl->sourceWidth, m_pImpl->sourceHeight,
-        m_pImpl->backBufferWidth, m_pImpl->backBufferHeight);
+        m_pImpl->backBufferWidth, m_pImpl->backBufferHeight, TRUE);
     width = viewport.right - viewport.left;
     height = viewport.bottom - viewport.top;
   }
@@ -524,6 +533,11 @@ BOOL cD3D11Presenter::EnsureSceneSize() {
   m_pImpl->ReleaseQueuedCommands();
   if (FAILED(CreateSceneResources(m_pImpl, width, height)))
     return FALSE;
+  D3D11LegacyTrace(
+      "scene-size source=%lux%lu scene=%lux%lu output=%lux%lu scale=%d fit=%d",
+      m_pImpl->sourceWidth, m_pImpl->sourceHeight, width, height,
+      m_pImpl->backBufferWidth, m_pImpl->backBufferHeight,
+      g_D3D11ScaleToWindow, g_D3D11FitToViewport);
   m_pImpl->hardwareFrame = FALSE;
   m_pImpl->sceneActive = FALSE;
   m_pImpl->sceneOpen = FALSE;
@@ -581,12 +595,14 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
       "u=float2((i<<1)&2,i&2);o.p=float4(u.x*2-1,1-u.y*2,0,1);o.u=u;return o;}";
   static const char cps[] =
       "cbuffer C:register(b0){float g;float hs;float pp;float z;float2 us;"
-      "float2 zz;}Texture2D "
+      "float2 zz;float2 os;float2 oo;}Texture2D "
       "ui:register(t0);Texture2D sc:register(t1);SamplerState "
       "s:register(s0);float4 main(float4 p:SV_Position,float2 "
       "u:TEXCOORD0):SV_Target{float4 a;float3 b;if(pp>.5){int3 "
       "q=int3(int2(p.xy),0);a=ui.Load(q);b=sc.Load(q).rgb;}else{"
-      "a=ui.Sample(s,u*us);b=sc.Sample(s,u).rgb;}float3 "
+      "float2 au=(u-oo)*os;float ai=step(0,au.x)*step(au.x,1)*"
+      "step(0,au.y)*step(au.y,1);a=ui.Sample(s,saturate(au)*us)*ai;"
+      "b=sc.Sample(s,u).rgb;}float3 "
       "c=a.rgb;if(hs>.5)c=lerp(b,a.rgb,a.a);return "
       "float4(pow(saturate(c),g),1);}";
   RECT rc;
@@ -665,7 +681,7 @@ BOOL cD3D11Presenter::Start(HWND hwnd, DWORD sw, DWORD sh,
   sceneHeight = sh;
   if (g_D3D11ScaleToWindow && g_D3D11FitToViewport) {
     sceneViewport = ComputePresentationViewport(
-        sw, sh, m_pImpl->backBufferWidth, m_pImpl->backBufferHeight);
+        sw, sh, m_pImpl->backBufferWidth, m_pImpl->backBufferHeight, TRUE);
     sceneWidth = sceneViewport.right - sceneViewport.left;
     sceneHeight = sceneViewport.bottom - sceneViewport.top;
   }
@@ -798,7 +814,7 @@ BOOL cD3D11Presenter::ClientToLogicalPoint(int *x, int *y) const {
     return FALSE;
   viewport = ComputePresentationViewport(
       m_pImpl->sourceWidth, m_pImpl->sourceHeight,
-      client.right - client.left, client.bottom - client.top);
+      client.right - client.left, client.bottom - client.top, FALSE);
   width = viewport.right - viewport.left;
   height = viewport.bottom - viewport.top;
   if (!width || !height)
@@ -827,7 +843,7 @@ BOOL cD3D11Presenter::LogicalToClientPoint(int *x, int *y) const {
     return FALSE;
   viewport = ComputePresentationViewport(
       m_pImpl->sourceWidth, m_pImpl->sourceHeight,
-      client.right - client.left, client.bottom - client.top);
+      client.right - client.left, client.bottom - client.top, FALSE);
   width = viewport.right - viewport.left;
   height = viewport.bottom - viewport.top;
   if (!width || !height)
@@ -878,8 +894,8 @@ BOOL cD3D11Presenter::BeginHardwareFrame() {
     m_pImpl->sceneActive = TRUE;
   }
   ZeroMemory(&v, sizeof(v));
-  // Scene/depth follow the selected logical resolution. Window resizing only
-  // changes the swap-chain backbuffer; the composite pass performs scaling.
+  // Fixed modes follow the selected logical resolution. Fit mode follows the
+  // available client viewport, and the composite pass uses that same area.
   v.Width = (float)m_pImpl->sceneWidth;
   v.Height = (float)m_pImpl->sceneHeight;
   v.MaxDepth = 1;
@@ -1235,7 +1251,9 @@ BOOL cD3D11Presenter::Present(IDirectDrawSurface *surface, int x0, int y0,
   bw = m_pImpl->backBufferWidth ? m_pImpl->backBufferWidth : cw;
   bh = m_pImpl->backBufferHeight ? m_pImpl->backBufferHeight : ch;
   viewport = ComputePresentationViewport(m_pImpl->sourceWidth,
-                                         m_pImpl->sourceHeight, bw, bh);
+                                         m_pImpl->sourceHeight, bw, bh,
+                                         g_D3D11FitToViewport &&
+                                             m_pImpl->sceneActive);
   ZeroMemory(&v, sizeof(v));
   v.TopLeftX = (float)viewport.left;
   v.TopLeftY = (float)viewport.top;
@@ -1262,6 +1280,25 @@ BOOL cD3D11Presenter::Present(IDirectDrawSurface *surface, int x0, int y0,
   c.sourceScale[1] = (float)m_pImpl->sourceHeight /
                      m_pImpl->sourceTextureHeight;
   c.padding[0] = c.padding[1] = 0;
+  c.overlayScale[0] = c.overlayScale[1] = 1.0f;
+  c.overlayOffset[0] = c.overlayOffset[1] = 0.0f;
+  if (m_pImpl->sceneActive && g_D3D11ScaleToWindow &&
+      g_D3D11FitToViewport && v.Width > 0 && v.Height > 0) {
+    const double sourceAspect = (double)m_pImpl->sourceWidth /
+                                m_pImpl->sourceHeight;
+    const double viewportAspect = (double)v.Width / v.Height;
+    // Keep the legacy HUD/menu canvas undistorted and centered over the
+    // full-width scene. Areas outside its original aspect stay transparent.
+    if (viewportAspect > sourceAspect) {
+      const double fraction = sourceAspect / viewportAspect;
+      c.overlayScale[0] = (float)(1.0 / fraction);
+      c.overlayOffset[0] = (float)((1.0 - fraction) * 0.5);
+    } else if (viewportAspect < sourceAspect) {
+      const double fraction = viewportAspect / sourceAspect;
+      c.overlayScale[1] = (float)(1.0 / fraction);
+      c.overlayOffset[1] = (float)((1.0 - fraction) * 0.5);
+    }
+  }
   m_pImpl->context->UpdateSubresource(m_pImpl->compositeConstants, 0, NULL, &c,
                                       0, 0);
   views[0] = m_pImpl->sourceView;

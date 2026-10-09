@@ -153,6 +153,21 @@ typedef struct _StateRecord
 
 typedef void (*PortalReadWrite) (void *buf, size_t elsize, size_t nelem);
 
+// WRRGB stores two obsolete pointer fields as 32-bit zero placeholders.
+// Keep the mission format fixed while allowing the live pointers to follow
+// the native architecture.
+typedef struct sPortalLightMapDisk
+{
+   short base_u, base_v;
+   short pixel_row;
+   uchar h, w;
+   uint32 data;
+   uint32 dynamic_light;
+   uint anim_light_bitmask;
+} sPortalLightMapDisk;
+
+static_assert(sizeof(sPortalLightMapDisk) == 20, "Unexpected WRRGB light-map record layout");
+
 void SpewCellPlanes(PortalCell *p)
 {
    int      i;
@@ -421,13 +436,18 @@ ulong WriteWR(PortalReadWrite func)
       // zero them out on load anyway, and they are meaningless to save.
       // If we don't, we keep getting a different WRRGB tag which sucks
       // for missdiff.exe
-      PortalLightMap templist;
+      sPortalLightMapDisk templist;
       for (i = 0; i < p->num_render_polys; i++)
       {
-         memcpy(&templist,&(p->light_list[i]),sizeof(PortalLightMap));
+         templist.base_u = p->light_list[i].base_u;
+         templist.base_v = p->light_list[i].base_v;
+         templist.pixel_row = p->light_list[i].pixel_row;
+         templist.h = p->light_list[i].h;
+         templist.w = p->light_list[i].w;
          templist.data = 0;
          templist.dynamic_light = 0;
-         (*func)(&templist,sizeof(PortalLightMap),1);
+         templist.anim_light_bitmask = p->light_list[i].anim_light_bitmask;
+         (*func)(&templist,sizeof(templist),1);
       }
       //(*func)(p->light_list, sizeof(PortalLightMap), p->num_render_polys);
       alloced_bytes_written += sizeof(PortalLightMap) * p->num_render_polys;
@@ -532,7 +552,19 @@ void ReadWR(PortalReadWrite func)
       // DoMalloc and read the light_list and the sub field bits pointer
       p->light_list = (PortalLightMap*) wrAlloc(sizeof(PortalLightMap)
                                              * p->num_render_polys);
-      (*func)(p->light_list, sizeof(PortalLightMap), p->num_render_polys);
+      for (i = 0; i < p->num_render_polys; ++i)
+      {
+         sPortalLightMapDisk diskLightMap;
+         (*func)(&diskLightMap, sizeof(diskLightMap), 1);
+         p->light_list[i].base_u = diskLightMap.base_u;
+         p->light_list[i].base_v = diskLightMap.base_v;
+         p->light_list[i].pixel_row = diskLightMap.pixel_row;
+         p->light_list[i].h = diskLightMap.h;
+         p->light_list[i].w = diskLightMap.w;
+         p->light_list[i].data = NULL;
+         p->light_list[i].dynamic_light = NULL;
+         p->light_list[i].anim_light_bitmask = diskLightMap.anim_light_bitmask;
+      }
 
       for (i = 0; i < p->num_render_polys; i++)
       {

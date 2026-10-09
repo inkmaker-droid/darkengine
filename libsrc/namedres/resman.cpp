@@ -725,11 +725,11 @@ long cResMan::GetResourceSize(IRes* pRes)
 
 ///////////////////////////////////////
 
-void cResMan::UnregisterResource(IRes* pResource, ulong ManData)
+void cResMan::UnregisterResource(IRes* pResource, DWORD_PTR ManData)
 {
 	cAutoResThreadLock lock{};
 
-	if (!pResource || !ManData || ManData == -1)
+	if (!pResource || !ManData || ManData == static_cast<DWORD_PTR>(-1))
 	{
 		Warning(("UnregisterResource called for a bogus resource!\n"));
 		return;

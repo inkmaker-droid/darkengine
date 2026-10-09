@@ -1043,8 +1043,7 @@ and pass them along to the game's command system.
 */
 char *GenericBind (const char *cmd, const char *val, BOOL already_down)
 {
-   CommandExecute (cmd);
-   return NULL;
+   return CommandExecute (cmd);
 }
 
 
@@ -1285,6 +1284,33 @@ static void InstallDefaultEditorBindings()
 }
 #endif
 
+#if defined(EDITOR) || defined(THIEF2_GAME)
+static void InstallDefaultConsoleBinding(ulong context)
+{
+   ulong old_context;
+   static const char* controls[] = { ":", ";" };
+   size_t i;
+
+   g_pInputBinder->GetContext(&old_context);
+   if (old_context != context)
+      g_pInputBinder->SetContext(context, TRUE);
+
+   // Use both shifted and unshifted forms of DromEd's historical console key
+   // consistently in the editor, play preview, and retail game. Never
+   // overwrite an explicit command assigned to either form.
+   for (i = 0; i < sizeof(controls) / sizeof(controls[0]); ++i)
+   {
+      char binding[128] = "";
+      g_pInputBinder->QueryBind(controls[i], binding, sizeof(binding));
+      if (!binding[0])
+         g_pInputBinder->Bind(controls[i], "edit_command");
+   }
+
+   if (old_context != context)
+      g_pInputBinder->SetContext(old_context, TRUE);
+}
+#endif
+
 void InitIBVars ()
 {
    g_pInputBinder->VarSet (g_gen_ib_vars);
@@ -1326,6 +1352,7 @@ void InitIBVars ()
    if (!have_default_binds)
       InstallDefaultEditorBindings();
    g_pInputBinder->LoadBndFile ("user.bnd", HK_BRUSH_EDIT, "edit");
+   InstallDefaultConsoleBinding(HK_BRUSH_EDIT);
 #endif //EDITOR
    // if user.bnd exists, load it, else load the game specific bnd file
    FILE *pFile = fopen( "user.bnd", "r" );
@@ -1341,6 +1368,10 @@ void InitIBVars ()
       g_pInputBinder->LoadBndFile (gamebnd_path, HK_GAME2_MODE, "game2");
    }
 
+#if defined(EDITOR) || defined(THIEF2_GAME)
+   InstallDefaultConsoleBinding(HK_GAME_MODE);
+#endif
+
    //the command context is for when the command box is open. there are no binds in it,
    //so that no key events are eaten by the raw handler
    g_pInputBinder->SetContext (HK_COMMAND_MODE, TRUE);
@@ -1349,29 +1380,6 @@ void InitIBVars ()
 #endif //EDITOR
    
    g_pInputBinder->SetMasterProcessCallback (GenericBind);
-
-#ifdef THIEF2_GAME
-   // Install the console default in the gameplay context. Do not add it when
-   // the user has already selected another key or backslash is already used.
-   ulong old_context;
-   char console_control[32] = "";
-   char console_binding[128] = "";
-
-   g_pInputBinder->GetContext(&old_context);
-   if (old_context != HK_GAME_MODE)
-      g_pInputBinder->SetContext(HK_GAME_MODE, TRUE);
-
-   g_pInputBinder->GetControlFromCmdStart("edit_command", console_control);
-   if (!console_control[0])
-   {
-      g_pInputBinder->QueryBind("\\", console_binding, sizeof(console_binding));
-      if (!console_binding[0])
-         g_pInputBinder->Bind("\\", "edit_command");
-   }
-
-   if (old_context != HK_GAME_MODE)
-      g_pInputBinder->SetContext(old_context, TRUE);
-#endif
 
    SetCountryKeyboard();
 

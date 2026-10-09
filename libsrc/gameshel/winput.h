@@ -31,7 +31,7 @@ public:
     //
     // Handle a message from owning cWinGameShell instance
     //
-    BOOL ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, long & RetVal);
+    BOOL ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT & RetVal);
 
 private:
     // IUnknown methods

@@ -93,6 +93,12 @@ EXTERN void mm_render_only(mms_model *m);
 // You should set to R3_PL_TEXTURE or R3_PL_TEXTURE_LINEAR
 EXTERN void mm_set_tmap_mode(ulong mode);
 
+// Mesh model files reserve only 32 bits for a material texture handle.  The
+// original 32-bit runtime stored grs_bitmap pointers there directly.  Keep the
+// serialized layout fixed and use an opaque, process-local token instead.
+EXTERN ulong mm_register_texture(r3s_texture texture);
+EXTERN r3s_texture mm_resolve_texture(ulong handle);
+
 // default pgon renderer.  gets called automatically by render_model and
 // render_only
 EXTERN void mm_render_pgon_block(mms_pgon *pgons,int num);

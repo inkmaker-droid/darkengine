@@ -5,6 +5,8 @@
 
 // $Header: r:/t2repos/thief2/src/sound/songplri.cpp,v 1.17 2000/02/20 15:12:37 patmac Exp $
 
+#include <string.h>
+
 #include <songplr.h>
 #include <songplri.h>
 #include <sndsrc.h>
@@ -82,11 +84,9 @@ BOOL CreateSongPlayer (ISongPlayer **ppPlayer, ISndMixer* pSndMixer, ISearchPath
 static void _segment_callback(ISndSource* /*pSndSource*/, uint32 *pCBD)
 {
    cSongPlayer *pThis;
-   long *pTmp;
 
    // skip first param (arg count), next param is our ptr
-   pTmp = (long *) pCBD;
-   pThis = (cSongPlayer*) pTmp[1];
+   memcpy(&pThis, pCBD + 1, sizeof(pThis));
 
    pThis->_DoSegmentCallback();
 }

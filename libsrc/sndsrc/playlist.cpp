@@ -342,7 +342,8 @@ cSndSource::SetPlaylist( SndPlaylist   pList )
          case plLabel:
             pLabel = (SSPLLabel *) pOp;
             if ( pLabel->labelNum < mMaxLabels ) {
-               mpLabels[pLabel->labelNum] = (SndPlaylistElement *) ( ((uint32) pOp) + sizeof(SSPLLabel) );
+               mpLabels[pLabel->labelNum] =
+                  (SndPlaylistElement *)((uchar *)pOp + sizeof(SSPLLabel));
             } else {
                Warning( ("Playlist label number out of range!\n") );
             }

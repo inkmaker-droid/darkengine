@@ -95,10 +95,10 @@ DECLARE_INTERFACE_(IMalloc, IUnknown)
     STDMETHOD_(ULONG,AddRef)  (THIS)  PURE;
     STDMETHOD_(ULONG,Release) (THIS) PURE;
 
-    STDMETHOD_(void *, Alloc)   (THIS_ ULONG cb) PURE;
-    STDMETHOD_(void *, Realloc) (THIS_ void * pv, ULONG cb) PURE;
+    STDMETHOD_(void *, Alloc)   (THIS_ SIZE_T cb) PURE;
+    STDMETHOD_(void *, Realloc) (THIS_ void * pv, SIZE_T cb) PURE;
     STDMETHOD_(void,   Free)    (THIS_ void * pv) PURE;
-    STDMETHOD_(ULONG,  GetSize) (THIS_ void * pv) PURE;
+    STDMETHOD_(SIZE_T, GetSize) (THIS_ void * pv) PURE;
     STDMETHOD_(int,    DidAlloc)(THIS_ void * pv) PURE;
     STDMETHOD_(void,   HeapMinimize)(THIS) PURE;
 };
@@ -112,14 +112,14 @@ DECLARE_INTERFACE_(IMallocSpy, IUnknown)
     STDMETHOD_(ULONG,AddRef)  (THIS)  PURE;
     STDMETHOD_(ULONG,Release) (THIS) PURE;
 
-    STDMETHOD_(ULONG,  PreAlloc)        (ULONG cbRequest) PURE;
+    STDMETHOD_(SIZE_T, PreAlloc)        (SIZE_T cbRequest) PURE;
     STDMETHOD_(void *, PostAlloc)       (void * Actual) PURE;
     STDMETHOD_(void *, PreFree)         (void * Request, BOOL fSpyed) PURE;
     STDMETHOD_(void,   PostFree)        (BOOL fSpyed) PURE;
-    STDMETHOD_(ULONG,  PreRealloc)      (void * Request, ULONG cbRequest,void ** pNewRequest, BOOL fSpyed) PURE;
+    STDMETHOD_(SIZE_T, PreRealloc)      (void * Request, SIZE_T cbRequest,void ** pNewRequest, BOOL fSpyed) PURE;
     STDMETHOD_(void *, PostRealloc)     (void * Actual, BOOL fSpyed) PURE;
     STDMETHOD_(void *, PreGetSize)      (void * Request, BOOL fSpyed) PURE;
-    STDMETHOD_(ULONG,  PostGetSize)     (ULONG cbActual, BOOL fSpyed) PURE;
+    STDMETHOD_(SIZE_T, PostGetSize)     (SIZE_T cbActual, BOOL fSpyed) PURE;
     STDMETHOD_(void *, PreDidAlloc)     (void * Request, BOOL fSpyed) PURE;
     STDMETHOD_(int,    PostDidAlloc)    (void * Request, BOOL fSpyed, int fActual) PURE;
     STDMETHOD_(void,   PreHeapMinimize) (void) PURE;
@@ -149,18 +149,18 @@ DECLARE_INTERFACE_(IDebugMalloc, IMalloc)
     //
     // IMalloc methods
     //
-    STDMETHOD_(void *, Alloc)   (THIS_ ULONG cb) PURE;
-    STDMETHOD_(void *, Realloc) (THIS_ void * pv, ULONG cb) PURE;
+    STDMETHOD_(void *, Alloc)   (THIS_ SIZE_T cb) PURE;
+    STDMETHOD_(void *, Realloc) (THIS_ void * pv, SIZE_T cb) PURE;
     STDMETHOD_(void,   Free)    (THIS_ void * pv) PURE;
-    STDMETHOD_(ULONG,  GetSize) (THIS_ void * pv) PURE;
+    STDMETHOD_(SIZE_T, GetSize) (THIS_ void * pv) PURE;
     STDMETHOD_(int,    DidAlloc)(THIS_ void * pv) PURE;
     STDMETHOD_(void,   HeapMinimize)(THIS) PURE;
 
     //
     // Debugging allocation functions
     //
-    STDMETHOD_(void *, AllocEx)  (THIS_ ULONG cb, const char * pszFile, int line) PURE;
-    STDMETHOD_(void *, ReallocEx)(THIS_ void * pv, ULONG cb, const char * pszFile, int line) PURE;
+    STDMETHOD_(void *, AllocEx)  (THIS_ SIZE_T cb, const char * pszFile, int line) PURE;
+    STDMETHOD_(void *, ReallocEx)(THIS_ void * pv, SIZE_T cb, const char * pszFile, int line) PURE;
     STDMETHOD_(void,   FreeEx)   (THIS_ void * pv, const char * pszFile, int line) PURE;
 
     STDMETHOD (VerifyAlloc)(THIS_ void * pv) PURE;

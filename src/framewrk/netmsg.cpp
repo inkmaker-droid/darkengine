@@ -223,7 +223,8 @@ cNetMsg::cNetMsg(sNetMsgDesc *pDesc, void *pClientData)
    AssertMsg(m_NumDispatchParams <= MAX_DISPATCH,
              "cNetMsg: too many params! Enhance me! (Or missing kNMPT_End)");
 
-   m_ppParams = (DWORD *) malloc(m_NumDispatchParams * sizeof(DWORD));
+   m_ppParams = (uintptr_t *) malloc(m_NumDispatchParams *
+                                     sizeof(uintptr_t));
 
    // Tell the net manager about ourselves:
    ulong flags = 0;
@@ -903,13 +904,13 @@ BOOL cNetMsg::UnmarshalParams(uchar *ptr, ObjID fromPlayer, ObjID *pForwardTo)
             break;
 
          case kNMPT_Vector:
-            m_ppParams[i] = (DWORD) ptr;
+            m_ppParams[i] = reinterpret_cast<uintptr_t>(ptr);
             ptr += sizeof(mxs_vector);
             break;
 
          case kNMPT_Block:
          {
-            m_ppParams[i] = (DWORD) ptr;
+            m_ppParams[i] = reinterpret_cast<uintptr_t>(ptr);
             ptr += pParam->size;
             break;
          }
@@ -920,7 +921,7 @@ BOOL cNetMsg::UnmarshalParams(uchar *ptr, ObjID fromPlayer, ObjID *pForwardTo)
             m_ppParams[i] = size;
             i++;
             ptr += sizeof(ushort);
-            m_ppParams[i] = (DWORD) ptr;
+            m_ppParams[i] = reinterpret_cast<uintptr_t>(ptr);
             ptr += size;
             break;
          }
@@ -932,7 +933,7 @@ BOOL cNetMsg::UnmarshalParams(uchar *ptr, ObjID fromPlayer, ObjID *pForwardTo)
                m_ppParams[i] = NULL;
                ptr += sizeof(uchar);
             } else {
-               m_ppParams[i] = (DWORD) ptr;
+               m_ppParams[i] = reinterpret_cast<uintptr_t>(ptr);
                ptr += strlen((const char *) m_ppParams[i]) + 1;
             }
             break;
@@ -986,7 +987,7 @@ BOOL cNetMsg::UnmarshalParams(uchar *ptr, ObjID fromPlayer, ObjID *pForwardTo)
                   ptr += sizeof(mxs_vector);
                   break;
             }
-            m_ppParams[i] = (DWORD) parm;
+            m_ppParams[i] = reinterpret_cast<uintptr_t>(parm);
             break;
          }
       }
@@ -1032,15 +1033,19 @@ void cNetMsg::ClearParams()
 // Signatures for our possible message handlers. The largest of these should
 // be one larger than MAX_DISPATCH:
 typedef void (*tMsgFunc0)();
-typedef void (*tMsgFunc1)(DWORD);
-typedef void (*tMsgFunc2)(DWORD, DWORD);
-typedef void (*tMsgFunc3)(DWORD, DWORD, DWORD);
-typedef void (*tMsgFunc4)(DWORD, DWORD, DWORD, DWORD);
-typedef void (*tMsgFunc5)(DWORD, DWORD, DWORD, DWORD, DWORD);
-typedef void (*tMsgFunc6)(DWORD, DWORD, DWORD, DWORD, DWORD, DWORD);
-typedef void (*tMsgFunc7)(DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD);
-typedef void (*tMsgFunc8)(DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD);
-typedef void (*tMsgFunc9)(DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD);
+typedef void (*tMsgFunc1)(uintptr_t);
+typedef void (*tMsgFunc2)(uintptr_t, uintptr_t);
+typedef void (*tMsgFunc3)(uintptr_t, uintptr_t, uintptr_t);
+typedef void (*tMsgFunc4)(uintptr_t, uintptr_t, uintptr_t, uintptr_t);
+typedef void (*tMsgFunc5)(uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t);
+typedef void (*tMsgFunc6)(uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t,
+                          uintptr_t);
+typedef void (*tMsgFunc7)(uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t,
+                          uintptr_t, uintptr_t);
+typedef void (*tMsgFunc8)(uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t,
+                          uintptr_t, uintptr_t, uintptr_t);
+typedef void (*tMsgFunc9)(uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t,
+                          uintptr_t, uintptr_t, uintptr_t, uintptr_t);
 
 //
 // Send this message to an outside handler
@@ -1053,29 +1058,30 @@ void cNetMsg::SendToHandler()
    if (m_pClientData) {
       switch(m_NumDispatchParams) {
          case 0:
-            ((tMsgFunc1) m_pDesc->msgHandler)((DWORD) m_pClientData);
+            ((tMsgFunc1) m_pDesc->msgHandler)(
+               reinterpret_cast<uintptr_t>(m_pClientData));
             break;
          case 1:
             ((tMsgFunc2) m_pDesc->msgHandler)(GetParam(0), 
-                                              (DWORD) m_pClientData);
+                                              reinterpret_cast<uintptr_t>(m_pClientData));
             break;
          case 2:
             ((tMsgFunc3) m_pDesc->msgHandler)(GetParam(0), 
                                               GetParam(1), 
-                                              (DWORD) m_pClientData);
+                                              reinterpret_cast<uintptr_t>(m_pClientData));
             break;
          case 3:
             ((tMsgFunc4) m_pDesc->msgHandler)(GetParam(0),
                                               GetParam(1),
                                               GetParam(2),
-                                              (DWORD) m_pClientData);
+                                              reinterpret_cast<uintptr_t>(m_pClientData));
             break;
          case 4:
             ((tMsgFunc5) m_pDesc->msgHandler)(GetParam(0),
                                               GetParam(1),
                                               GetParam(2),
                                               GetParam(3),
-                                              (DWORD) m_pClientData);
+                                              reinterpret_cast<uintptr_t>(m_pClientData));
             break;
          case 5:
             ((tMsgFunc6) m_pDesc->msgHandler)(GetParam(0),
@@ -1083,7 +1089,7 @@ void cNetMsg::SendToHandler()
                                               GetParam(2),
                                               GetParam(3),
                                               GetParam(4),
-                                              (DWORD) m_pClientData);
+                                              reinterpret_cast<uintptr_t>(m_pClientData));
             break;
          case 6:
             ((tMsgFunc7) m_pDesc->msgHandler)(GetParam(0),
@@ -1092,7 +1098,7 @@ void cNetMsg::SendToHandler()
                                               GetParam(3),
                                               GetParam(4),
                                               GetParam(5),
-                                              (DWORD) m_pClientData);
+                                              reinterpret_cast<uintptr_t>(m_pClientData));
             break;
          case 7:
             ((tMsgFunc8) m_pDesc->msgHandler)(GetParam(0),
@@ -1102,7 +1108,7 @@ void cNetMsg::SendToHandler()
                                               GetParam(4),
                                               GetParam(5),
                                               GetParam(6),
-                                              (DWORD) m_pClientData);
+                                              reinterpret_cast<uintptr_t>(m_pClientData));
             break;
          case 8:
             ((tMsgFunc9) m_pDesc->msgHandler)(GetParam(0),
@@ -1113,7 +1119,7 @@ void cNetMsg::SendToHandler()
                                               GetParam(5),
                                               GetParam(6),
                                               GetParam(7),
-                                              (DWORD) m_pClientData);
+                                              reinterpret_cast<uintptr_t>(m_pClientData));
             break;
          default:
             Warning(("Too many params in msg to dispatch automatically.\n"));
@@ -1284,14 +1290,25 @@ void cNetMsg::DoLoopback(va_list pArgs)
          {
             const cMultiParm *pParm = va_arg(pArgs, const cMultiParm *);
             cMultiParm *parm = new cMultiParm(*pParm);
-            m_ppParams[i] = (DWORD) parm;
+            m_ppParams[i] = reinterpret_cast<uintptr_t>(parm);
             break;
          }
          case kNMPT_DynBlock:
             // DynBlocks get *two* params
             m_ppParams[i] = va_arg(pArgs, DWORD);
             i++;
-            // FALL THROUGH
+            m_ppParams[i] = reinterpret_cast<uintptr_t>(
+               va_arg(pArgs, void *));
+            break;
+         case kNMPT_Vector:
+         case kNMPT_Block:
+            m_ppParams[i] = reinterpret_cast<uintptr_t>(
+               va_arg(pArgs, void *));
+            break;
+         case kNMPT_String:
+            m_ppParams[i] = reinterpret_cast<uintptr_t>(
+               va_arg(pArgs, const char *));
+            break;
          default:
             m_ppParams[i] = va_arg(pArgs, DWORD);
             break;

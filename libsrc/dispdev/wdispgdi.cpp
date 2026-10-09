@@ -210,7 +210,7 @@ void cGDIProvider::AdjustWindow(BOOL fToMode)
 
 ///////////////////////////////////////
 
-BOOL cGDIProvider::DoProcessMessage(UINT msg, WPARAM wParam, LPARAM /*lParam*/, long * pRetVal)
+BOOL cGDIProvider::DoProcessMessage(UINT msg, WPARAM wParam, LPARAM /*lParam*/, LRESULT * pRetVal)
 {
     // If we haven't been initialized...
     if (!m_pDisplayDevice->IsModeSet())

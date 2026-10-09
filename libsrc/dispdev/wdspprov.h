@@ -35,7 +35,7 @@ public:
     virtual ~cWinDisplayProvider();
 
     // Handle a message from IGameShell instance
-    virtual BOOL DoProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, long * pRetVal);
+    virtual BOOL DoProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT * pRetVal);
 
     virtual void DoGetInfo(sGrDeviceInfo *, sGrModeInfo *) = 0;
     virtual BOOL DoOpen(sGrModeCap *, int fFlags) = 0;

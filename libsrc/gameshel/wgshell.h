@@ -150,7 +150,7 @@ protected:
     virtual BOOL PreTranslateMessage(MSG * pMsg);
 
     // Handle a message dispatched to our window
-    virtual long WndProc(UINT msg, WPARAM wParam, LPARAM lParam);
+    virtual LRESULT WndProc(UINT msg, WPARAM wParam, LPARAM lParam);
 
     ///////////////////////////////////
     //
@@ -181,7 +181,7 @@ private:
     // Because DirectDraw reserves the space in the window structure we could
     // normally use to store our context, we place it in gm_pWinGameShell
     static cWinGameShell * gm_pWinGameShell;
-    static long FAR PASCAL StaticWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    static LRESULT CALLBACK StaticWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
     ///////////////////////////////////
     //

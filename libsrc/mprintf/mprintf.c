@@ -142,29 +142,14 @@ void (*mono_spc_func)(char *,int)=NULL;
       (*mono_spc_func)(s,n)
 
 /* memset that sets n shorts starting a s to c. */
-#ifdef __WATCOMC__
-void *smemset (void *s, short c, int n);
-#pragma aux smemset=       \
-   "push edi"              \
-   "rep  stosw"            \
-   "pop  eax"              \
-   parm [edi] [eax] [ecx]  \
-   modify [edi eax ecx];
-#else
 __inline void *smemset(void *s, short c, int n)
 {
-	#pragma warning(disable : 4035)	// disables no return value warning
-	__asm
-	{
-		mov		edi, s
-		mov		ax, c
-		mov		ecx, n
-		push	edi
-		rep		stosw
-		pop		eax
-	}
+   short *p = (short *)s;
+   int i;
+   for (i = 0; i < n; ++i)
+      p[i] = c;
+   return s;
 }
-#endif
 
 #define out_mda(reg,val) outp(M_SRX_ADR,reg); outp(M_SRX_DATA,val)
 
@@ -201,27 +186,11 @@ int vbio_call (int parm_ax)
 }
 #endif /* USE_VBIO_CALL */
 
-#ifdef __WATCOMC__
-int mono_get_combo(void);
-#pragma aux mono_get_combo=\
-   "mov eax,0x1a00" \
-   "int 0x10" \
-   "mov eax,ebx" \
-   "and eax,0xffff" \
-   modify exact [ebx];
-#else
 __inline int mono_get_combo(void)
 {
-	#pragma warning(disable : 4035)	// disables no return value warning
-	__asm
-	{
-		mov		eax, 0x1a00
-		int		0x10
-		mov		eax, ebx
-		and		eax, 0xffff
-	}
+   /* BIOS display probing is unavailable in a protected-mode application. */
+   return 0;
 }
-#endif
 /* returns TRUE if the secondary display is monochrome. */
 bool mono_detect(void)
 {
@@ -733,7 +702,10 @@ int _mprint(const char *s, int n)
    int i,cur_x,cur_y;
    uchar *p;                           /* pointer to current line. */
 
-   if (_mono_log())
+   // A special-output callback can make _mono_log() true even when no log
+   // file is open. Never pass the sentinel handle to the CRT; its invalid
+   // parameter handler terminates current Windows builds.
+   if (mono_file != -1)
       write (mono_file, s, n);			/* write even if no screen */
 #ifdef _WIN32
    if (mono_to_debugger)

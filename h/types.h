@@ -16,7 +16,16 @@
 #ifndef __TYPES_H
 #define __TYPES_H
 
+// Dark's own data structures use the project's historical byte packing, but
+// Windows API structures must use the platform ABI's default packing.  The
+// compiler-wide /Zp1 setting remains in force after this include.
+#if defined(_MSC_VER)
+#pragma pack(push, 8)
+#endif
 #include <windows.h>
+#if defined(_MSC_VER)
+#pragma pack(pop)
+#endif
 
 //
 // COMPILER VENDOR SPECIFIC ADJUSTEMENTS (placed first so will affect this file)

@@ -323,6 +323,7 @@ errtype mouse_put_xy(short x, short y)
         me.type = MOUSE_MOTION;
         me.timestamp = get_mouse_ticks();
         me.buttons = mouseInstantButts;
+        me.wheel = 0;
         mouse_generate(me);
     }
     return OK;

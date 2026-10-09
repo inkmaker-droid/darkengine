@@ -1,199 +1,68 @@
 ///////////////////////////////////////////////////////////////////////////////
-// $Source: x:/prj/tech/libsrc/lg/RCS/stktrace.cpp $
-// $Author: TOML $
-// $Date: 1997/10/16 13:20:37 $
-// $Revision: 1.8 $
-//
+// Portable Windows stack capture.
 
 #include <types.h>
-
-#if defined(_WIN32) && defined(_MSC_VER)
-
-#include <tchar.h>
-#include <windows.h>
 #include <stktrace.h>
-typedef DWORD MOFFSET;
-typedef struct tagSTACKTRACEENTRY
-    {
-    WORD    dwSize;
-    WORD    wSS;
-    MOFFSET wBP;
-    WORD    wCS;
-    MOFFSET wIP;
-    HMODULE hModule;
-    WORD    wSegment;
-    WORD    wFlags;
-    } STACKTRACEENTRY;
 
-#if 0
-#define MAX_MODULE_NAME MAX_PATH
+#if defined(_WIN32)
 
-typedef struct tagMODULEENTRY
-    {
-    DWORD   dwSize;
-    char    szModule[MAX_MODULE_NAME + 1];
-    HMODULE hModule;
-    WORD wcUsage;
-    char szExePath[MAX_PATH + 1];
-    WORD wNext;
-    } MODULEENTRY;
-#endif
+#include <windows.h>
 
-static BOOL StackTraceCSIPFirst(STACKTRACEENTRY * lpStackTrace,
-                                 WORD wSS, WORD wCS, MOFFSET wIP, MOFFSET wBP)
-    {
-    lpStackTrace->wSS = wSS;
-    lpStackTrace->wCS = wCS;
-    lpStackTrace->wIP = wIP;
-    lpStackTrace->wBP = wBP;
-    lpStackTrace->hModule = 0;
-    lpStackTrace->wSegment = 0;
-    lpStackTrace->wFlags = 0;
-    return TRUE;
-    }
+int LGAPI FillStackArray(int Skip, int MaxFrames, void **p)
+{
+   USHORT captured;
+   int i;
 
-static BOOL StackTraceNext(STACKTRACEENTRY * lpStackTrace)
-    {
-    MOFFSET *pBP = (MOFFSET *) lpStackTrace->wBP;
-    if (!pBP || IsBadReadPtr(pBP, 4))
-        return FALSE;
+   if (p == NULL || MaxFrames <= 0)
+      return 0;
+   for (i = 0; i < MaxFrames; ++i)
+      p[i] = NULL;
 
-    lpStackTrace->wBP = pBP[0];
-    lpStackTrace->wIP = pBP[1];
-    lpStackTrace->hModule = 0;
-    lpStackTrace->wSegment = 0;
-    lpStackTrace->wFlags = 0;
+   /* Skip this wrapper in addition to the frames requested by the caller. */
+   captured = CaptureStackBackTrace((ULONG)(Skip + 1), (ULONG)MaxFrames,
+                                    p, NULL);
+   return (int)captured;
+}
 
-    if (lpStackTrace->wIP == 0 || lpStackTrace->wIP == 0xffffffff)
-      return FALSE;
+int LGAPI FillThreadStackArray(HANDLE hThread, int Skip, int MaxFrames, void **p)
+{
+   CONTEXT context;
+   DWORD threadId;
+   int i;
 
-    return TRUE;
-    }
+   if (p == NULL || MaxFrames <= 0 || hThread == NULL)
+      return 0;
+   for (i = 0; i < MaxFrames; ++i)
+      p[i] = NULL;
 
+   threadId = GetThreadId(hThread);
+   if (threadId == GetCurrentThreadId())
+      return FillStackArray(Skip + 1, MaxFrames, p);
 
-// Get the CS, SS, IP, and BP
-static WORD     g_wCS;
-static WORD     g_wSS;
-static MOFFSET  g_wIP;
-static MOFFSET  g_wBP;
-static MOFFSET  g_wBX;
-static MOFFSET  g_wAX;
+   ZeroMemory(&context, sizeof(context));
+   context.ContextFlags = CONTEXT_CONTROL;
+   if (!GetThreadContext(hThread, &context) || Skip > 0)
+      return 0;
 
-//
-// GetTraceParams()
-//
-#ifndef __WATCOMC__
-    inline void GetTraceParams(void)
-    {
-    	__asm
-    	{
-        mov g_wAX, eax          ; Save AX
-        mov g_wBX, ebx          ; Save BX
-        mov g_wCS, cs
-        mov g_wSS, ss
-
-        mov ebx, ebp
-        mov eax, ss:[ebx]     ; Get BP for caller
-        mov g_wBP, eax
-
-        mov eax, ss:[ebx+4]   ; Get return address for caller
-        mov g_wIP, eax
-
-        mov ebx, g_wBX         ; Restore BX
-        mov eax, g_wBX         ; Restore AX
-    	}
-    }
+#if defined(_M_X64)
+   p[0] = (void *)(ULONG_PTR)context.Rip;
+#elif defined(_M_IX86)
+   p[0] = (void *)(ULONG_PTR)context.Eip;
+#elif defined(_M_ARM64)
+   p[0] = (void *)(ULONG_PTR)context.Pc;
 #else
-    void GetTraceParams(void);
-    #pragma aux GetTraceParams =\
-        "mov g_wAX, eax" \
-        "mov g_wBX, ebx" \
-        "mov g_wCS, cs" \
-        "mov g_wSS, ss" \
-        "mov ebx, ebp" \
-        "mov eax, ss:[ebx]" \
-        "mov g_wBP, eax" \
-        "mov eax, ss:[ebx+4]" \
-        "mov g_wIP, eax" \
-        "mov ebx, g_wBX" \
-        "mov eax, g_wAX" \
-        modify [eax ebx];
+   return 0;
 #endif
-
-static int __stdcall DoFillStackArray(int Skip, int MaxFrames, void **p)
-    {
-    static BOOL fTracing;
-
-    if (fTracing)
-        return 0;
-
-    fTracing = TRUE;
-
-    STACKTRACEENTRY ste;
-    ste.dwSize = sizeof(STACKTRACEENTRY);
-
-    if (!StackTraceCSIPFirst(&ste, g_wSS, g_wCS, g_wIP, g_wBP))
-        {
-        fTracing = FALSE;
-        return 0;
-        }
-
-    for (int j = 0; j < Skip; j++)
-        {
-        if (!StackTraceNext(&ste))
-            {
-            fTracing = FALSE;
-            return 0;
-            }
-        }
-
-    for (int i = 0; i < MaxFrames; i++)
-        p[i] = 0;
-
-    int i;
-    for (i = 0; i < MaxFrames; i++)
-        {
-        *p++ = (void *)(ste.wIP);
-        if (!StackTraceNext(&ste))
-            break;
-        }
-
-    fTracing = FALSE;
-    return i;
-    }
-
-int LGAPI FillStackArray(int Skip, int MaxFrames, void **p)		// phs, 7/1/96
-    {
-    STACKTRACEENTRY ste;
-    ste.dwSize = sizeof(STACKTRACEENTRY);
-
-    GetTraceParams();
-
-    return DoFillStackArray(Skip, MaxFrames, p);
-    }
-
-int LGAPI FillThreadStackArray(HANDLE hThread, int Skip, int MaxFrames, void **p)	// phs, 7/1/96
-    {
-    CONTEXT threadContext;
-    threadContext.ContextFlags = CONTEXT_CONTROL;
-    if (GetThreadContext(hThread, &threadContext))
-        {
-        g_wCS = (WORD) threadContext.SegCs;
-        g_wSS = (WORD) threadContext.SegSs;
-        g_wIP = threadContext.Eip;
-        g_wBP = threadContext.Ebp;
-        return DoFillStackArray(Skip, MaxFrames, p);
-        }
-    return 0;
-    }
+   return 1;
+}
 
 #else
 
-#pragma off (unreferenced)
+#pragma off(unreferenced)
 int FillStackArray(int Skip, int MaxFrames, void **p)
-    {
-    return 0;
-    }
-#pragma on (unreferenced)
+{
+   return 0;
+}
+#pragma on(unreferenced)
 
 #endif

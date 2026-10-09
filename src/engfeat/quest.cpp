@@ -447,24 +447,38 @@ STDMETHODIMP cQuestData::Delete(THIS_ const char *pName)
 
 STDMETHODIMP cQuestData::DeleteAll(void)
 {
-   tHashSetHandle handle;
+   // Removing an entry invalidates the hash iterator's current bucket/node.
+   // Always restart from the first remaining entry instead of advancing an
+   // iterator through storage that Delete() just freed.
    cQuestDataNode *pNode;
-
-   pNode = m_nameHash.GetFirst(handle);
-   for (; pNode != NULL; pNode = m_nameHash.GetNext(handle))
-      Delete(pNode->m_pName); 
+   do
+   {
+      tHashSetHandle handle;
+      pNode = m_nameHash.GetFirst(handle);
+      if (pNode == NULL)
+         break;
+      Delete(pNode->m_pName);
+   }
+   while (TRUE);
    return S_OK;
 }
 
 STDMETHODIMP cQuestData::DeleteAllType(eQuestDataType type)
 {
-   tHashSetHandle handle;
    cQuestDataNode *pNode;
+   do
+   {
+      tHashSetHandle handle;
+      pNode = m_nameHash.GetFirst(handle);
+      while ((pNode != NULL) && (pNode->m_type != type))
+         pNode = m_nameHash.GetNext(handle);
 
-   pNode = m_nameHash.GetFirst(handle);
-   for (; pNode != NULL; pNode = m_nameHash.GetNext(handle))
-      if (pNode->m_type == type)
-         Delete(pNode->m_pName); 
+      // As in DeleteAll(), do not reuse the iterator after removing its node.
+      if (pNode == NULL)
+         break;
+      Delete(pNode->m_pName);
+   }
+   while (TRUE);
    return S_OK;
 }
 

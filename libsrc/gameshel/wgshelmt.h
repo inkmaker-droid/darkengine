@@ -52,7 +52,7 @@ protected:
     STDMETHOD_(void, BeginFrame)();
     STDMETHOD_(void, PumpEvents)(int fPumpFlags = kPumpAll);
     // Handle a message dispatched to our window
-    virtual long WndProc(UINT msg, WPARAM wParam, LPARAM lParam);
+    virtual LRESULT WndProc(UINT msg, WPARAM wParam, LPARAM lParam);
     virtual void CreateGameWindow();
     virtual void DestroyGameWindow();
     virtual void NotifyDisplayOnActivateApp(BOOL fActive);
