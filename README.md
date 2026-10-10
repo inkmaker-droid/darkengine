@@ -35,6 +35,28 @@ D3D11-named API directly. This is the renderer seam for a future OpenGL
 provider, but an OpenGL implementation and a complete non-Windows build do
 not exist yet.
 
+Core clocks, dynamic-library loading, memory queries, assertions, clipboard,
+synchronization, and filesystem conveniences now cross `platform_services.h`
+and `platform_io.h`. Windows providers live under `winsrc`; the initial Unix
+providers and CMake portability target live under `unixsrc`. On Linux,
+`cmake -S . -B build-cmake && cmake --build build-cmake` validates that common
+boundary. The complete game target is still being migrated to CMake.
+
+Audio follows the same provider model. Windows uses DirectSound 3D by default,
+with native I3DL2 environmental reverb. An OpenAL provider supplies positional
+audio, EFX reverb, and per-source occlusion when `OpenAL32.dll` is available;
+set `sfx_backend openal` in `cam.cfg` to select it explicitly. The default
+`auto` setting tries DirectSound first and uses OpenAL only if native audio
+cannot initialize, so the standard executable has no OpenAL dependency.
+
+Movie playback is exposed through the platform-neutral engine movie API. The
+Windows Media Foundation, DirectShow, and legacy DirectDraw implementation is
+isolated under `winsrc/movie` so another platform can supply its own backend.
+
+Legacy PKWARE DCL-compressed resources are decoded in-process with Mark
+Adler's small `blast` decoder under `3rdparty/blast`; newly written resources
+use the engine's existing LZW codec. No external compression DLL is required.
+
 The runner currently provides:
 
 - first-run selection and validation of a Thief 2 data directory;
@@ -55,8 +77,8 @@ The runner currently provides:
 - A retail Thief 2 installation containing `cam.cfg` and either `DARK.GAM` or
   `MISS1.MIS`
 
-The Windows SDK supplies the legacy DirectX declarations still exposed by a
-few engine-facing interfaces. Current Windows output uses a D3D11 swap chain
+The Windows SDK supplies the DirectX declarations used by the Windows input,
+audio, and rendering providers. Current Windows output uses a D3D11 swap chain
 and Windows Media Foundation. No assembler is required by the active x86 or
 x64 build.
 
@@ -361,13 +383,13 @@ repository.
   validated by this runner and modern presentation path.
 - DromEd is currently a viewer and playtest tool, not a reliable editor. It
   builds with the shared D3D11 renderer in a resizable window, but stability,
-  editing and save integrity, complete mission-authoring workflows, and the
-  optional legacy `darkdlgs.dll` property dialogs still require substantial
-  validation. NewDark missions and data are not supported.
-- The original EAX room-type controls are still present, but the current
-  DirectSound mixer backend does not implement EAX reverb or occlusion. Those
-  controls therefore have no audio effect until a modern environmental-audio
-  backend is added.
+  editing and save integrity, and complete mission-authoring workflows still
+  require substantial validation. NewDark missions and data are not
+  supported.
+- Environmental audio now maps the original EAX room presets onto DirectSound
+  I3DL2 or OpenAL EFX. DirectSound provides room reverb while the optional
+  OpenAL provider also supplies per-source low-pass occlusion; both paths need
+  broader in-mission acoustic comparison against the original game.
 - Squirrel scripting support required by NewDark-era fan missions and mods,
   including *The Black Parade*, is not implemented. The x64 legacy-OSM
   compatibility runtime does not provide Squirrel support.
@@ -385,8 +407,9 @@ repository.
   perception behavior has not been exhaustively verified for every mission.
 - Keyboard-layout behavior for the default `:` and `;` console bindings needs
   broader testing on non-US layouts.
-- The full build still emits numerous warnings inherited from the legacy
-  source. They require separate review before warning levels can be tightened.
+- The four supported Release targets currently compile and link without
+  warnings at the configured warning level. Raising that level and enabling
+  additional static analysis remain future work.
 - Automated runtime tests are limited because licensed retail data cannot be
   included in the repository or continuous-integration environment.
 

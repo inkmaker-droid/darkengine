@@ -29,7 +29,8 @@
       <!-- Embed CodeView records in each object so parallel library builds do
            not race while updating shared compiler PDBs. The linker still emits
            the final executable PDB. -->
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <DebugInformationFormat Condition="'$(Configuration)' != 'Release'">OldStyle</DebugInformationFormat>
+      <DebugInformationFormat Condition="'$(Configuration)' == 'Release'">None</DebugInformationFormat>
       <!-- MSVC emits C4073/C4074 solely because the legacy runtime deliberately
            selects early static-initialization segments. Preserve that ordering. -->
       <DisableSpecificWarnings>4073;4074;%(DisableSpecificWarnings)</DisableSpecificWarnings>
