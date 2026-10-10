@@ -9,7 +9,7 @@
 
 #include <limits.h>
 #include <string.h>
-#include <io.h>
+#include <platform_io.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 

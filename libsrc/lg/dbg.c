@@ -422,7 +422,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <conio.h>
 
 #include <dbg.h>
 #include <lgsprntf.h>
@@ -434,6 +433,7 @@
 
 #include <coremutx.h>
 #include <lgassert.h>
+#include <platform_services.h>
 
 #ifdef DBG_ON
 
@@ -449,7 +449,7 @@ static ulong spewSrc;
 
 static void (*dbg_f_report_user)(int errType, const char *msg) = NULL;
 
-int (*f_getch)() = getch;
+int (*f_getch)() = PlatformReadKey;
 
 int errErrCode;
 

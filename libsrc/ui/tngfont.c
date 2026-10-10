@@ -8,9 +8,8 @@
 #include <string.h>  // for fake load
 #include <stdlib.h>
 #include <fcntl.h>
-#include <io.h>
+#include <platform_io.h>
 
-//#include <malloc.h>
 
 #include <mprintf.h>
 

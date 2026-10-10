@@ -3,7 +3,7 @@
 #include <lgassert.h>
 #include <str.h>
 
-#include <io.h>
+#include <platform_io.h>
 #include <cstdio>
 
 #ifndef NO_DB_MEM

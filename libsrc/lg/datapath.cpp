@@ -74,8 +74,7 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <string.h>
-#include <dos.h>
-#include <io.h>
+#include <platform_io.h>
 #include <lg.h>
 
 #include <datapath.h>
@@ -84,12 +83,6 @@
 #ifndef min
 #define min(a, b) ((a < b) ? a : b)
 #endif // min
-
-// Use this for watcom
-#if defined(__WATCOMC__) || defined(__SC__)
-EXTERN int _dp_find_flags_tab[4] = {_A_NORMAL,0,_A_SUBDIR|_A_NORMAL,_A_SUBDIR};
-#endif
-
 
 //	-------------------------------------------------------------
 //
@@ -262,13 +255,7 @@ int DatapathFind(Datapath *pdp, const char *fname, char *buff, int len)
 {
 	int i;
 	size_t bufferLen = len > 0 ? (size_t)len : 0;
-#if defined(__WATCOMC__) || defined(__SC__)
-	struct find_t find;
-	int err;
-#else
-	struct _finddata_t find;		// phs, 7/1/96
-	intptr_t handle;
-#endif
+	sPlatformFileFind find = { 0 };
 
 	for (i = -1; i < pdp->numDatapaths; i++)
 		{
@@ -294,21 +281,11 @@ int DatapathFind(Datapath *pdp, const char *fname, char *buff, int len)
 	      		strcat(buff, fname);
             }
 			}
-#if defined(__WATCOMC__) || defined(__SC__)
-		err = _dos_findfirst(buff, _dp_find_flags_tab[pdp->find_flags], &find);
-		if (err == 0)
+		if (PlatformFindFirst(buff, &find))
 			{
-			_dos_findclose(&find);
+			PlatformFindClose(&find);
 			return TRUE;
 			}
-#else
-		handle = _findfirst(buff, &find);	// MSVC _findfirst acts just a bit differently - phs, 7/1/96
-		if (handle != -1)
-			{
-			_findclose(handle);
-			return TRUE;
-			}
-#endif
 		}
 
 //	Can't find!

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdint.h>
 #include <types.h>
 
 typedef struct sPlatformDisplayMode
@@ -26,6 +27,33 @@ typedef struct sPlatformMemoryStatus
    uint32 available_virtual_bytes;
 } sPlatformMemoryStatus;
 
+typedef struct sPlatformMutex
+{
+   void *implementation;
+} sPlatformMutex;
+
+typedef enum ePlatformFileAttribute
+{
+   kPlatformFileHidden = 1,
+   kPlatformFileSystem = 2,
+   kPlatformFileDirectory = 4
+} ePlatformFileAttribute;
+
+typedef struct sPlatformFileFind
+{
+   void *implementation;
+   char name[260];
+   uint64_t size;
+   uint32 attributes;
+} sPlatformFileFind;
+
+typedef enum ePlatformAssertAction
+{
+   kPlatformAssertDebug,
+   kPlatformAssertExit,
+   kPlatformAssertIgnore
+} ePlatformAssertAction;
+
 EXTERN int PlatformGetDisplayModes(ePlatformDisplayScope scope,
                                    sPlatformDisplayMode *modes,
                                    int capacity,
@@ -38,5 +66,39 @@ EXTERN BOOL PlatformWriteUserUInt(const char *store, const char *name,
                                   uint32 value);
 EXTERN const char *PlatformGetLanguageCode(void);
 EXTERN void PlatformShowError(const char *title, const char *message);
+EXTERN BOOL PlatformAskYesNo(const char *title, const char *message);
 EXTERN int PlatformPopupMenu(const char *const *items, int count,
                              int client_x, int client_y);
+EXTERN uint32 PlatformMilliseconds(void);
+EXTERN uint64_t PlatformCurrentThreadId(void);
+EXTERN int PlatformReadKey(void);
+EXTERN size_t PlatformAllocationSize(void *allocation);
+EXTERN void PlatformHeapCheck(void);
+EXTERN void PlatformHeapMinimize(void);
+EXTERN void *PlatformLoadLibrary(const char *name);
+EXTERN void *PlatformFindSymbol(void *library, const char *name);
+EXTERN void PlatformUnloadLibrary(void *library);
+EXTERN void PlatformDebugOutput(const char *text);
+EXTERN ePlatformAssertAction PlatformShowAssert(const char *message);
+EXTERN void PlatformDebugBreak(void);
+EXTERN void PlatformExitProcess(int status);
+EXTERN BOOL PlatformSetClipboardText(const char *text);
+EXTERN int PlatformGetClipboardText(char *text, int capacity);
+EXTERN BOOL PlatformGetCurrentDirectory(char *path, int capacity);
+EXTERN BOOL PlatformCopyFiles(const char *pattern, const char *source_dir,
+                              const char *destination_dir);
+EXTERN BOOL PlatformFindFirst(const char *pattern, sPlatformFileFind *find);
+EXTERN BOOL PlatformFindNext(sPlatformFileFind *find);
+EXTERN void PlatformFindClose(sPlatformFileFind *find);
+EXTERN BOOL PlatformMutexInit(sPlatformMutex *mutex);
+EXTERN void PlatformMutexTerm(sPlatformMutex *mutex);
+EXTERN void PlatformMutexLock(sPlatformMutex *mutex);
+EXTERN void PlatformMutexUnlock(sPlatformMutex *mutex);
+EXTERN long PlatformAtomicLoad(volatile long *value);
+EXTERN long PlatformAtomicIncrement(volatile long *value);
+EXTERN long PlatformAtomicDecrement(volatile long *value);
+EXTERN long PlatformAtomicExchange(volatile long *value, long replacement);
+EXTERN long PlatformAtomicAdd(volatile long *value, long amount);
+EXTERN long PlatformAtomicCompareExchange(volatile long *value,
+                                          long replacement,
+                                          long expected);

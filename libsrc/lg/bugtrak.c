@@ -12,7 +12,7 @@
 #include "time.h"
 #include "array.h"
 #include <fcntl.h>
-#include <io.h>
+#include <platform_io.h>
 #include <string.h>
 
 errtype bugtrak_report_registration(int id);

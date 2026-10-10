@@ -19,6 +19,7 @@
 #include <mprintf.h>
 
 #include <lg.h>
+#include <platform_services.h>
 
 #include <csg.h>
 #include <csgbrush.h>
@@ -1081,5 +1082,5 @@ void portalize_csg_internal_database(void)
    AllocSetAllocCap((alloc_limits.totalAlloc > old_alloc_cap) ? 
                         alloc_limits.totalAlloc : 
                         old_alloc_cap);
-   _heapmin();
+   PlatformHeapMinimize();
 }

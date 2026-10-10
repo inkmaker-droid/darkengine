@@ -8,7 +8,7 @@
 #ifdef PLAYTEST
 
 #include <time.h>
-#include <objbase.h>
+#include <stdlib.h>
 #include <playtest.h>
 #include <command.h>
 #include <ctype.h>
@@ -47,6 +47,7 @@
 #include <objmodel.h>
 
 #include <litprop.h>
+#include <platform_services.h>
 
 #include <dbmem.h>   // woo-woo
 
@@ -260,7 +261,7 @@ static void sparse_hash_stats(void)
 
 extern "C" void hello_debugger(void)
 {
-   DebugBreak();
+   PlatformDebugBreak();
 }
 
 void hello_ms_profiler(void)

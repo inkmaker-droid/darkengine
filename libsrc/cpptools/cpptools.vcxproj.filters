@@ -27,13 +27,13 @@
     <ClCompile Include="dynfunc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="filepath.cpp">
+    <ClCompile Include="..\..\winsrc\cpptools\filepath.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="filespec.cpp">
+    <ClCompile Include="..\..\winsrc\cpptools\filespec.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="fnamutil.cpp">
+    <ClCompile Include="..\..\winsrc\cpptools\fnamutil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="hashpp.cpp">
@@ -51,7 +51,7 @@
     <ClCompile Include="relocptr.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="splitpat.cpp">
+    <ClCompile Include="..\..\winsrc\cpptools\splitpat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="str.cpp">

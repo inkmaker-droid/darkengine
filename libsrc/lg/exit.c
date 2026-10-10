@@ -9,14 +9,10 @@
  * exit() sequence.
  */
 
-#ifdef _WIN32
-#include <win32_platform.h>
-#endif
-
-#include <io.h>
 #include <stdlib.h>
 #include <string.h>
 #include <lg.h>
+#include <platform_services.h>
 
 void PrintExitMsg(void);
 const char *pExitMsg;		// message to print on exit
@@ -67,9 +63,5 @@ void SetExitMsg_(const char *msg)
 void PrintExitMsg(void)
 {
    if (pExitMsg && *pExitMsg)
-#ifdef _WIN32
-      MessageBox(NULL, pExitMsg, NULL, MB_OK);
-#else
-      write(STDOUT_FILENO,pExitMsg,strlen(pExitMsg));
-#endif
+      PlatformShowError("Dark Engine", pExitMsg);
 }

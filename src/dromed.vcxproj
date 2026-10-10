@@ -524,7 +524,7 @@
     <ClInclude Include="editor\Cyclegad.h" />
     <ClInclude Include="editor\Doorblok.h" />
     <ClInclude Include="editor\Dragbox.h" />
-    <ClInclude Include="editor\Edinhst.h" />
+    <ClInclude Include="..\winsrc\editor\edinhst.h" />
     <ClInclude Include="editor\Edinhtyp.h" />
     <ClInclude Include="editor\Editapp.h" />
     <ClInclude Include="editor\Editbr.h" />
@@ -536,12 +536,12 @@
     <ClInclude Include="editor\Editlink.h" />
     <ClInclude Include="editor\Editmode.h" />
     <ClInclude Include="editor\Editobj.h" />
-    <ClInclude Include="editor\Editplst.h" />
+    <ClInclude Include="..\winsrc\editor\editplst.h" />
     <ClInclude Include="editor\Editprop.h" />
     <ClInclude Include="editor\Editprst.h" />
     <ClInclude Include="editor\Editsave.h" />
     <ClInclude Include="editor\Edittul_.h" />
-    <ClInclude Include="editor\Edlinkst.h" />
+    <ClInclude Include="..\winsrc\editor\edlinkst.h" />
     <ClInclude Include="editor\Edlnktyp.h" />
     <ClInclude Include="editor\Edmedmo.h" />
     <ClInclude Include="editor\Edmedmos.h" />
@@ -599,7 +599,7 @@
     <ClInclude Include="editor\Scrnedit.h" />
     <ClInclude Include="editor\Scrpted.h" />
     <ClInclude Include="editor\Sdesedit.h" />
-    <ClInclude Include="editor\Sdesedst.h" />
+    <ClInclude Include="..\winsrc\editor\sdesedst.h" />
     <ClInclude Include="editor\Sdesparm.h" />
     <ClInclude Include="editor\Simpwrap.h" />
     <ClInclude Include="editor\Status.h" />
@@ -1730,7 +1730,7 @@
     <ClCompile Include="editor\Editapp.c" />
     <ClCompile Include="editor\Editbr.c" />
     <ClCompile Include="editor\Editgeom.c" />
-    <ClCompile Include="editor\Editlink.cpp">
+    <ClCompile Include="..\winsrc\editor\editlink.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -1738,7 +1738,7 @@
     </ClCompile>
     <ClCompile Include="editor\Editmode.c" />
     <ClCompile Include="editor\Editobj.c" />
-    <ClCompile Include="editor\Editplst.cpp">
+    <ClCompile Include="..\winsrc\editor\editplst.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -1778,12 +1778,12 @@
     <ClCompile Include="editor\Mediface.c" />
     <ClCompile Include="editor\Medmenu.cpp" />
     <ClCompile Include="editor\Medplay.cpp" />
-    <ClCompile Include="editor\Menus.cpp" />
+    <ClCompile Include="..\winsrc\editor\menus.cpp" />
     <ClCompile Include="editor\Modalui.c" />
     <ClCompile Include="editor\Motedit.cpp" />
     <ClCompile Include="editor\Namenum.c" />
     <ClCompile Include="editor\Objed.cpp" />
-    <ClCompile Include="editor\Objedit.cpp" />
+    <ClCompile Include="..\winsrc\editor\objedit.cpp" />
     <ClCompile Include="editor\Objhistp.cpp" />
     <ClCompile Include="editor\Objpnp.c" />
     <ClCompile Include="editor\Otreeed.cpp" />
@@ -1814,7 +1814,7 @@
     <ClCompile Include="editor\Swaptool.c" />
     <ClCompile Include="editor\Txtpnp.c" />
     <ClCompile Include="editor\Txtrpal.c" />
-    <ClCompile Include="editor\Uiedit.c" />
+    <ClCompile Include="..\winsrc\editor\uiedit.c" />
     <ClCompile Include="editor\Undoredo.c" />
     <ClCompile Include="editor\Userpnp.c" />
     <ClCompile Include="editor\Vbrush.c" />
@@ -2617,8 +2617,11 @@
     <ClCompile Update="editor\**\*.c;editor\**\*.cpp;csg\**\*.c;csg\**\*.cpp;framewrk\Report.cpp;sound\Songedtr.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Update="..\winsrc\editor\objedit.cpp;..\winsrc\editor\uiedit.c">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
     <!-- Small UI/service shims shared by the game command and scripting code. -->
-    <ClCompile Update="editor\Isdesced.cpp;editor\Menus.cpp;editor\Prompts.c;editor\Sdesparm.cpp;editor\Status.c;framewrk\Gameiid.c">
+    <ClCompile Update="editor\Isdesced.cpp;..\winsrc\editor\menus.cpp;editor\Prompts.c;editor\Sdesparm.cpp;editor\Status.c;framewrk\Gameiid.c">
       <ExcludedFromBuild>false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Update="framewrk\Initedit.cpp">

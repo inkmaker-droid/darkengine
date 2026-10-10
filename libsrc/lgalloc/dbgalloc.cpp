@@ -5,24 +5,20 @@
 // $Revision: 1.9 $
 //
 
-#ifdef _WIN32
 #ifndef SHIP
-
-#include <win32_platform.h>
 
 #include <lg.h>
 #include <dbgalloc.h>
 #include <memcore.h>
 #include <hashfns.h>
 #include <mprintf.h>
+#include <platform_services.h>
 
 #ifdef DBGALLOC_STACKWALK
 #include <stktrace.h>
 #endif
 
 #pragma code_seg("lgalloc")
-
-EXTERN __declspec(dllimport) unsigned long __stdcall timeGetTime   (void);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -155,7 +151,7 @@ cHeapDebug::cHeapDebug()
     m_nMaxRealBytesAlloced = 0;
     
     m_HeapTestInterval = 0;
-    m_TimeTraceStart = timeGetTime();
+    m_TimeTraceStart = PlatformMilliseconds();
     m_TimeLeakTrackStart = 0;
     memset(m_TraceTable, 0, sizeof(m_TraceTable));
     memset(m_ModuleTable, 0, sizeof(m_ModuleTable));
@@ -512,7 +508,7 @@ STDMETHODIMP_(void) cHeapDebug::PopCredit()
 
 void cHeapDebug::LeakTrackStart()
 {
-    m_TimeLeakTrackStart = timeGetTime() - m_TimeTraceStart;
+    m_TimeLeakTrackStart = PlatformMilliseconds() - m_TimeTraceStart;
 }
 
 ///////////////////////////////////////
@@ -541,7 +537,7 @@ void cHeapDebug::TraceMalloc(void * p, size_t clientSize, const char * pszFile, 
       pInfo->size = clientSize;
       pInfo->pszFile = pszFile;
       pInfo->line = line;
-      pInfo->time = timeGetTime() - m_TimeTraceStart;
+      pInfo->time = PlatformMilliseconds() - m_TimeTraceStart;
 
 #ifdef DBGALLOC_STACKWALK
       if (!pszFile)
@@ -736,5 +732,4 @@ sHDModuleInfo *cHeapDebug::ModuleInfoGet(const char *pszFileName)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#endif
 #endif

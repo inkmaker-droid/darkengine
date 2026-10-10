@@ -9,7 +9,7 @@
  * This file is part of the dev2d library.
  */
 
-#include <malloc.h>
+#include <stdlib.h>
 
 /* dynamic memory allocation/deallocation is done through the indirected
    functions gr_malloc() and gr_free(). they default to malloc() and

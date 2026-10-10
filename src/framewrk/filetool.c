@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <io.h>
+#include <platform_io.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 

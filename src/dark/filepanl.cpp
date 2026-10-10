@@ -14,7 +14,7 @@
 #include <tagfile.h>
 #include <gcompose.h>
 #include <scrnman.h>
-#include <direct.h>
+#include <platform_io.h>
 #include <simtime.h>
 #include <gen_bind.h>
 #include <keydefs.h>

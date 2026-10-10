@@ -38,7 +38,7 @@
 #endif
 
 #include <stdio.h>
-#include <io.h>
+#include <platform_io.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 

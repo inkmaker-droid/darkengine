@@ -8,7 +8,7 @@
  *
 */
 
-#include <io.h>  
+#include <platform_io.h>
 #include <2d.h>
 
 #define largest_code	4095		/* largest possible code */

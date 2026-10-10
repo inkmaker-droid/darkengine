@@ -28,7 +28,7 @@
  *
 */
 
-#include <io.h>
+#include <platform_io.h>
 #include <string.h>
 
 #include <res.h>

@@ -32,6 +32,7 @@
 
 #include <appagg.h>
 #include <gshelapi.h>
+#include <platform_services.h>
 
 #include <status.h>
 
@@ -4737,7 +4738,7 @@ BOOL AIPathFindDBBuild()
 
    ResetPathfindZones();
 
-   _heapmin();
+   PlatformHeapMinimize();
 
    g_AIPathDB.m_Cells.SetSize(MAX_CELLS);
    g_AIPathDB.m_Marks.SetSize(MAX_CELLS);
@@ -5277,7 +5278,7 @@ done_links_error:
 
    mprintf("\n");
 
-   _heapmin();
+   PlatformHeapMinimize();
 
    mprintf("Setting floor types...");
    PropagateFloorTypes();
@@ -5345,7 +5346,7 @@ done:
    delete [] pPathCell2CellLinks;
    delete [] pPathCell2VertexLinks;
 
-   _heapmin();
+   PlatformHeapMinimize();
 
    ClearAdjunctData();
 
@@ -5371,7 +5372,7 @@ done:
            AIGetZoneSize(kAIZone_HighStrikeLVL)/1024
           );
 
-   _heapmin();
+   PlatformHeapMinimize();
 
    g_fAIPathFindInited = TRUE;
 
@@ -5388,7 +5389,7 @@ done:
 #endif
    BuildAIRoomDatabase();
 
-   _heapmin();
+   PlatformHeapMinimize();
 
    return TRUE;
 }

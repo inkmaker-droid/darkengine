@@ -12,7 +12,7 @@
 // itself.  this does not include brush lists or construction.  
 
 #include <stdlib.h>
-#include <io.h>
+#include <platform_io.h>
 #include <rand.h>
 
 #include <lg.h>

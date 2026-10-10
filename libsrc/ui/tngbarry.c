@@ -1,5 +1,5 @@
 #include <fcntl.h>
-#include <io.h>
+#include <platform_io.h>
 
 #include <barrykey.h>
 #include <tngbarry.h>

@@ -15,6 +15,7 @@
 #include <limits.h>
 
 #include <lg.h>
+#include <platform_services.h>
 #include <mprintf.h>
 #include <appagg.h>
 #include <r3d.h>
@@ -1859,7 +1860,7 @@ Command gedit_all_mode_keys[] =
    { "play_sfx", FUNC_STRING, SFX_command },
 #endif
    { "get_pixel_color", FUNC_STRING, gedit_get_pixel_color, "click on pixel, get told color" },
-   { "heapchk", FUNC_VOID, &_heapchk, "Test the heap, if debugging heap enabled" },
+   { "heapchk", FUNC_VOID, PlatformHeapCheck, "Test the heap, if debugging heap enabled" },
    { "monodebug", TOGGLE_BOOL, &mono_to_debugger, "output mono to Windows debug stream" },
 #ifdef RN_STATS
    { "rn_stat_clear", FUNC_VOID, rnStatClear },

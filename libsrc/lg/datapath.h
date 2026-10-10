@@ -68,14 +68,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if defined(__WATCOMC__) || defined(__SC__)
-// for find_t
-#include <dos.h>
-#else 
-#include <io.h>
-#endif
-
 #include <types.h>
+#include <platform_services.h>
 
 #ifdef __cplusplus
 extern "C"  {
@@ -150,12 +144,7 @@ typedef struct {
    char path[128];   // name with path and wild cards added
    int curp;         // current datapath entry
    int cur;
-#if defined(__WATCOMC__) || defined(__SC__)
-	struct find_t find;
-#else
-	struct _finddata_t find;		// phs, 7/1/96
-   intptr_t findfp;
-#endif
+   sPlatformFileFind find;
    int flags;      
 } DatapathDir;
 

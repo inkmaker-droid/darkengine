@@ -1,11 +1,9 @@
 #include <stdio.h>
 #include <fcntl.h>
-#include <io.h>
+#include <platform_io.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <direct.h>
-#include <dos.H>
 
 #include <lg.h>
 #include <hashfns.h>

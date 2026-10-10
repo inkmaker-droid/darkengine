@@ -1,4 +1,4 @@
-#include <io.h>
+#include <platform_io.h>
 #include "pqueue.h"
 #include "string.h"
 /*

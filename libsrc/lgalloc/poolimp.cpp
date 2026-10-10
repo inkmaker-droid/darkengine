@@ -7,10 +7,6 @@
 // Implementation of pools
 //
 
-#ifdef _WIN32
-#include <win32_platform.h>
-#endif
-
 #include <lg.h>
 #include <pool.h>
 #include <poolimp.h>
@@ -20,6 +16,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <string.h>
 
 #pragma code_seg("lgalloc")
@@ -34,9 +31,6 @@
 // while the threading code treated them as full-sized pool elements.
 //
 
-#ifdef _WIN32
-
-#define kPoolCoreGrowSize (1024 * 64)
 #define kPoolCoreMaxSize  (1024 * 1024 * 64)
 
 class cPoolCore
@@ -46,49 +40,34 @@ public:
 
 private:
     static void *gm_pCoreStack;
-    static void *gm_pCoreStackLimit;
+    static void *gm_pCoreStackEnd;
 };
 
 void *cPoolCore::gm_pCoreStack;
-void *cPoolCore::gm_pCoreStackLimit;
+void *cPoolCore::gm_pCoreStackEnd;
 
 void *cPoolCore::AllocPage()
 {
     if (!gm_pCoreStack)
     {
-        gm_pCoreStack = VirtualAlloc(NULL, kPoolCoreMaxSize, MEM_RESERVE,
-                                    PAGE_READWRITE);
-        AssertMsg(gm_pCoreStack, "VirtualAlloc reserve failed");
+        gm_pCoreStack = malloc(kPoolCoreMaxSize);
+        AssertMsg(gm_pCoreStack, "Pool allocation failed");
         if (!gm_pCoreStack)
             return NULL;
-
-        if (!VirtualAlloc(gm_pCoreStack, kPoolCoreGrowSize, MEM_COMMIT,
-                          PAGE_READWRITE))
-        {
-            CriticalMsg("VirtualAlloc commit failed");
-            return NULL;
-        }
-        gm_pCoreStackLimit = (uchar *)gm_pCoreStack + kPoolCoreGrowSize;
+        gm_pCoreStackEnd = (uchar *)gm_pCoreStack + kPoolCoreMaxSize;
     }
 
     void *pReturn = gm_pCoreStack;
     gm_pCoreStack = (uchar *)gm_pCoreStack + kPageSize;
 
-    while (gm_pCoreStack > gm_pCoreStackLimit)
+    if (gm_pCoreStack > gm_pCoreStackEnd)
     {
-        if (!VirtualAlloc(gm_pCoreStackLimit, kPoolCoreGrowSize, MEM_COMMIT,
-                          PAGE_READWRITE))
-        {
-            CriticalMsg("VirtualAlloc commit failed");
-            return NULL;
-        }
-        gm_pCoreStackLimit = (uchar *)gm_pCoreStackLimit + kPoolCoreGrowSize;
+        CriticalMsg("Pool arena exhausted");
+        return NULL;
     }
 
     return pReturn;
 }
-
-#endif
 
 struct sPoolBlock;
 

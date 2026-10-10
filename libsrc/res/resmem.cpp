@@ -156,7 +156,7 @@ void ResGetMemStats(sResMemStats * pStats)
 #define ResInternalMalloc(n)     malloc(n)
 #define ResInternalFree(p)       free(p);
 #define ResInternalRealloc(p, n) realloc(p, n)
-#define ResInternalGetSize(p)    _msize(p)
+#define ResInternalGetSize(p)    PlatformAllocationSize(p)
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -185,7 +185,7 @@ void ResCompact(void)
 {
     g_pResSharedCache->FlushAll();
     ResMemSetCap(ResPickAllocCap());
-    _heapmin();
+    PlatformHeapMinimize();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

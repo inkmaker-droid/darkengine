@@ -5,9 +5,6 @@
 
 // $Header: r:/t2repos/thief2/src/framewrk/initedit.cpp,v 1.26 2000/02/19 13:16:19 toml Exp $
 
-#include <win32_platform.h>
-#include <dynfunc.h>
-
 #include <comtools.h>
 
 
@@ -57,7 +54,6 @@
 // COM object initializaiton
 //
 
-#ifdef _WIN32
 //
 // Called to notify start-up code is complete, COM initialization is
 // pending.
@@ -132,31 +128,6 @@ static void constrain_editor_game_mode(sScrnMode* mode)
    mode->valid_fields |= kScrnModeBitDepthValid | kScrnModeFlagsValid;
 }
 
-////////////////////////////////////////
-
-//
-// Editor DLL loading
-//
-
-
-static void LGAPI woe(IUnknown *)
-{
-   Warning(("Cannot find darkdlgs.dll.  Dialogs will not be available\n"));
-}
-
-DeclDynFunc_(void, LGAPI, DarkDlgsSetAggregate, (IUnknown *));
-ImplDynFunc(DarkDlgsSetAggregate, "darkdlgs.dll", "_DarkDlgsSetAggregate@4", woe);
-
-#define DynDarkDlgsSetAggregate (DynFunc(DarkDlgsSetAggregate).GetProcAddress())
-
-static void load_dlg_lib(void)
-{
-   AutoAppIPtr_(Unknown,pUnk);
-   DynDarkDlgsSetAggregate(pUnk);
-}
-
-
-
 //
 // Called to notify COM initialization is complete.  The application
 // uses this time to acquire pointers to the available components if
@@ -203,7 +174,6 @@ tResult LGAPI AppInit()
 #endif
    }
 
-   load_dlg_lib();
 
    char buf[260];
    const char *load_var = config_is_defined("render_test") ? "render_test" : "file";
@@ -238,11 +208,6 @@ tResult LGAPI AppExit()
    CoreEngineAppExit();
    return NOERROR;
 }
-
-
-
-
-#endif
 
 
 

@@ -9,9 +9,6 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#define WIN32_LEAN_AND_MEAN
-#include <win32_platform.h>
-
 #include <kb.h>
 #include <kbcook.h>
 #include <keydefs.h>
@@ -35,6 +32,7 @@
 #include <simstate.h>
 
 #include <config.h>
+#include <platform_services.h>
 
 #include <mprintf.h>
 #include <memall.h>
@@ -87,14 +85,14 @@ static int CmdTermLineCount = 0;
 static int CmdTermNextLine = 0;
 static char CmdTermCaptureLine[CMDTERM_LINE_LENGTH];
 static int CmdTermCaptureLength = 0;
-static volatile LONG CmdTermCommandCaptureDepth = 0;
-static volatile LONG CmdTermDiagnosticCapture = FALSE;
+static volatile long CmdTermCommandCaptureDepth = 0;
+static volatile long CmdTermDiagnosticCapture = FALSE;
 static BOOL CmdTermOutputHookInstalled = FALSE;
 static void (*CmdTermPreviousMonoHook)(char*,int) = NULL;
-static CRITICAL_SECTION CmdTermModelLock;
+static sPlatformMutex CmdTermModelLock;
 static BOOL CmdTermModelLockInitialized = FALSE;
-static volatile LONG CmdTermPendingFontDelta = 0;
-static volatile LONG CmdTermFontChangeDeferred = FALSE;
+static volatile long CmdTermPendingFontDelta = 0;
+static volatile long CmdTermFontChangeDeferred = FALSE;
 
 // Keep both profiles on the non-antialiased bitmap fonts. The AA resources
 // render through Dark's legacy lighting table and acquire scaling artifacts
@@ -152,20 +150,19 @@ static void cmdterm_model_init(void)
 {
    if (!CmdTermModelLockInitialized)
    {
-      InitializeCriticalSection(&CmdTermModelLock);
-      CmdTermModelLockInitialized = TRUE;
+      CmdTermModelLockInitialized = PlatformMutexInit(&CmdTermModelLock);
    }
 }
 
 static void cmdterm_model_lock(void)
 {
    cmdterm_model_init();
-   EnterCriticalSection(&CmdTermModelLock);
+   PlatformMutexLock(&CmdTermModelLock);
 }
 
 static void cmdterm_model_unlock(void)
 {
-   LeaveCriticalSection(&CmdTermModelLock);
+   PlatformMutexUnlock(&CmdTermModelLock);
 }
 
 static BOOL cmdterm_is_scrollable(void)
@@ -394,8 +391,8 @@ static void cmdterm_mono_output(char* text, int length)
 {
    if (CmdTermPreviousMonoHook)
       CmdTermPreviousMonoHook(text, length);
-   if (InterlockedCompareExchange(&CmdTermCommandCaptureDepth, 0, 0) > 0 ||
-       InterlockedCompareExchange(&CmdTermDiagnosticCapture, 0, 0))
+   if (PlatformAtomicLoad(&CmdTermCommandCaptureDepth) > 0 ||
+       PlatformAtomicLoad(&CmdTermDiagnosticCapture))
       cmdterm_capture_stream(text, length);
 }
 
@@ -423,7 +420,7 @@ static void cmdterm_remove_output_hook(void)
 
 static void cmdterm_begin_command_capture(void)
 {
-   InterlockedIncrement(&CmdTermCommandCaptureDepth);
+   PlatformAtomicIncrement(&CmdTermCommandCaptureDepth);
    // Installing mono_spc_func makes legacy mprintf calls format their output
    // even when no monochrome screen or log is active. Limit that behavior to
    // an executing console command unless diagnostics were explicitly enabled.
@@ -432,19 +429,19 @@ static void cmdterm_begin_command_capture(void)
 
 static void cmdterm_end_command_capture(void)
 {
-   if (InterlockedCompareExchange(&CmdTermCommandCaptureDepth, 0, 0) > 0)
-      InterlockedDecrement(&CmdTermCommandCaptureDepth);
+   if (PlatformAtomicLoad(&CmdTermCommandCaptureDepth) > 0)
+      PlatformAtomicDecrement(&CmdTermCommandCaptureDepth);
    cmdterm_model_lock();
    cmdterm_capture_flush_locked();
    cmdterm_model_unlock();
-   if (InterlockedCompareExchange(&CmdTermCommandCaptureDepth, 0, 0) == 0 &&
-       !InterlockedCompareExchange(&CmdTermDiagnosticCapture, 0, 0))
+   if (PlatformAtomicLoad(&CmdTermCommandCaptureDepth) == 0 &&
+       !PlatformAtomicLoad(&CmdTermDiagnosticCapture))
       cmdterm_remove_output_hook();
 }
 
 void cmdterm_capture_status(const char* text)
 {
-   if (InterlockedCompareExchange(&CmdTermCommandCaptureDepth, 0, 0) > 0 &&
+   if (PlatformAtomicLoad(&CmdTermCommandCaptureDepth) > 0 &&
        text && *text)
       cmdterm_print(text);
 }
@@ -494,8 +491,7 @@ static void cmdterm_scroll_and_draw(int lines)
 
 static BOOL cmdterm_control_down(void)
 {
-   return (GetAsyncKeyState(VK_CONTROL) & 0x8000) ||
-          kb_state(KBC_LCTRL) == KBS_DOWN ||
+   return kb_state(KBC_LCTRL) == KBS_DOWN ||
           kb_state(KBC_RCTRL) == KBS_DOWN;
 }
 
@@ -506,12 +502,12 @@ static BOOL cmdterm_handle_wheel(short wheel)
 
    if (cmdterm_control_down())
    {
-      InterlockedExchangeAdd(&CmdTermPendingFontDelta, wheel);
-      if (InterlockedCompareExchange(&CmdTermFontChangeDeferred,
-                                     TRUE, FALSE) == FALSE)
+      PlatformAtomicAdd(&CmdTermPendingFontDelta, wheel);
+      if (PlatformAtomicCompareExchange(&CmdTermFontChangeDeferred,
+                                        TRUE, FALSE) == FALSE)
       {
          if (uiDefer(cmdterm_deferred_font_change, NULL) != OK)
-            InterlockedExchange(&CmdTermFontChangeDeferred, FALSE);
+            PlatformAtomicExchange(&CmdTermFontChangeDeferred, FALSE);
       }
       return TRUE;
    }
@@ -670,38 +666,7 @@ static void cmdterm_install_mouse_handler(Region* region)
 
 static BOOL cmdterm_set_clipboard_text(const char* text)
 {
-   HGLOBAL memory;
-   char* destination;
-   size_t length = text ? strlen(text) : 0;
-
-   memory = GlobalAlloc(GMEM_MOVEABLE, length + 1);
-   if (!memory)
-      return FALSE;
-   destination = (char*)GlobalLock(memory);
-   if (!destination)
-   {
-      GlobalFree(memory);
-      return FALSE;
-   }
-   if (length)
-      memcpy(destination, text, length);
-   destination[length] = '\0';
-   GlobalUnlock(memory);
-
-   if (!OpenClipboard(NULL))
-   {
-      GlobalFree(memory);
-      return FALSE;
-   }
-   EmptyClipboard();
-   if (!SetClipboardData(CF_TEXT, memory))
-   {
-      CloseClipboard();
-      GlobalFree(memory);
-      return FALSE;
-   }
-   CloseClipboard();
-   return TRUE;
+   return PlatformSetClipboardText(text);
 }
 
 static BOOL cmdterm_copy_output(BOOL all)
@@ -760,8 +725,8 @@ static BOOL cmdterm_copy_command(void)
 
 static BOOL cmdterm_paste_command(LGadTextBox* box)
 {
-   HANDLE data;
-   const char* clipboard;
+   char clipboard[sizeof(CmdTerm.cmdbuf)];
+   const char* source;
    char insertion[sizeof(CmdTerm.cmdbuf)];
    int insertion_length = 0;
    int cursor = LGadTextBoxCursor(box);
@@ -769,32 +734,20 @@ static BOOL cmdterm_paste_command(LGadTextBox* box)
    int available = sizeof(CmdTerm.cmdbuf) - current_length - 1;
    int i;
 
-   if (available <= 0 || !OpenClipboard(NULL))
+   if (available <= 0 ||
+       !PlatformGetClipboardText(clipboard, sizeof(clipboard)))
       return FALSE;
-   data = GetClipboardData(CF_TEXT);
-   if (!data)
-   {
-      CloseClipboard();
-      return FALSE;
-   }
-   clipboard = (const char*)GlobalLock(data);
-   if (!clipboard)
-   {
-      CloseClipboard();
-      return FALSE;
-   }
 
-   while (*clipboard && insertion_length < available)
+   source = clipboard;
+   while (*source && insertion_length < available)
    {
-      char c = *clipboard++;
+      char c = *source++;
       if (c == '\r')
          continue;
       if (c == '\n' || c == '\t')
          c = ' ';
       insertion[insertion_length++] = c;
    }
-   GlobalUnlock(data);
-   CloseClipboard();
    if (!insertion_length)
       return FALSE;
 
@@ -854,8 +807,7 @@ static void cmdterm_console_diagnostics(char* argument)
 
    if (!argument || !*argument)
    {
-      cmdterm_print(InterlockedCompareExchange(&CmdTermDiagnosticCapture,
-                                               0, 0)
+      cmdterm_print(PlatformAtomicLoad(&CmdTermDiagnosticCapture)
          ? "Diagnostic output capture is on."
          : "Diagnostic output capture is off.");
       return;
@@ -864,15 +816,15 @@ static void cmdterm_console_diagnostics(char* argument)
        cmdterm_argument_is(argument, "1") ||
        cmdterm_argument_is(argument, "true"))
    {
-      InterlockedExchange(&CmdTermDiagnosticCapture, TRUE);
+      PlatformAtomicExchange(&CmdTermDiagnosticCapture, TRUE);
       cmdterm_install_output_hook();
    }
    else if (cmdterm_argument_is(argument, "off") ||
             cmdterm_argument_is(argument, "0") ||
             cmdterm_argument_is(argument, "false"))
    {
-      InterlockedExchange(&CmdTermDiagnosticCapture, FALSE);
-      if (InterlockedCompareExchange(&CmdTermCommandCaptureDepth, 0, 0) == 0)
+      PlatformAtomicExchange(&CmdTermDiagnosticCapture, FALSE);
+      if (PlatformAtomicLoad(&CmdTermCommandCaptureDepth) == 0)
          cmdterm_remove_output_hook();
    }
    else
@@ -881,7 +833,7 @@ static void cmdterm_console_diagnostics(char* argument)
       return;
    }
 
-   cmdterm_print(InterlockedCompareExchange(&CmdTermDiagnosticCapture, 0, 0)
+   cmdterm_print(PlatformAtomicLoad(&CmdTermDiagnosticCapture)
       ? "Diagnostic output capture enabled."
       : "Diagnostic output capture disabled.");
 }
@@ -1426,7 +1378,7 @@ void CreateCommandTerminal(LGadRoot* root, Rect* bounds, ulong flags)
    CmdTerm.flags = flags;
    CmdTerm.parentroot = root;
    CmdTerm.bounds = *bounds;
-   if (InterlockedCompareExchange(&CmdTermDiagnosticCapture, 0, 0))
+   if (PlatformAtomicLoad(&CmdTermDiagnosticCapture))
       cmdterm_install_output_hook();
 
    // Retain the compact profile for other historical game targets. Thief 2
@@ -1657,7 +1609,7 @@ void DestroyCommandTerminal(void)
 
 static BOOL cmdterm_apply_pending_font_change(void)
 {
-   LONG delta = InterlockedExchange(&CmdTermPendingFontDelta, 0);
+   long delta = PlatformAtomicExchange(&CmdTermPendingFontDelta, 0);
    LGadRoot* parent;
    Rect bounds;
    ulong flags;
@@ -1716,7 +1668,7 @@ static BOOL cmdterm_apply_pending_font_change(void)
 static void cmdterm_deferred_font_change(void* unused)
 {
    (void)unused;
-   InterlockedExchange(&CmdTermFontChangeDeferred, FALSE);
+   PlatformAtomicExchange(&CmdTermFontChangeDeferred, FALSE);
    cmdterm_apply_pending_font_change();
 }
 

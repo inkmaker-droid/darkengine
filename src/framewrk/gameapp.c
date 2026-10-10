@@ -7,8 +7,6 @@
 
 #include <string.h>
 
-#include <objbase.h>
-#include <win32_platform.h>
 #include <aggmemb.h>
 #include <appagg.h>
 #include <loopapi.h>

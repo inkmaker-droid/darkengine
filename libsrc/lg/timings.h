@@ -112,13 +112,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <mprintf.h>
+#include <platform_services.h>
 
-#ifdef _WIN32
-EXTERN unsigned long __declspec(dllimport) __stdcall timeGetTime(void);
-#define TimerRawTimeValue() timeGetTime()
-#else
-#define TimerRawTimeValue() 1L
-#endif
+#define TimerRawTimeValue() PlatformMilliseconds()
 
 ///////////////////////////////////////////////////////////////////////////////
 

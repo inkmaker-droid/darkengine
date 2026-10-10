@@ -7,13 +7,8 @@
 // (c) Copyright 1994-1996 Tom Leonard. All Rights Reserved. Unlimited license granted to Looking Glass Technologies Inc.
 //
 
-#ifdef _WIN32
-#include <win32_platform.h>
-#else
-#include <dlfcn.h>
-#endif
-
 #include "dynfunc.h"
+#include <platform_services.h>
 
 ///////////////////////////////////////
 BOOL cDynFunc::Load()
@@ -22,18 +17,10 @@ BOOL cDynFunc::Load()
         {
         fTriedToLoad = TRUE;
         // Assert(pszLibName && pszFuncSig);
-#ifdef _WIN32
-        hInstLib = (void *)LoadLibraryA(pszLibName);
-#else
-        hInstLib = dlopen(pszLibName, RTLD_NOW | RTLD_LOCAL);
-#endif
+        hInstLib = PlatformLoadLibrary(pszLibName);
         if (LoadedDLL(hInstLib))
             {
-#ifdef _WIN32
-            pfnFunc = (void *)GetProcAddress((HMODULE)hInstLib, pszFuncSig);
-#else
-            pfnFunc = dlsym(hInstLib, pszFuncSig);
-#endif
+            pfnFunc = PlatformFindSymbol(hInstLib, pszFuncSig);
             //DebugMsgTrue3(pfnFunc && HIWORD(pszFuncSig), "Loaded function %s from %s (%p)", pszFuncSig, pszLibName, pfnFunc);
             //DebugMsgTrue3(pfnFunc && !HIWORD(pszFuncSig), "Loaded function %d from %s (%p)", int(LOWORD(pszFuncSig)), pszLibName, pfnFunc);
             }
@@ -62,11 +49,7 @@ void cDynFunc::Unload()
     fTriedToLoad = FALSE;
     if (LoadedDLL(hInstLib))
         {
-#ifdef _WIN32
-        FreeLibrary((HMODULE)hInstLib);
-#else
-        dlclose(hInstLib);
-#endif
+        PlatformUnloadLibrary(hInstLib);
         }
     hInstLib = 0;
     }

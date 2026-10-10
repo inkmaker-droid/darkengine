@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdlib.h>     // _MAX_PATH
 #include <fcntl.h>
-#include <io.h>
+#include <platform_io.h>
 #include <sys\stat.h>
 
 /* Finds the free file in a sequence like

@@ -34,10 +34,10 @@
 // For quick save 
 #include <drkuires.h>
 #include <drkmsg.h>
-#include <direct.h>
+#include <platform_io.h>
 
 // For checkpoints
-#include <direct.h>
+#include <platform_io.h>
 #include <stdio.h>
 
 #include <command.h>

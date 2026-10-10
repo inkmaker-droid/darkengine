@@ -451,7 +451,7 @@ ObjID CameraGetObjID(Camera *cam)
 // save/load system to get accurate camera positions saved to disk
 
 #include <stdio.h>
-#include <io.h>
+#include <platform_io.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>

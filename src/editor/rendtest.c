@@ -10,7 +10,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <io.h>
+#include <platform_io.h>
 
 #include <timer.h>
 #include <mprintf.h>

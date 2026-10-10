@@ -11,7 +11,6 @@
 #ifndef __POOLIMP_H
 #define __POOLIMP_H
 
-#include <malloc.h>
 #include <heaptool.h>
 
 #undef Free
@@ -21,13 +20,8 @@
 // Macros to specify how pools should get thier memory.
 //
 
-#ifndef _WIN32
-#define PoolCoreAlloc(n)  malloc(n)
-#define PoolCoreFree(p)   free(p)
-#else
 #define PoolCoreAlloc(n)  cPoolCore::Alloc(n)
 #define PoolCoreFree(p)   cPoolCore::Free(p)
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 //

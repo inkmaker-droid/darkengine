@@ -35,6 +35,7 @@
 #include <status.h>
 
 #include <timings.h>
+#include <platform_services.h>
 
 #include <mprintf.h>
 
@@ -303,8 +304,8 @@ typedef struct _StateRecord
 
 static void SlowFrame(long nMilliseconds)
 {
-   DWORD nStart = timeGetTime();
-   while ((timeGetTime()-nStart) < (DWORD)nMilliseconds)
+   uint32 nStart = PlatformMilliseconds();
+   while ((PlatformMilliseconds()-nStart) < (uint32)nMilliseconds)
    {}
 }
 
@@ -342,7 +343,7 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
          // Check whether this is a multi-player game whenever we enter the mode
          gpNetMan = AppGetObj(INetManager);
 
-         nLastRealFrameTime = timeGetTime(); // tm_get_millisec_unrecorded();
+         nLastRealFrameTime = PlatformMilliseconds();
          break;
       }
       case kMsgBeginFrame:
@@ -360,11 +361,11 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
          if (nSlowFrameTime > 0)
          {
 //            nCurrentRealFrameTime = tm_get_millisec_unrecorded();
-            nCurrentRealFrameTime = timeGetTime();
+            nCurrentRealFrameTime = PlatformMilliseconds();
             nRealTimeDelta = nCurrentRealFrameTime-nLastRealFrameTime;
             if (nRealTimeDelta < nSlowFrameTime)
                SlowFrame(nSlowFrameTime-nRealTimeDelta);
-            nLastRealFrameTime = timeGetTime();
+            nLastRealFrameTime = PlatformMilliseconds();
          }
          break;
 

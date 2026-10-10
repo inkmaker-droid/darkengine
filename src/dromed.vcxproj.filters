@@ -1119,7 +1119,7 @@
     <ClInclude Include="editor\Dragbox.h">
       <Filter>Editor</Filter>
     </ClInclude>
-    <ClInclude Include="editor\Edinhst.h">
+    <ClInclude Include="..\winsrc\editor\edinhst.h">
       <Filter>Editor</Filter>
     </ClInclude>
     <ClInclude Include="editor\Edinhtyp.h">
@@ -1155,7 +1155,7 @@
     <ClInclude Include="editor\Editobj.h">
       <Filter>Editor</Filter>
     </ClInclude>
-    <ClInclude Include="editor\Editplst.h">
+    <ClInclude Include="..\winsrc\editor\editplst.h">
       <Filter>Editor</Filter>
     </ClInclude>
     <ClInclude Include="editor\Editprop.h">
@@ -1170,7 +1170,7 @@
     <ClInclude Include="editor\Edittul_.h">
       <Filter>Editor</Filter>
     </ClInclude>
-    <ClInclude Include="editor\Edlinkst.h">
+    <ClInclude Include="..\winsrc\editor\edlinkst.h">
       <Filter>Editor</Filter>
     </ClInclude>
     <ClInclude Include="editor\Edlnktyp.h">
@@ -1344,7 +1344,7 @@
     <ClInclude Include="editor\Sdesedit.h">
       <Filter>Editor</Filter>
     </ClInclude>
-    <ClInclude Include="editor\Sdesedst.h">
+    <ClInclude Include="..\winsrc\editor\sdesedst.h">
       <Filter>Editor</Filter>
     </ClInclude>
     <ClInclude Include="editor\Sdesparm.h">
@@ -4618,7 +4618,7 @@
     <ClCompile Include="editor\Editgeom.c">
       <Filter>Editor</Filter>
     </ClCompile>
-    <ClCompile Include="editor\Editlink.cpp">
+    <ClCompile Include="..\winsrc\editor\editlink.cpp">
       <Filter>Editor</Filter>
     </ClCompile>
     <ClCompile Include="editor\Editmode.c">
@@ -4627,7 +4627,7 @@
     <ClCompile Include="editor\Editobj.c">
       <Filter>Editor</Filter>
     </ClCompile>
-    <ClCompile Include="editor\Editplst.cpp">
+    <ClCompile Include="..\winsrc\editor\editplst.cpp">
       <Filter>Editor</Filter>
     </ClCompile>
     <ClCompile Include="editor\Editprop.c">
@@ -4717,7 +4717,7 @@
     <ClCompile Include="editor\Medplay.cpp">
       <Filter>Editor</Filter>
     </ClCompile>
-    <ClCompile Include="editor\Menus.cpp">
+    <ClCompile Include="..\winsrc\editor\menus.cpp">
       <Filter>Editor</Filter>
     </ClCompile>
     <ClCompile Include="editor\Modalui.c">
@@ -4732,7 +4732,7 @@
     <ClCompile Include="editor\Objed.cpp">
       <Filter>Editor</Filter>
     </ClCompile>
-    <ClCompile Include="editor\Objedit.cpp">
+    <ClCompile Include="..\winsrc\editor\objedit.cpp">
       <Filter>Editor</Filter>
     </ClCompile>
     <ClCompile Include="editor\Objhistp.cpp">
@@ -4825,7 +4825,7 @@
     <ClCompile Include="editor\Txtrpal.c">
       <Filter>Editor</Filter>
     </ClCompile>
-    <ClCompile Include="editor\Uiedit.c">
+    <ClCompile Include="..\winsrc\editor\uiedit.c">
       <Filter>Editor</Filter>
     </ClCompile>
     <ClCompile Include="editor\Undoredo.c">

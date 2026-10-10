@@ -5,10 +5,6 @@
 // $Revision: 1.28 $
 //
 
-#ifdef _WIN32
-#include <win32_platform.h>
-#endif
-
 #include <lg.h>
 #include <codewrit.h>
 
@@ -76,11 +72,9 @@ int LGAPI _AppMain(int argc, const char *argv[])
     // Force link of main/WinMain/LibMain
     _g_referenceEntryPoint = 1;
 
-#ifdef _WIN32
     // Allow our code to be self-modifying
-    if (GetPrivateProfileInt("AppCore", "MakeAllCodeWritable", !!(g_fAppStartupFlags & kASF_MakeCodeWritable), "lg.ini"))
+    if (g_fAppStartupFlags & kASF_MakeCodeWritable)
         MakeAllCodeWritable();
-#endif
 
     // Increase the number of available handles in the standard buffered i/o
     #ifdef __WATCOMC__

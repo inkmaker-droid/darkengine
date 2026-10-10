@@ -14,12 +14,12 @@
     <DarkLibraryOutputDir>$(DarkPlatformOutputDir)</DarkLibraryOutputDir>
     <OutDir>$(DarkPlatformOutputDir)</OutDir>
     <IntDir>$(DarkIntermediateRoot)$(MSBuildProjectName)\</IntDir>
-    <IncludePath>$(MSBuildThisFileDirectory)winsrc;$(MSBuildThisFileDirectory)winsrc\appcore;$(MSBuildThisFileDirectory)winsrc\dispdev;$(MSBuildThisFileDirectory)winsrc\gameshel;$(MSBuildThisFileDirectory)winsrc\lg;$(IncludePath)</IncludePath>
+    <IncludePath>$(MSBuildThisFileDirectory)winsrc;$(MSBuildThisFileDirectory)winsrc\appcore;$(MSBuildThisFileDirectory)winsrc\dispdev;$(MSBuildThisFileDirectory)winsrc\editor;$(MSBuildThisFileDirectory)winsrc\gameshel;$(MSBuildThisFileDirectory)winsrc\lg;$(MSBuildThisFileDirectory)winsrc\lgalloc;$(MSBuildThisFileDirectory)winsrc\platform;$(MSBuildThisFileDirectory)winsrc\sound;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <!-- Dark's persisted structures and cross-library ABI use byte packing. -->
     <ClCompile>
-      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)winsrc;$(MSBuildThisFileDirectory)winsrc\lg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)winsrc;$(MSBuildThisFileDirectory)winsrc\appcore;$(MSBuildThisFileDirectory)winsrc\editor;$(MSBuildThisFileDirectory)winsrc\lg;$(MSBuildThisFileDirectory)winsrc\lgalloc;$(MSBuildThisFileDirectory)winsrc\platform;$(MSBuildThisFileDirectory)winsrc\sound;$(MSBuildThisFileDirectory)3rdparty\blast;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StructMemberAlignment>1Byte</StructMemberAlignment>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <!-- The renderer uses C99 array designators for sparse dispatch tables.

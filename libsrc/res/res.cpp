@@ -43,7 +43,7 @@
  *
 */
 
-#include <io.h>
+#include <platform_io.h>
 #include <stdlib.h>
 #include <string.h>
 

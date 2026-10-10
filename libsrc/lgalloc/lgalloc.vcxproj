@@ -173,15 +173,14 @@
     <ClCompile Include="pool.cpp" />
     <ClCompile Include="poolimp.cpp" />
     <ClCompile Include="primallc.cpp" />
-    <ClCompile Include="stdalloc.cpp" />
+    <ClCompile Include="..\..\winsrc\lgalloc\stdalloc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="allcguid.h" />
     <ClInclude Include="allocapi.h" />
-    <ClInclude Include="allocovr.h" />
+    <ClInclude Include="..\..\winsrc\lgalloc\allocovr.h" />
     <ClInclude Include="dbgalloc.h" />
     <ClInclude Include="dbmem.h" />
-    <ClInclude Include="fastmutx.h" />
     <ClInclude Include="heap.h" />
     <ClInclude Include="heaptool.h" />
     <ClInclude Include="mallocdb.h" />
@@ -196,7 +195,6 @@
     <ClInclude Include="primallc.h" />
     <ClInclude Include="stdalloc.h" />
     <ClInclude Include="undbmem.h" />
-    <ClInclude Include="virtmem.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="memcore.txt" />

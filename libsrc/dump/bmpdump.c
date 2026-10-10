@@ -8,7 +8,7 @@
  * 
 */
 
-#include <io.h>
+#include <platform_io.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <lg.h>

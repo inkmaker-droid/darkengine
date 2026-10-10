@@ -5,7 +5,7 @@
 
 // $Header: r:/t2repos/thief2/src/framewrk/buftagf.cpp,v 2.2 2000/03/07 19:56:48 toml Exp $
 #include <stdio.h>
-#include <io.h>
+#include <platform_io.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 

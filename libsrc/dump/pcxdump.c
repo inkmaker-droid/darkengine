@@ -8,7 +8,7 @@
  * 
  */
 
-#include <io.h>
+#include <platform_io.h>
 #include <lg.h>
 #include <dev2d.h>
 #include <dump.h>

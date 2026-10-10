@@ -8,9 +8,6 @@
 //
 // Standard headers
 //
-#ifdef _WIN32
-#include <win32_platform.h>
-#endif
 #include <lg.h>
 #include <comtools.h>
 

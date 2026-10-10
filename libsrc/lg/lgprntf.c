@@ -7,7 +7,7 @@
  * no-floats baby printf.
  */
 
-#include <io.h>
+#include <platform_io.h>
 #include <stdarg.h>
 #include <dbg.h>
 #include <lgsprntf.h>

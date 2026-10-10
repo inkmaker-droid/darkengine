@@ -51,7 +51,6 @@
 #include <lnktrait.h>
 
 #include <dialogs.h>
-#include <dynfunc.h>
 #include <gen_bind.h>
 
 #include <dbmem.h>
@@ -64,18 +63,6 @@ extern "C" ObjID gLockedBrushes [];
 extern "C" BOOL brushIsLocked (editBrush* brush);
 
 const char* TERRAIN_STRING = "all_terrain";
-
-static void linked_woe(sLink&)
-{
-	CriticalMsg("Could not load dialog!");
-}
-
-//  Dynamic function to open the new link dialog
-//
-DeclDynFunc_(BOOL,LGAPI,DisplayLinkDialog,(sLink&));
-ImplDynFunc(DisplayLinkDialog,"darkdlgs.dll","_DisplayLinkDialog@4",linked_woe);
-
-#define AskForLink	(DynFunc(DisplayLinkDialog).GetProcAddress())
 
 ////////////////////////////////////////////////////////////
 // OBJ EDITING COMMANDS
@@ -425,7 +412,7 @@ static void link_edit_from_multibrush ()
 
 	//	Display the new link dialog, with the objects filled in
 	//
-	if (AskForLink (link))
+	if (FALSE)
 	{
         AutoAppIPtr_(LinkManager,pLinkMan);
 		pLinkMan = AppGetObj(ILinkManager);

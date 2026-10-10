@@ -9,7 +9,7 @@
 #define __TAGFILE_H
 
 #include <lg.h>
-#include <io.h>
+#include <platform_io.h>
 
 #include <comtools.h>
 
