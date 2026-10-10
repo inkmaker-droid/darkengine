@@ -1,17 +1,18 @@
 ////////////////////////////////////////////////////////////////////////
-// $Header: x:/prj/tech/libsrc/sound/RCS/qlgsndi.h 1.1 1998/03/20 12:52:48 PATMAC Exp $
+// $Header: x:/prj/tech/libsrc/sound/RCS/dlgsndi.h 1.1 1998/03/20 11:46:23 PATMAC Exp $
 //
 // (c) 1997 Looking Glass Technologies Inc.
 // Pat McElhatton
 //
-// Module name: Looking Glass Sound Library internal defs, QMixer version
-// File name: qlgsndi.h
+// Module name: Looking Glass Sound Library internal defs, DirectSound version
+// File name: dlgsndi.h
 //
 // Description: Internal interface definition for sound library
 //
 ////////////////////////////////////////////////////////////////////////
 
 #include <win32_platform.h>
+#include <dsound.h>
 
 #ifndef _LG_SOUND_H
 #include <lgsound.h>
@@ -20,33 +21,30 @@
 #include <stdio.h>
 
 #include <lgassert.h>
-#include <thrdtool.h>
 
 #include <timelog.h>
-#include <qmixer.h>
-
 //-------------------------------------------------------------------------------
-// the cQSndDevice class abstracts the lower layer of sound subsystems that we use.
+// the cDSndDevice class abstracts the lower layer of sound subsystems that we use.
 // for DOS this means AIL and for Win95 this means DirectSound.
 //-------------------------------------------------------------------------------
 
-class cQSndSample;
+struct IDirectSound8;
+typedef IDirectSound8 cDSndDevice;
 
-class cQSndMixer : public cSndMixer
+
+class cDSndSample;
+
+class cDSndMixer : public cSndMixer
 {
 	DECLARE_UNAGGREGATABLE();
 
 public:
-	cQSndMixer();
-	virtual ~cQSndMixer();
+	cDSndMixer();
+	virtual ~cDSndMixer();
 
-	STDMETHOD_(eSndError, Init)(sSndSetup* setup, uint32 numChannels,
-		sSndAttribs* attr);
+	STDMETHOD_(eSndError, Init)(sSndSetup* setup, uint32 numChannels, sSndAttribs* attr);
 
-	STDMETHOD_(ISndSample*, CreateRawSample)(eSndSampleCreateFlagSet flags, void* pd,
-		uint32 dlen, uint32 nsamps, sSndAttribs* attribs);
-
-	STDMETHOD_(void, Update)(void);
+	STDMETHOD_(ISndSample*, CreateRawSample)(eSndSampleCreateFlagSet flags, void* pd, uint32 dlen, uint32 nsamps, sSndAttribs* attribs);
 
 	STDMETHOD_(void, Pause)(void);
 	STDMETHOD_(void, Resume)(void);
@@ -57,8 +55,9 @@ public:
 	STDMETHOD_(void, Set3DEnvironment)(sSndEnvironment* pParams);
 	STDMETHOD_(void, Set3DMethod)(eSnd3DMethod method);
 	STDMETHOD_(void, Get3DMethodCapabilities)(uint32* pMethods);
+	STDMETHOD_(void, Set3DDeferMode)(BOOL deferOn);
 
-	//XXX Chaos
+
 	STDMETHOD_(void, FreeHWChannelCount)(THIS_ int32* pHWChans, int32* p3DHWChans);
 	STDMETHOD_(int32, Init3DReverb)(THIS);
 	STDMETHOD_(void, Shutdown3DReverb)(THIS);
@@ -67,27 +66,35 @@ public:
 	STDMETHOD_(BOOL, Set3DReverbSettings)(THIS_ ReverbSettings* pReverbSettings);
 	STDMETHOD_(BOOL, Get3DReverbSettings)(THIS_ ReverbSettings* pReverbSettings);
 	STDMETHOD_(BOOL, Have3DOcclusion)(THIS);
+	STDMETHOD_(const char*, GetBackendName)(THIS);
+	STDMETHOD_(uint32, GetCapabilities)(THIS);
 	STDMETHOD_(int32, Kludge)(THIS_ int kludgeSelector, void* pKludgeStruct, int32 sizeKludgeStruct);
 
-	HQMIXER GetQMixer(void);
-	float GetDistanceFactor(void);
+
+	cDSndDevice* GetDevice();
+	void UsePanVol(void);
+	BOOL ReverbEnabled(void) const;
+	const ReverbSettings &ReverbState(void) const;
+	void RefreshReverb(void);
 
 private:
 
-	HQMIXER                 mpMixDevice;
-	float                   mDistanceFactor;
+	cDSndDevice* mSoundDevice;                // the device
+	IDirectSoundBuffer* mpPrimaryBuffer;
+	IDirectSound3DListener* mpListener;
+	BOOL                    mbPanVolInUse;
+	BOOL                    mbReverbEnabled;
+	BOOL                    mbReverbTested;
+	BOOL                    mbCanReverb;
+	ReverbSettings          mReverbSettings;
+
+	BOOL ProbeReverb(void);
 };
 
-inline HQMIXER
-cQSndMixer::GetQMixer(void)
+inline void
+cDSndMixer::UsePanVol(void)
 {
-	return mpMixDevice;
-}
-
-inline float
-cQSndMixer::GetDistanceFactor(void)
-{
-	return mDistanceFactor;
+	mbPanVolInUse = TRUE;
 }
 
 
@@ -98,16 +105,20 @@ cQSndMixer::GetDistanceFactor(void)
 // If that can free something up it will.  Once you have a sample you can Initialize it
 // to the type of sample you want and then do all the fun stuff, most notibly play it.
 //-------------------------------------------------------------------------------
+#ifdef _WIN32
+struct IDirectSoundBuffer;
+typedef IDirectSoundBuffer cSndSampleImp;
+#endif
 
 
-class cQSndSample : public cSndSample
+class cDSndSample : public cSndSample
 {
 	DECLARE_UNAGGREGATABLE();
 
 public:
 
-	cQSndSample(cQSndMixer* mixer, eSndSampleCreateFlagSet flags);
-	virtual ~cQSndSample();
+	cDSndSample(cDSndMixer* mixer, eSndSampleCreateFlagSet flags);
+	virtual ~cDSndSample();
 
 	STDMETHOD_(void, SetPan)(int32 pan);
 	STDMETHOD_(void, SetFrequency)(uint32 freq);
@@ -116,7 +127,6 @@ public:
 	STDMETHOD_(void, CheckStream)(void);
 
 	STDMETHOD_(BOOL, BufferReady)(uint32 len);
-	STDMETHOD_(eSndError, LoadBuffer)(uint8* data, uint32 len);
 	STDMETHOD_(eSndError, LoadBufferIndirect)(SndLoadFunction funk, void* pData, uint32 len);
 
 	STDMETHOD_(void, SilenceFill)(uint32 nBytes);
@@ -129,20 +139,20 @@ public:
 	STDMETHOD_(void, Set3DMode)(eSnd3DMode mode);
 	STDMETHOD_(void, SetAmbientVolume)(int32 vol);
 	STDMETHOD_(void, Set3DMethod)(eSnd3DMethod method);
-
-	//XXX Chaos
 	STDMETHOD_(eSnd3DMethod, Get3DMethod)(THIS);
 	STDMETHOD_(void, Set3DReverbMix)(THIS_ float mix);
 	STDMETHOD_(void, Set3DOcclusion)(THIS_ int32 occlusionMillibels);
 	STDMETHOD_(int32, Kludge)(THIS_ int kludgeSelector, void* pKludgeStruct, int32 sizeKludgeStruct);
-
-
+	void UpdateReverb(void);
 
 	// Here is some of the nasty stuff to let things happen 
-	// between cQSndMixer and cQSndSample
+	// between cDSndMixer and cDSndSample
 	virtual BOOL        IsPlaying(void);
 	virtual BOOL        MakeAudible();
-	virtual BOOL        InvokeRefillCB(void* pBuffer, uint32 nBytes);
+
+	// redo pan/volume for audible samples
+	//  return FALSE if there are no samples using pan/vol for 3D
+	BOOL                 UpdatePanVol3D(void);
 
 
 protected:
@@ -150,27 +160,61 @@ protected:
 	virtual void         LLStop();
 	virtual void         LLRelease();
 	virtual void         LLInit();
-	virtual HRESULT      LLStart();
+	virtual eSndError    LLStart();
 	virtual void         LLPause();
 	virtual void         LLResume();
 	virtual void         LLUnMute();
 	virtual void         LLSetPosition(uint32 pos);
 	virtual uint32       LLGetPosition();
 	virtual void         LLSetVolume(int32 vol);
+	virtual void         SetPanVol3D(void);
 
 	virtual BOOL      LockBuffer(void** p1, uint32* sz1, void** p2, uint32* sz2, uint32 len);
 	virtual void      UnlockBuffer(void* p1, uint32 sz1, void* p2, uint32 sz2);
+	virtual uint32    AvailToWrite(uint32 rdPosition);      // internal only
 
-	int            mChannel;
-	HQMIXER        mpMixDevice;
-	LPMIXWAVE      mpWave;
-	void* mpAudioData;
+	void     SetA3d(BOOL useA3d);
 
-	void* mpRefillDest;
+	friend class cDSndMixer;
 
-	float                mAmbientVolumeDB;    // volume outside the outer cone
-	float                mRolloff;            // distance volume rolloff factor
-
-	friend class cQSndMixer;
-	friend class cQSndFadeTask;
+private:
+	cSndSampleImp* mpSampleImp;
+	IDirectSound3DBuffer* mp3DBuffer;
+	IDirectSoundBuffer8* mpSample8;
+	IDirectSoundFXI3DL2Reverb8* mpReverb;
+	float mReverbMix;
+	int32 mOcclusionMillibels;
 };
+
+inline BOOL cDSndMixer::ReverbEnabled(void) const
+{
+	return mbReverbEnabled && mbCanReverb;
+}
+
+inline const ReverbSettings &cDSndMixer::ReverbState(void) const
+{
+	return mReverbSettings;
+}
+
+//
+// Macros for reporting DirectSound errors
+//
+#ifdef DBG_ON
+
+#define DSOUND_ERROR( RES, STR ) \
+   mprintf( "DirectSound error 0x%x from %s\n", RES, STR ); \
+   TLOG2( "\nDirectSound error 0x%x from %s\n", RES, (uint32) STR )
+
+#define DSOUND_ERROR_CHECK( RES, STR ) \
+   do {  \
+      if ( !SUCCEEDED( RES ) ) {   \
+         DSOUND_ERROR( RES, STR );  \
+      }  \
+   } while (0)
+
+#else
+
+#define DSOUND_ERROR( RES, STR )
+#define DSOUND_ERROR_CHECK( RES, STR )
+
+#endif

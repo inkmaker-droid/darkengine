@@ -17,10 +17,7 @@
 // all fade times are in MILLISECONDS (I theenk)
 //
 
-#include <win32_platform.h>
 #include <lg.h>
-#include <mmsystem.h>
-#include <dsound.h>
 
 #include <lgsndi.h>
 

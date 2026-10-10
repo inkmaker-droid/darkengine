@@ -13,12 +13,12 @@
 #include "dsnddynf.h"
 
 //
-// DirectSoundCreate
+// DirectSoundCreate8
 //
-ImplDynFunc(DirectSoundCreate, "dsound.dll", "DirectSoundCreate", 0);
+ImplDynFunc(DirectSoundCreate8, "dsound.dll", "DirectSoundCreate8", 0);
 
 
 BOOL LoadDirectSound()
 {
-    return DynFunc(DirectSoundCreate).Load();
+    return DynFunc(DirectSoundCreate8).Load();
 }

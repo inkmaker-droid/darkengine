@@ -16,10 +16,11 @@
 #ifndef __DSNDDYNF_H
 #define __DSNDDYNF_H
 
+#include <dsound.h>
 #include <dynfunc.h>
 
-DeclDynFunc_( HRESULT, WINAPI, DirectSoundCreate, (GUID FAR * lpGUID, LPDIRECTSOUND * ppDS, IUnknown FAR *pUnkOuter ) );
-#define DynDirectSoundCreate     (DynFunc(DirectSoundCreate).GetProcAddress())
+DeclDynFunc_( HRESULT, WINAPI, DirectSoundCreate8, (LPCGUID lpGUID, LPDIRECTSOUND8 *ppDS8, LPUNKNOWN pUnkOuter) );
+#define DynDirectSoundCreate8 (DynFunc(DirectSoundCreate8).GetProcAddress())
 
 BOOL LoadDirectSound();
 

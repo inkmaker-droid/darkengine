@@ -13,14 +13,17 @@
 
 #include <win32_platform.h>
 #include <lg.h>
+#include <algorithm>
 #include <assert.h>
 
 #include <dlgsndi.h>
 #include <mprintf.h>
 
 #include <mixerlck.h>
+#include <sndplatform.h>
 
 #include <matrix.h>
+#include <math.h>
 
 // this is used as a sample ID in logging
 #define SAMPLE_ID    ((mGroup << 16) + mSerialNum)
@@ -40,7 +43,7 @@
 #define ESTIMATED_POSITION( when ) \
   ( (((float) mFrequency * ((when) - mBaseTime)) / 1000.0 ) + mBasePos )
 
-#define ESTIMATED_POSITION_NOW  ESTIMATED_POSITION( timeGetTime() )
+#define ESTIMATED_POSITION_NOW  ESTIMATED_POSITION(SndTimeMs())
 
 // allow only one thread in critical sections
 #define MIXER_MUTEX \
@@ -68,6 +71,10 @@ cDSndSample::cDSndSample( cDSndMixer              *pMixer,
    // DirectSound stuff
    mpSampleImp = NULL;
    mp3DBuffer = NULL;
+   mpSample8 = NULL;
+   mpReverb = NULL;
+   mReverbMix = 0.0f;
+   mOcclusionMillibels = 0;
    // End DirectSound stuff
    m3DMethod = kSnd3DMethodNone;
 }
@@ -83,6 +90,8 @@ cDSndSample::~cDSndSample()
 {
    MIXER_MUTEX;
 
+   SafeRelease(mpReverb);
+   SafeRelease(mpSample8);
    if ( mpSampleImp != NULL ) {
       mpMixer->DoTrace( (void *)(uintptr_t)mBufferLen, kSndBufferFree );
       mpSampleImp->Release();
@@ -131,9 +140,8 @@ cDSndSample::MakeAudible()
    if ( (m3DMethod == kSnd3DMethodSoftware) || (m3DMethod == kSnd3DMethodHardware) ) {
       // a 3D sample with volume & frequency control (no pan!)
       db.dwFlags = DSBCAPS_CTRL3D | DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLFREQUENCY;
-      if ( m3DMethod == kSnd3DMethodHardware ) {
-         db.dwFlags |= DSBCAPS_LOCHARDWARE;
-      }
+      if (pMixer->CanDo3DReverb())
+         db.dwFlags |= DSBCAPS_CTRLFX | DSBCAPS_LOCSOFTWARE;
    } else {
       // a non-3D sample with volume, frequency & pan control
 	  //db.dwFlags = DSBCAPS_CTRLDEFAULT;
@@ -186,6 +194,7 @@ cDSndSample::MakeAudible()
             Set3DDistanceRange( m3DMinDistance, m3DMaxDistance );
             Set3DMode( m3DMode );
             SetAmbientVolume( mAmbientVolume );
+            UpdateReverb();
             // fall thru to set regular pan & volume below
 
          case kSnd3DMethodNone:
@@ -220,6 +229,8 @@ cDSndSample::LLStop( void )
 void
 cDSndSample::LLRelease( void )
 {
+   SafeRelease(mpReverb);
+   SafeRelease(mpSample8);
    mpSampleImp->Release();
    mpSampleImp = NULL;
    if ( mp3DBuffer != NULL ) {
@@ -234,7 +245,7 @@ cDSndSample::LLInit( void )
 }
 
 
-HRESULT
+eSndError
 cDSndSample::LLStart( void )
 {
    HRESULT res;
@@ -267,7 +278,7 @@ cDSndSample::LLStart( void )
    res = mpSampleImp->Play(0,0,flags);
    DSOUND_ERROR_CHECK( res, "LLStart" );
 
-   return res;
+   return SUCCEEDED(res) ? kSndOk : kSndUnknownError;
 }
 
 void
@@ -421,7 +432,7 @@ STDMETHODIMP_(void) cDSndSample::SetFrequency(uint32 freq)
       if ( IS_RUNNING ) {
          // muted & running - just recalculate current
          //  position before changing frequency
-         now = timeGetTime();
+         now = SndTimeMs();
          mBasePos = (uint32)ESTIMATED_POSITION( now );
          mBaseTime = now;
          TLOG2( "Smp::SetFrequency - reset baseTime %ld basePos %ld", mBaseTime, mBasePos );
@@ -1035,16 +1046,109 @@ STDMETHODIMP_(eSnd3DMethod) cDSndSample::Get3DMethod(void)
 }
 
 STDMETHODIMP_(void) cDSndSample::Set3DReverbMix(float mix)
-{ // TODO
+{
+   mReverbMix = std::max(0.0f, std::min(mix, 1.0f));
+   UpdateReverb();
 }
 
 STDMETHODIMP_(void) cDSndSample::Set3DOcclusion(int32 occlusionMillibels)
-{ // TODO
+{
+   // DirectSound has no portable per-voice low-pass control. Preserve the
+   // value for a provider that does; Dark's existing blocking attenuation is
+   // still applied to the direct path by appsfx.
+   mOcclusionMillibels = occlusionMillibels;
 }
 
 STDMETHODIMP_(int32) cDSndSample::Kludge(int kludgeSelector, void* pKludgeStruct, int32 sizeKludgeStruct)
 { // TODO
     return 0;
+}
+
+void cDSndSample::UpdateReverb(void)
+{
+   cDSndMixer *mixer = (cDSndMixer *)mpMixer;
+   if (mpSampleImp == NULL || mp3DBuffer == NULL)
+      return;
+
+   if (mpSample8 == NULL &&
+       FAILED(mpSampleImp->QueryInterface(IID_IDirectSoundBuffer8,
+                                          (void **)&mpSample8)))
+      return;
+
+   if (mpReverb == NULL)
+   {
+      DSEFFECTDESC effect = {};
+      DWORD result = DSFXR_UNKNOWN;
+      effect.dwSize = sizeof(effect);
+      effect.guidDSFXClass = GUID_DSFX_STANDARD_I3DL2REVERB;
+      if (FAILED(mpSample8->SetFX(1, &effect, &result)) ||
+          FAILED(mpSample8->GetObjectInPath(GUID_DSFX_STANDARD_I3DL2REVERB, 0,
+                                            IID_IDirectSoundFXI3DL2Reverb8,
+                                            (void **)&mpReverb)))
+         return;
+   }
+
+   if (!mixer->ReverbEnabled() || mReverbMix <= 0.0f)
+   {
+      DSFXI3DL2Reverb disabled = { I3DL2_ENVIRONMENT_PRESET_GENERIC };
+      disabled.lRoom = DSFX_I3DL2REVERB_ROOM_MIN;
+      mpReverb->SetAllParameters(&disabled);
+      return;
+   }
+
+   static const DWORD presets[kREVERB_COUNT] = {
+      DSFX_I3DL2_ENVIRONMENT_PRESET_GENERIC,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_PADDEDCELL,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_ROOM,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_BATHROOM,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_LIVINGROOM,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_STONEROOM,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_AUDITORIUM,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_CONCERTHALL,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_CAVE,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_ARENA,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_HANGAR,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_CARPETEDHALLWAY,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_HALLWAY,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_STONECORRIDOR,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_ALLEY,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_FOREST,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_CITY,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_MOUNTAINS,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_QUARRY,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_PLAIN,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_PARKINGLOT,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_SEWERPIPE,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_UNDERWATER,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_CAVE,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_CONCERTHALL,
+      DSFX_I3DL2_ENVIRONMENT_PRESET_PLATE
+   };
+
+   const ReverbSettings &state = mixer->ReverbState();
+   const int type = std::max(0, std::min(state.type, kREVERB_COUNT - 1));
+   if (FAILED(mpReverb->SetPreset(presets[type])))
+      return;
+
+   DSFXI3DL2Reverb parameters = {};
+   if (FAILED(mpReverb->GetAllParameters(&parameters)))
+      return;
+
+   float level = mReverbMix;
+   if (state.flags & kREVERB_FlagLevel)
+      level *= std::max(0.0f, std::min(state.level, 1.0f));
+   parameters.lRoom = level <= 0.00001f
+      ? DSFX_I3DL2REVERB_ROOM_MIN
+      : std::max((LONG)DSFX_I3DL2REVERB_ROOM_MIN,
+                 std::min((LONG)DSFX_I3DL2REVERB_ROOM_MAX,
+                          parameters.lRoom + (LONG)(2000.0f * log10f(level))));
+   if (state.flags & kREVERB_FlagDecay)
+      parameters.flDecayTime = std::max(DSFX_I3DL2REVERB_DECAYTIME_MIN,
+         std::min(state.decay, DSFX_I3DL2REVERB_DECAYTIME_MAX));
+   if (state.flags & kREVERB_FlagDamping)
+      parameters.flDecayHFRatio = std::max(DSFX_I3DL2REVERB_DECAYHFRATIO_MIN,
+         std::min(state.damping, DSFX_I3DL2REVERB_DECAYHFRATIO_MAX));
+   mpReverb->SetAllParameters(&parameters);
 }
 
 

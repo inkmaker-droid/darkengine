@@ -14,15 +14,16 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-#include <dsound.h>
-
 #ifndef _LG_SOUND_H
 #include <lgsound.h>
 #endif
 #include <stdio.h>
 
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+
 #include <lgassert.h>
-#include <thrdtool.h>
 
 #include <timelog.h>
 
@@ -129,12 +130,14 @@ public:
    STDMETHOD_(int32,    Get3DPositionVolume)(THIS_ sSndVector *pSrcPos);
    STDMETHOD_(void,     Get3DPositionPanVolume)(THIS_ sSndVector *pSrcPos, int32 *pPan, int32 *pVol);
    STDMETHOD_(void,     Set3DDeferMode)(THIS_ BOOL deferOn);
+	STDMETHOD_(const char*, GetBackendName)(THIS);
+	STDMETHOD_(uint32, GetCapabilities)(THIS);
 
 	// this is how the samples tell the mixer what they're up to
 	void Inform(cSndSample *sample, eSndTraceEvent action);
 	int32 NumberOfChannels();
 
-   static void CALLBACK TimerCallback( UINT tid, UINT r1, DWORD_PTR duser, DWORD_PTR r2, DWORD_PTR r3 );
+   static void TimerCallback(void *user);
    void CheckTimer( void );
    void StartTimer( void );
 
@@ -145,7 +148,7 @@ public:
    cSndSample ** AudibleHead( void );
    cSndSample ** InaudibleHead( void );
 
-   cThreadMutex & MutexRef( void );
+   std::recursive_mutex & MutexRef( void );
 	BOOL CheckStreams(void);
 
    void DoFreeChannelCB(void);
@@ -156,6 +159,8 @@ public:
 
    int BlockDisplay();
    void ReleaseDisplay(int cookie);
+   void InitPlatformState();
+   void ReleasePlatformState();
    void TBD( char *message );
 
 protected:
@@ -174,7 +179,6 @@ protected:
 
 	static BOOL mTimerNeeded;                 // should timer be started/stopped?
 	static uint32 mTimerId;
-	static TIMECAPS mTimerCaps;
 
    // sample allocation stuff
 
@@ -194,7 +198,7 @@ protected:
    int         mIterWhichList;
 
 //   cThreadLock    mLock;
-   cThreadMutex   mMutex;
+   std::recursive_mutex mMutex;
    cMixerThread   *mpThread;
    uint32         mTimeoutMillisecs;
 
@@ -254,26 +258,37 @@ cSndMixer::DoTrace( void            *pSample,
 
 
 // provide access to mixer mutex
-inline cThreadMutex &
+inline std::recursive_mutex &
 cSndMixer::MutexRef()
 {
    return mMutex;
 }
 
 
-class cMixerThread : public cWorkerThread
+class cMixerThread
 {
 public:
-   cMixerThread( cSndMixer *pMixer ) : mpMixer(pMixer), mTimeoutMillisecs( 200 )
-   {};
-   void        SetTimeout( uint32 ms ) {
-      mTimeoutMillisecs = ms;
-   };
+   explicit cMixerThread(cSndMixer *mixer);
+   ~cMixerThread();
+   bool Create(void);
+   bool CallWorker(int command);
+   void WaitForClose(void);
+   void SetTimeout(uint32 milliseconds);
 
 private:
-   virtual DWORD ThreadProc();
-   cSndMixer      *mpMixer;
-   uint32         mTimeoutMillisecs;
+   void ThreadProc(void);
+
+   cSndMixer *mpMixer;
+   std::thread mThread;
+   std::mutex mCallerMutex;
+   std::mutex mCallMutex;
+   std::condition_variable mWake;
+   std::condition_variable mReply;
+   uint32 mTimeoutMillisecs;
+   int mCommand;
+   bool mCommandPending;
+   bool mReplyReady;
+   bool mReplySucceeded;
 };
 
 
@@ -474,11 +489,11 @@ public:
    void        TBD(const char *message );
 
 protected:
-	virtual HRESULT      Start();
+	virtual eSndError    Start();
    virtual void         LLStop() = 0;
    virtual void         LLRelease() = 0;
    virtual void         LLInit()  = 0;
-   virtual HRESULT      LLStart() = 0;
+   virtual eSndError    LLStart() = 0;
    virtual void         LLPause() = 0;
    virtual void         LLResume() = 0;
    virtual void         LLUnMute() = 0;
@@ -533,7 +548,7 @@ protected:
 
    uint32               mBaseOffset;      // position readback offset
 
-   DWORD                mBaseTime;        // base for muted position estimates
+   uint32               mBaseTime;        // base for muted position estimates
    uint32               mBasePos;
 
    cSndSample           *mpNext;          // doubley linked list ptrs

@@ -182,7 +182,10 @@ void DbgCheckInUseChannels(void);  // check to make sure we are all cleaned up
 
 ISearchPath *pSoundPath = 0;
 
-static int  g_SFX_Device = SFXDEVICE_Software;
+// Positional audio is the modern default.  The legacy A3D device value is
+// retained in configuration files, but now means provider-backed 3D audio;
+// it no longer requests a physical sound-card buffer.
+static int  g_SFX_Device = SFXDEVICE_A3D;
 
 ///////////////////////////////////////
 // have some horror
@@ -321,7 +324,8 @@ BOOL SFXInit(void)
    int mixer_rate=22050;
    BOOL createOk;
    sSndEnvironment snd3DEnv;
-   char methodName[256];
+   char methodName[256] = {};
+   char backendName[32] = "auto";
 
    if (pSndMixer)
       return TRUE;
@@ -393,13 +397,10 @@ BOOL SFXInit(void)
    // pick 3D sound method - default is dark's built-in pan/vol
    //
    config_get_raw( "snd3d", methodName, sizeof(methodName) );
+   config_get_raw( "sfx_backend", backendName, sizeof(backendName) );
+   backendName[sizeof(backendName) - 1] = '\0';
    if ( ! strcmpi(methodName, "a3d") )
       g_SFX_Device = SFXDEVICE_A3D;
-
-#ifdef USE_QSOUND
-   else if ( ! strcmpi(methodName, "qmixer") )
-      g_SFX_Device = SFXDEVICE_QMIXER;
-#endif
 
    createOk = FALSE;
 
@@ -408,7 +409,7 @@ BOOL SFXInit(void)
       case SFXDEVICE_Software:
       {
          sfx3DMethod = kSnd3DMethodNone;
-         createOk = SndCreateMixer(&pSndMixer,NULL);
+         createOk = SndCreateMixerNamed(&pSndMixer, NULL, backendName);
          use2DHWmod = FALSE;
          use3DHWmod = FALSE;
          break;
@@ -416,11 +417,8 @@ BOOL SFXInit(void)
 
       case SFXDEVICE_A3D:
       {
-         sfx3DMethod = kSnd3DMethodHardware;
-         // this really just means "use 3d audio HW acceleration", not just
-         //   A3d devices
-         //createOk = SndCreateA3DMixer(&pSndMixer,NULL);
-         createOk = SndCreateMixer(&pSndMixer,NULL);
+         sfx3DMethod = kSnd3DMethodSoftware;
+         createOk = SndCreateMixerNamed(&pSndMixer, NULL, backendName);
          // factor in volume offsets which are used to balance volumes
          //  when hardware acceleration is enabled
          // Don't factor in these offsets.  Just tell the vol get to do it.
@@ -432,16 +430,17 @@ BOOL SFXInit(void)
          break;
       }
 
-#ifdef USE_QSOUND
-      case SFXDEVICE_QMIXER:
+      case SFXDEVICE_OBSOLETE_QSOUND:
       {
-         sfx3DMethod = kSnd3DMethodSoftware;
-         createOk = SndCreateQSMixer(&pSndMixer, NULL);
+         // Preserve old configuration files without retaining the dormant
+         // third-party QSound mixer.
+         g_SFX_Device = SFXDEVICE_Software;
+         sfx3DMethod = kSnd3DMethodNone;
+         createOk = SndCreateMixerNamed(&pSndMixer, NULL, backendName);
          use2DHWmod = FALSE;
          use3DHWmod = FALSE;
          break;
       }
-#endif
 
       default:
       {
@@ -452,7 +451,26 @@ BOOL SFXInit(void)
       }
    }
 
-   if ( createOk ) {
+   BOOL initialized = FALSE;
+   if (createOk) {
+      pSndMixer->Set3DMethod(sfx3DMethod);
+      initialized = pSndMixer->Init(NULL, sfx_use_channels + SFX_BONUSCHANNELS,
+                                    &attribs) == kSndOk;
+   }
+
+   // "auto" means the native provider first, then the portable provider if
+   // the native device cannot be initialized. OpenAL remains opt-in on a
+   // healthy Windows system and is loaded only at runtime.
+   if (!initialized && !strcmpi(backendName, "auto")) {
+      SafeRelease(pSndMixer);
+      if (SndCreateMixerNamed(&pSndMixer, NULL, "openal")) {
+         pSndMixer->Set3DMethod(sfx3DMethod);
+         initialized = pSndMixer->Init(NULL,
+            sfx_use_channels + SFX_BONUSCHANNELS, &attribs) == kSndOk;
+      }
+   }
+
+   if (initialized) {
       TIMELOG_INIT( 16384 );
       if (sgMixerTimeout != -1)
       {
@@ -465,9 +483,6 @@ BOOL SFXInit(void)
       SongEd_Init();
 #endif
 
-      pSndMixer->Set3DMethod(  sfx3DMethod );
-      if (pSndMixer->Init(NULL,sfx_use_channels + SFX_BONUSCHANNELS,&attribs)==kSndOk)
-      {
 #ifndef SHIP
          // Set config var to make sure mixer initializes to expected format.
          if (sgSpewMixerAttribs)
@@ -513,10 +528,9 @@ BOOL SFXInit(void)
             config_get_float( "snd3d_rolloff", &(snd3DEnv.rolloffFactor) );
             pSndMixer->Set3DEnvironment(  &snd3DEnv );
          }
-         return TRUE;      // seems to have worked
-      }
+      return TRUE;
    }
-   pSndMixer=NULL;
+   SafeRelease(pSndMixer);
    SFXClose();
    Warning(("Sound failed to correctly init\n"));
    return FALSE;
@@ -870,10 +884,11 @@ static bool _sfx_start_play(_sfx *fx, BOOL after_delay)
          if ( (fx->flags & SFXFLG_POS) && (sfx3DMethod != kSnd3DMethodNone) )
          {  // if we want 3D, make sure we arent using too many hardware channels
             eSnd3DMethod useMethod=sfx3DMethod;
-            if (sfx3DMethod==kSnd3DMethodHardware)
+            if (sfx3DMethod == kSnd3DMethodSoftware ||
+                sfx3DMethod == kSnd3DMethodHardware)
             {
-               long HW3dcnt=1;
-               if (sfxCheckChannels)
+               long HW3dcnt = 1;
+               if (sfx3DMethod == kSnd3DMethodHardware && sfxCheckChannels)
                   pSndMixer->FreeHWChannelCount(NULL, &HW3dcnt);
                if (HW3dcnt>0 &&
                    ( (max_simul_hardware_3d_snds==0) ||
@@ -1157,7 +1172,7 @@ static BOOL _sfx_update(_sfx *fx, BOOL init, ulong cur_time)
       if (fx->pSnd->Get3DMethod() == kSnd3DMethodNone )
          fx->pSnd->SetPan(fx->parm.pan);
 
-      if ( (fx->flags & SFXFLG_POS) && (sfx3DMethod == kSnd3DMethodHardware) && pSndMixer->Have3DOcclusion() ) {
+      if ((fx->flags & SFXFLG_POS) && pSndMixer->Have3DOcclusion()) {
          // set the occlusion here
          long occlusionLevel;
          float modBF;   // modified blocking factor
@@ -1764,7 +1779,7 @@ BOOL SFX_Use_Occlusion( int sfxHandle )
    _sfx *pSFX = &(fxlist[sfxHandle]);
 
    if ( (pSndMixer != NULL) && (pSFX != NULL) ) {
-      return (pSFX->flags & SFXFLG_POS) && (sfx3DMethod == kSnd3DMethodHardware) && pSndMixer->Have3DOcclusion();
+      return (pSFX->flags & SFXFLG_POS) && pSndMixer->Have3DOcclusion();
    }
 
    return FALSE;

@@ -21,36 +21,15 @@
 
 #include <appagg.h>
 #include <wappapi.h>
-#include <wdispapi.h>
-#include <dispapi.h>
 
 #include <dsnddynf.h>
 #include <mprintf.h>
 #include <dbg.h>
 
 #include <mixerlck.h>
+#include <math.h>
 
-#ifdef _MSC_VER
-// short-term workaround: the A3D libs/headers don't work for Watcom, so disable
-//  A3D acceleration in Watcom builds  - patmc 3-27-98
-
-// #define USE_A3D
-#endif
-
-#ifdef USE_A3D
-
-extern "C" {
-//_declspec (dllexport) 
-HRESULT WINAPI
-A3dCreate(const GUID * lpGUID, LPDIRECTSOUND * ppDS, IUnknown FAR *pUnkOuter );
-};
-
-#else
-extern "C" {
-HRESULT WINAPI
-A3dCreate(const GUID * lpGUID, LPDIRECTSOUND * ppDS, IUnknown FAR *pUnkOuter );
-}
-#endif
+extern BOOL SndCreateOpenALMixer(ISndMixer **ppMixer, IUnknown *pOuter);
 
 // @Note (toml 05-17-96):  Sometime relatively soon the mixer should be converted into a true
 // member of the application aggregate object
@@ -78,27 +57,17 @@ BOOL SndCreateMixer(ISndMixer **ppMixer, IUnknown *pOuter)
    return (*ppMixer != NULL);
 }
 
-BOOL SndCreateA3DMixer(ISndMixer **ppMixer, IUnknown *pOuter)
+BOOL SndCreateMixerNamed(ISndMixer **ppMixer, IUnknown *pOuter, const char *backend)
 {
-   cDSndMixer *pMixer;
+   if (backend != NULL && _stricmp(backend, "openal") == 0)
+      return SndCreateOpenALMixer(ppMixer, pOuter);
+
+   if (backend == NULL || backend[0] == '\0' || _stricmp(backend, "auto") == 0 ||
+       _stricmp(backend, "native") == 0 || _stricmp(backend, "directsound") == 0)
+      return SndCreateMixer(ppMixer, pOuter);
+
    *ppMixer = NULL;
-
-   if( pOuter != NULL )
-      return FALSE;
-
-   pMixer = new cDSndMixer;
-   *ppMixer = pMixer;
-   if ( pMixer != NULL ) {
-      pMixer->SetA3d( TRUE );
-   }
-
-   return (pMixer != NULL);
-}
-
-void
-cDSndMixer::SetA3d( BOOL useA3d )
-{
-   mbUseA3d = useA3d;
+   return FALSE;
 }
 
 ////////////////////////////////////
@@ -121,9 +90,17 @@ cDSndMixer::cDSndMixer()
    mSoundDevice = NULL;
    mpPrimaryBuffer = NULL;
    mpListener = NULL;
-   mbUseA3d = FALSE;
    m3DDeferFlag = DS3D_IMMEDIATE;
    mbPanVolInUse = FALSE;
+   mbReverbEnabled = FALSE;
+   mbReverbTested = FALSE;
+   mbCanReverb = FALSE;
+   memset(&mReverbSettings, 0, sizeof(mReverbSettings));
+   mReverbSettings.flags = kREVERB_FlagType;
+   mReverbSettings.type = kREVERB_Generic;
+   mReverbSettings.level = 1.0f;
+   mReverbSettings.decay = DSFX_I3DL2REVERB_DECAYTIME_DEFAULT;
+   mReverbSettings.damping = DSFX_I3DL2REVERB_DECAYHFRATIO_DEFAULT;
    // end DirectSound Specific stuff
 }
 
@@ -186,16 +163,9 @@ cDSndMixer::Init( sSndSetup    *setup,
       return kSndCantCreateDevice;
    }
 
-   // attemp to create the DirectSound object
-#ifdef USE_A3D
-   if ( mbUseA3d ) {
-      res = A3dCreate(NULL, &mSoundDevice, NULL);
-   } else {
-      res = DynDirectSoundCreate(NULL, &mSoundDevice, NULL);
-   }
-#else
-   res = DynDirectSoundCreate(NULL, &mSoundDevice, NULL);
-#endif
+   // Create the native Windows provider. Positional audio is mixed in
+   // software by modern DirectSound; no physical sound-card buffer is needed.
+   res = DynDirectSoundCreate8(NULL, &mSoundDevice, NULL);
    if ( FAILED(res) ) {
       DSOUND_ERROR( res, "MixInit / DirectSoundCreate" );
       return kSndCantCreateDevice;
@@ -337,8 +307,7 @@ cDSndMixer::Init( sSndSetup    *setup,
 
    mTimerState = eSndTimerUnknown;
    
-   mpDisplayDevice = AppGetObj(IDisplayDevice);
-   mpWinDisplayDevice = AppGetObj(IWinDisplayDevice);
+   InitPlatformState();
 
    // try to get the 3D Listener interface
    m3DDeferFlag = DS3D_IMMEDIATE;
@@ -619,12 +588,7 @@ STDMETHODIMP_(void)
 cDSndMixer::Get3DMethodCapabilities( uint32 *pMethods )
 {
    assert( pMethods != NULL );
-   // TBD: check for 3D hardware & report if found
-   if ( mbUseA3d ) {
-      *pMethods = kSnd3DMethodSoftware | kSnd3DMethodPanVol | kSnd3DMethodHardware;
-   } else {
-      *pMethods = kSnd3DMethodSoftware | kSnd3DMethodPanVol;
-   }
+   *pMethods = kSnd3DMethodSoftware | kSnd3DMethodPanVol;
    TLOG1( "Mix::Get3DMethodCapabilities 0x%x", *pMethods );
 }
 
@@ -657,42 +621,56 @@ cDSndMixer::FreeHWChannelCount(int32* pHWChans, int32* p3DHWChans)
 STDMETHODIMP_(int32)
 cDSndMixer::Init3DReverb(void)
 {
-    // TODO
-    return 0;
+    mbReverbEnabled = ProbeReverb();
+    RefreshReverb();
+    return mbReverbEnabled ? kREVERB_InitOK_SW : kREVERB_InitFail;
 }
 
 STDMETHODIMP_(void)
 cDSndMixer::Shutdown3DReverb(void)
 {
-    // TODO
+    mbReverbEnabled = FALSE;
+    RefreshReverb();
 }
 
 STDMETHODIMP_(BOOL)
 cDSndMixer::Have3DReverb(void)
 {
-    // TODO
-    return 0;
+    return ReverbEnabled();
 }
 
 STDMETHODIMP_(BOOL)
 cDSndMixer::CanDo3DReverb(void)
 {
-    // TODO
-    return 0;
+    return ProbeReverb();
 }
 
 STDMETHODIMP_(BOOL)
 cDSndMixer::Set3DReverbSettings(ReverbSettings* pReverbSettings)
 {
-    // TODO
-    return 0;
+    if (pReverbSettings == NULL || !ProbeReverb())
+       return FALSE;
+
+    if (pReverbSettings->flags & kREVERB_FlagType)
+       mReverbSettings.type = pReverbSettings->type;
+    if (pReverbSettings->flags & kREVERB_FlagLevel)
+       mReverbSettings.level = pReverbSettings->level;
+    if (pReverbSettings->flags & kREVERB_FlagDecay)
+       mReverbSettings.decay = pReverbSettings->decay;
+    if (pReverbSettings->flags & kREVERB_FlagDamping)
+       mReverbSettings.damping = pReverbSettings->damping;
+    mReverbSettings.flags |= pReverbSettings->flags;
+    RefreshReverb();
+    return TRUE;
 }
 
 STDMETHODIMP_(BOOL)
 cDSndMixer::Get3DReverbSettings(ReverbSettings* pReverbSettings)
 {
-    // TODO
-    return 0;
+    if (pReverbSettings == NULL)
+       return FALSE;
+    *pReverbSettings = mReverbSettings;
+    return TRUE;
 }
 
 STDMETHODIMP_(BOOL)
@@ -700,6 +678,78 @@ cDSndMixer::Have3DOcclusion(void)
 {
     // TODO
     return 0;
+}
+
+STDMETHODIMP_(const char*)
+cDSndMixer::GetBackendName(void)
+{
+    return "directsound";
+}
+
+STDMETHODIMP_(uint32)
+cDSndMixer::GetCapabilities(void)
+{
+    uint32 capabilities = kSndCapPositional;
+    if (ProbeReverb())
+       capabilities |= kSndCapReverb;
+    return capabilities;
+}
+
+BOOL cDSndMixer::ProbeReverb(void)
+{
+   if (mbReverbTested)
+      return mbCanReverb;
+
+   mbReverbTested = TRUE;
+   mbCanReverb = FALSE;
+   if (mSoundDevice == NULL)
+      return FALSE;
+
+   WAVEFORMATEX format = {};
+   format.wFormatTag = WAVE_FORMAT_PCM;
+   format.nChannels = 1;
+   format.nSamplesPerSec = 22050;
+   format.wBitsPerSample = 16;
+   format.nBlockAlign = 2;
+   format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+
+   DSBUFFERDESC desc = {};
+   desc.dwSize = sizeof(desc);
+   desc.dwFlags = DSBCAPS_CTRLFX | DSBCAPS_LOCSOFTWARE;
+   desc.dwBufferBytes = 4;
+   desc.lpwfxFormat = &format;
+
+   IDirectSoundBuffer *buffer = NULL;
+   IDirectSoundBuffer8 *buffer8 = NULL;
+   IDirectSoundFXI3DL2Reverb8 *reverb = NULL;
+   DSEFFECTDESC effect = {};
+   DWORD result = DSFXR_UNKNOWN;
+   effect.dwSize = sizeof(effect);
+   effect.guidDSFXClass = GUID_DSFX_STANDARD_I3DL2REVERB;
+
+   HRESULT hr = mSoundDevice->CreateSoundBuffer(&desc, &buffer, NULL);
+   if (SUCCEEDED(hr))
+      hr = buffer->QueryInterface(IID_IDirectSoundBuffer8, (void **)&buffer8);
+   if (SUCCEEDED(hr))
+      hr = buffer8->SetFX(1, &effect, &result);
+   if (SUCCEEDED(hr) && result == DSFXR_LOCHARDWARE)
+      result = DSFXR_PRESENT;
+   if (SUCCEEDED(hr))
+      hr = buffer8->GetObjectInPath(GUID_DSFX_STANDARD_I3DL2REVERB, 0,
+                                    IID_IDirectSoundFXI3DL2Reverb8,
+                                    (void **)&reverb);
+
+   mbCanReverb = SUCCEEDED(hr) && reverb != NULL;
+   SafeRelease(reverb);
+   SafeRelease(buffer8);
+   SafeRelease(buffer);
+   return mbCanReverb;
+}
+
+void cDSndMixer::RefreshReverb(void)
+{
+   for (cSndSample *sample = mpAudibleListHead; sample != NULL; sample = sample->Next())
+      ((cDSndSample *)sample)->UpdateReverb();
 }
 
 STDMETHODIMP_(int32)

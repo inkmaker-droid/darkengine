@@ -15,8 +15,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 #include <algorithm>
-
-#include <win32_platform.h>
+#include <chrono>
 
 #include <assert.h>
 
@@ -24,18 +23,13 @@
 
 #include <comtools.h>
 
-#include <appagg.h>
-#include <wappapi.h>
-#include <wdispapi.h>
-#include <dispapi.h>
-
-#include <dsnddynf.h>
 #include <mprintf.h>
 #include <dbg.h>
 #include <matrix.h>
 #include <math.h>
 
 #include <mixerlck.h>
+#include <sndplatform.h>
 // @Note (toml 05-17-96):  Sometime relatively soon the mixer should be converted into a true
 // member of the application aggregate object
 
@@ -45,15 +39,11 @@ extern "C" {
 static ISndSample * StopSample(ISndMixer *, ISndSample *sample, void *);
 };
 
-// this is how often timer interrupts get generated
-const int kTmBestResolution = 10;
-
 // if fade timer callback doesn't happen by this time, assume timers are broken
 const int kTmFadeStartTimeout = 6000;  // in milliseconds
 
 uint32 cSndMixer::mTimerId = 0;
 BOOL cSndMixer::mTimerNeeded = FALSE;
-TIMECAPS cSndMixer::mTimerCaps = {0};
 
 #ifdef DO_PERF_METERS
 PerfMeter lgsoundThreadPM;
@@ -131,8 +121,7 @@ cSndMixer::~cSndMixer()
    // inform nosy app about death of mixer
    DoTrace( NULL, kSndMixerDestroyed );
 
-   SafeRelease( mpDisplayDevice );
-   SafeRelease( mpWinDisplayDevice );
+   ReleasePlatformState();
 }
 
 void
@@ -466,7 +455,7 @@ STDMETHODIMP_(void) cSndMixer::Update()
    if ( mpThread != NULL ) {
       // tell stream refill thread to do stream update
 #ifndef SHIP
-      if ( mpThread->CallWorker( kThreadUpdate )==E_FAIL)
+      if (!mpThread->CallWorker(kThreadUpdate))
          mprintf("App called update in a mixer mutex, kThreadUpdate failed\n");
 #else
       mpThread->CallWorker( kThreadUpdate );
@@ -482,7 +471,7 @@ STDMETHODIMP_(void) cSndMixer::Update()
       //
       // do a fake mixer timer callback, which updates faders
       //
-      TimerCallback( 0, 0, (DWORD_PTR)this, 0, 0 );
+      TimerCallback(this);
       // TimerCallback will set timer state to working
       mTimerState = eSndTimerBroken;
    }
@@ -1106,6 +1095,18 @@ cSndMixer::Set3DDeferMode( BOOL  deferOn )
    m3DDeferFlag = deferOn;
 }
 
+STDMETHODIMP_(const char*)
+cSndMixer::GetBackendName(void)
+{
+   return "unknown";
+}
+
+STDMETHODIMP_(uint32)
+cSndMixer::GetCapabilities(void)
+{
+   return 0;
+}
+
 
 /************************************************************
  *
@@ -1117,26 +1118,20 @@ cSndMixer::Set3DDeferMode( BOOL  deferOn )
 //
 // mixer timer callback, which updates faders
 //
-void CALLBACK
-cSndMixer::TimerCallback( UINT nTimerID,
-                          UINT uReserved,
-                          DWORD_PTR dwUser,
-                          DWORD_PTR dwReserved1,
-                          DWORD_PTR dwReserved2 )
+void cSndMixer::TimerCallback(void *user)
 {
 
    TLOG_INT_START(1);
-   cSndMixer *mixer = (cSndMixer *)dwUser;      // ??????????????????????????
+   cSndMixer *mixer = static_cast<cSndMixer *>(user);
    cSndSample *pSample;
    uint32 group;
    cSndGroupVolumeFadeTask *pFade;
    BOOL fadeActive;
    BOOL onAudibleList;
-                             // wait!!! - is this mixer (the cast dwUser) == this?
    cMixerAutoLock __mixer_lock__( mixer->mMutex );
 
    mixer->mTimerState = eSndTimerWorking;
-   mixer->mTimerLastTick = timeGetTime();
+   mixer->mTimerLastTick = SndTimeMs();
    mTimerNeeded = FALSE;
 
    // TBD: replace all this with scheme where there is a linked list of
@@ -1208,11 +1203,6 @@ cSndMixer::TimerCallback( UINT nTimerID,
 void
 cSndMixer::CheckTimer( void )
 {
-   int32 resolution;
-   AutoAppIPtr(DisplayDevice);
-   UINT result;
-   BOOL failed = FALSE;
-
    if ( mTimerNeeded == FALSE ) {
 
 
@@ -1221,21 +1211,7 @@ cSndMixer::CheckTimer( void )
       //
       if ( mTimerId != 0 ) {
          TLOG0( "Mix:CheckTimer off" );
-         // timer is active & not needed - kill it
-         result = timeKillEvent(mTimerId);
-#ifndef SHIP
-         if ( result ) {
-            mprintf( "!!! timeKillEvent returns %d\n", result );
-         }
-#endif
-
-         // stop the timer
-         result = timeEndPeriod(kFadeGranularity);
-#ifndef SHIP
-         if ( result ) {
-            mprintf( "!!! timeEndPeriod returns %d\n", result );
-         }
-#endif
+         SndStopPeriodicTimer(mTimerId, kFadeGranularity);
          mTimerId = 0;
          mTimerState = eSndTimerUnknown;
       }
@@ -1250,63 +1226,23 @@ cSndMixer::CheckTimer( void )
       if ( (mTimerId == 0) && (mTimerState != eSndTimerBroken) ) {
          // timer is inactive & needed - start it
          mTimerState = eSndTimerBroken;
-         result = timeGetDevCaps(&mTimerCaps, sizeof(TIMECAPS));
-         if ( result ) {
-#ifndef SHIP
-            mprintf( "!!! timeGetDevCaps returns %d\n", result );
-#endif
-            failed = TRUE;
-         }
- 
-         // get resolution from desired resolution & system limits
-         resolution = 
-            std::min(std::max(mTimerCaps.wPeriodMin, static_cast<UINT>(kTmBestResolution)),
-                mTimerCaps.wPeriodMax);
-
          // break the DirectX display lock to avoid hang in timer calls
          int blockCookie = BlockDisplay();
-
-         // start the timer
-         result = timeBeginPeriod(kFadeGranularity);
-         if ( result ) {
-#ifndef SHIP
-            mprintf( "!!! timeBeginPeriod returns %d\n", result );
-#endif
-            failed = TRUE;
-         }
-
-         //
-         // first argument is how often timer callbacks occur (roughly) in
-         //   milliseconds, second argument is how accurately they can
-         //   be scheduled in milliseconds (how often timer interrupt occurs)
-         //
-         TLOG1( "Mix:CheckTimer on resolution %d", resolution );
-         mTimerId = timeSetEvent(kFadeGranularity, resolution,
-                                 TimerCallback,
-                                 (DWORD_PTR)this, TIME_PERIODIC );
-
-         if ( mTimerId == NULL ) {
-#ifndef SHIP
-            mprintf( "!!! timeSetEvent returns NULL\n" );
-#endif
-            failed = TRUE;
-         }
-
-         // restore the DirectX display lock
+         mTimerId = SndStartPeriodicTimer(kFadeGranularity, TimerCallback, this);
          ReleaseDisplay(blockCookie);
 
-         if ( failed == FALSE ) {
+         if (mTimerId != 0) {
             // the timer SHOULD be working, setup stuff which CheckTimer will
             // use to detect dead timer
             mTimerState = eSndTimerUnknown;
-            mTimerLastTick = timeGetTime();
+            mTimerLastTick = SndTimeMs();
          }
       } else {
          //
          // timer is needed & has been started - see if it is really ticking
          //
          if ( mTimerState == eSndTimerUnknown ) {
-            if ( (timeGetTime() - mTimerLastTick) > kTmFadeStartTimeout ) {
+            if ( (SndTimeMs() - mTimerLastTick) > kTmFadeStartTimeout ) {
                // timer was started over a second ago, no ticks - assume broken
                Warning( ("Sound fade timer broken, resorting to manual fades\n") );
                mTimerState = eSndTimerBroken;
@@ -1340,7 +1276,6 @@ cSndMixer::StartTimer( void )
 STDMETHODIMP_(uint32)
 cSndMixer::SetTimeout( uint32       milliSecs )
 {
-   int      masterPriority;
    uint32   oldTimeout = mTimeoutMillisecs;
 
    mTimeoutMillisecs = milliSecs;
@@ -1370,12 +1305,6 @@ cSndMixer::SetTimeout( uint32       milliSecs )
             delete mpThread;
             mpThread = NULL;
          } else {
-            // set thread priority to one above main thread priority
-            masterPriority = GetThreadPriority(GetCurrentThread());
-            if ( masterPriority < THREAD_PRIORITY_HIGHEST ) {
-               masterPriority++;
-            }
-            mpThread->SetPriority( masterPriority );
             mpThread->SetTimeout( mTimeoutMillisecs );
          }
       }
@@ -1383,31 +1312,6 @@ cSndMixer::SetTimeout( uint32       milliSecs )
    return oldTimeout;
 }
    
-
-//
-// Block display use, if there is a display
-//
-int cSndMixer::BlockDisplay()
-{
-   if (mpDisplayDevice)
-   {
-      mpWinDisplayDevice->WaitForMutex();
-      return mpDisplayDevice->BreakLock();
-   }
-   return 0;
-}
-
-//
-// Release a previous display block
-//
-void cSndMixer::ReleaseDisplay(int cookie)
-{
-   if (mpDisplayDevice)
-   {
-      mpDisplayDevice->RestoreLock(cookie);
-      mpWinDisplayDevice->ReleaseMutex();
-   }
-}
 
 /************************************************************
  *
@@ -1425,85 +1329,133 @@ void cSndMixer::ReleaseDisplay(int cookie)
  */
 
 
-//
-// thread which updates all streams
-//
-DWORD
-cMixerThread::ThreadProc( void )
+cMixerThread::cMixerThread(cSndMixer *mixer)
+   : mpMixer(mixer), mTimeoutMillisecs(200), mCommand(0),
+     mCommandPending(false), mReplyReady(false), mReplySucceeded(false)
 {
-   DWORD          fWaitResult;
-   BOOL           fExit = FALSE;
-   HANDLE         waitHandle;
-   cThreadMutex   &mixLock = mpMixer->MutexRef();
-   BOOL           streamsActive = TRUE;
+}
 
-   waitHandle = GetCallHandle();
-   // possible priorities: NORMAL, ABOVE_NORMAL, HIGHEST, TIME_CRITICAL
-   SetPriority( THREAD_PRIORITY_HIGHEST );
-   //SetTimeout( INFINITE );
-   do {
-// TBD: allow app to set timeout
-      fWaitResult = WaitForSingleObject( waitHandle, 
-                                         streamsActive ? mTimeoutMillisecs : INFINITE );
+cMixerThread::~cMixerThread()
+{
+   if (mThread.joinable())
+      mThread.join();
+}
 
-      TLOG_INT_START( 2 );
-      switch ( fWaitResult ) {
-         case WAIT_TIMEOUT:
-            // timeout occured, so do update of streams
-            TLOG0( "MixThread: CheckStreams timeout" );
-            if (mixLock.Wait(0))
-            {
-               //mprintf("WOOOHOOO!!!!!!!!\n");
-               PERF_ENTER( lgsoundThreadPM );
-               mpMixer->DoTrace( NULL, kSndThreadUpdateStart );
-               streamsActive = mpMixer->CheckStreams();
-               PERF_EXIT( lgsoundThreadPM );
-#ifdef DO_PERF_METERS
-               TLOG1( "MixThread: CheckStreams took %d millisecs",
-                     lgsoundThreadPM.deltaTime );
-#endif
-               mpMixer->DoTrace( NULL, kSndThreadUpdateEnd );
-               mixLock.Release();
-            }
-            break;
-         case WAIT_OBJECT_0:
-            // It's a call from the master thread...
-            switch ( GetCallParam() ){
-               case kThreadExit:
-                  Reply(S_OK);
-                  fExit = TRUE;
-                  break;
+bool cMixerThread::Create(void)
+{
+   try
+   {
+      mThread = std::thread(&cMixerThread::ThreadProc, this);
+      return true;
+   }
+   catch (...)
+   {
+      return false;
+   }
+}
 
-               case kThreadUpdate:
-                  if (mixLock.Wait(0))
-                  {
-                     streamsActive = mpMixer->CheckStreams();
-                     mixLock.Release();
-                     Reply(S_OK);
-                  }
-                  else
-                  {
-                     Reply(E_FAIL);
-                  }
-                  break;
+bool cMixerThread::CallWorker(int command)
+{
+   if (!mThread.joinable())
+      return false;
 
-               case kThreadNewStream:
-                  // a stream has been created - allow wakeup on timeout
-                  streamsActive = TRUE;
-                  Reply(S_OK);
-                  break;
+   std::lock_guard<std::mutex> callerLock(mCallerMutex);
+   std::unique_lock<std::mutex> lock(mCallMutex);
+   mCommand = command;
+   mCommandPending = true;
+   mReplyReady = false;
+   mWake.notify_one();
+   mReply.wait(lock, [this] { return mReplyReady; });
+   return mReplySucceeded;
+}
 
-               default:
-                  CriticalMsg("Unknown call to Mixer Stream-refill Thread");
-                  Reply(E_FAIL);
-                  break;
-            }
-            break;
+void cMixerThread::WaitForClose(void)
+{
+   if (mThread.joinable())
+      mThread.join();
+}
+
+void cMixerThread::SetTimeout(uint32 milliseconds)
+{
+   std::lock_guard<std::mutex> lock(mCallMutex);
+   mTimeoutMillisecs = milliseconds;
+}
+
+void cMixerThread::ThreadProc(void)
+{
+   std::recursive_mutex &mixLock = mpMixer->MutexRef();
+   bool streamsActive = true;
+   bool exit = false;
+   SndPrioritizeStreamingThread();
+
+   while (!exit)
+   {
+      int command = 0;
+      bool timedOut = false;
+      {
+         std::unique_lock<std::mutex> lock(mCallMutex);
+         if (streamsActive)
+            timedOut = !mWake.wait_for(lock,
+               std::chrono::milliseconds(mTimeoutMillisecs),
+               [this] { return mCommandPending; });
+         else
+            mWake.wait(lock, [this] { return mCommandPending; });
+         if (!timedOut)
+         {
+            command = mCommand;
+            mCommandPending = false;
+         }
       }
-      TLOG_INT_END( 2 );
-   } while ( !fExit && (fWaitResult != WAIT_FAILED) );
 
-   return S_OK;
+      TLOG_INT_START(2);
+      bool succeeded = true;
+      if (timedOut)
+      {
+         TLOG0("MixThread: CheckStreams timeout");
+         if (mixLock.try_lock())
+         {
+            PERF_ENTER(lgsoundThreadPM);
+            mpMixer->DoTrace(NULL, kSndThreadUpdateStart);
+            streamsActive = mpMixer->CheckStreams();
+            PERF_EXIT(lgsoundThreadPM);
+            mpMixer->DoTrace(NULL, kSndThreadUpdateEnd);
+            mixLock.unlock();
+         }
+      }
+      else if (command == kThreadExit)
+      {
+         exit = true;
+      }
+      else if (command == kThreadUpdate)
+      {
+         succeeded = mixLock.try_lock();
+         if (succeeded)
+         {
+            streamsActive = mpMixer->CheckStreams();
+            mixLock.unlock();
+         }
+      }
+      else if (command == kThreadNewStream)
+      {
+         streamsActive = true;
+      }
+      else
+      {
+         CriticalMsg("Unknown call to Mixer Stream-refill Thread");
+         succeeded = false;
+      }
+      TLOG_INT_END(2);
+
+      if (!timedOut)
+      {
+         {
+            std::lock_guard<std::mutex> lock(mCallMutex);
+            mReplySucceeded = succeeded;
+            mReplyReady = true;
+         }
+         mReply.notify_one();
+      }
+   }
 }
 
 

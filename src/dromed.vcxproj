@@ -100,7 +100,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;arq.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dxguid.lib;actmovie.lib;entrywin.lib;arq.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -108,6 +108,7 @@
       <AdditionalIncludeDirectories>.;.\actreact;.\ai;.\csg;.\editor;.\engfeat;.\framewrk;.\motion;.\object;.\physics;.\portal;.\render;.\script;.\shock;.\sim;.\sound;.\ui;.\dark;.\deepc;.\deepc\motion;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>types.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>None</DebugInformationFormat>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
@@ -121,8 +122,8 @@
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>arq.lib;dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <AdditionalDependencies>arq.lib;dxguid.lib;actmovie.lib;entrywin.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -140,7 +141,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;arq.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dxguid.lib;actmovie.lib;entrywin.lib;arq.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -148,6 +149,7 @@
       <AdditionalIncludeDirectories>.;.\actreact;.\ai;.\csg;.\editor;.\engfeat;.\framewrk;.\motion;.\object;.\physics;.\portal;.\render;.\script;.\shock;.\sim;.\sound;.\ui;.\dark;.\deepc;.\deepc\motion;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>types.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>None</DebugInformationFormat>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
@@ -161,8 +163,8 @@
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>arq.lib;dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <AdditionalDependencies>arq.lib;dxguid.lib;actmovie.lib;entrywin.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
