@@ -154,6 +154,7 @@
     <Text Include="cpptools.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\3rdparty\blast\blast.c" />
     <ClCompile Include="delmlist.cpp" />
     <ClCompile Include="dlist.cpp" />
     <ClCompile Include="dynarray.cpp" />

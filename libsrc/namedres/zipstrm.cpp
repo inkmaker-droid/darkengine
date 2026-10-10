@@ -2,34 +2,11 @@
 
 #include <zipstrm.h>
 #include <portableinflate.h>
-#include <dynfunc.h>
 
-#ifndef EXP_BUFFER_SIZE
-#define EXP_BUFFER_SIZE    12596
-#endif
-
-///////////////////////////////////////////////////////////////////////////////
-//
-// Dynamic loading
-//
-
-static void PkFail()
+extern "C"
 {
-	CriticalMsg("Failed to locate and load implode.dll!");
-	exit(1);
+#include <blast.h>
 }
-
-typedef unsigned int(*tPkReadFunc)(char* buf, unsigned int* size, void* param);
-typedef void(*tPkWriteFunc)(char* buf, unsigned int* size, void* param);
-
-DeclDynFunc(unsigned int, PkImplode, (tPkReadFunc, tPkWriteFunc, char*, void*, unsigned int*, unsigned int*));
-DeclDynFunc(unsigned int, PkExplode, (tPkReadFunc, tPkWriteFunc, char*, void*));
-
-ImplDynFunc(PkImplode, "implode.dll", "implode", PkFail);
-ImplDynFunc(PkExplode, "implode.dll", "explode", PkFail);
-
-#define DynPkImplode (DynFunc(PkImplode).GetProcAddress())
-#define DynPkExplode (DynFunc(PkExplode).GetProcAddress())
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -136,104 +113,79 @@ void cZipStream::SetName(const char* pName)
 struct sPkExplodeInfo
 {
 	IStoreStream* pSourceStream;
-	const char* pSource;
-	const char* pSourceLimit;
+	unsigned char readBuffer[0x2000];
 	char* pDest;
 	const char* pDestLimit;
 	ulong skip;
-	char* pReadBuf;
 	int fComplete;
 };
 
 ///////////////////////////////////////
 
-unsigned int PkExplodeReader(char* buf, unsigned int* size, void* param)
+unsigned int PkExplodeReader(void* param, unsigned char** buffer)
 {
 	auto* pInfo = reinterpret_cast<sPkExplodeInfo*>(param);
 
 	if (!param || pInfo->fComplete)
 		return 0;
 
-	if (pInfo->pSource >= pInfo->pSourceLimit)
-	{
-		auto targetReadSize = pInfo->skip ? pInfo->skip :
-			static_cast<long>(pInfo->pDestLimit - pInfo->pDest);
-		if (targetReadSize < 1)
-			targetReadSize = 1;
-		else if (targetReadSize > 0x10000)
-			targetReadSize = 0x10000;
-
-		auto a = pInfo->pSourceStream->Read(targetReadSize, pInfo->pReadBuf);
-		pInfo->pSource = pInfo->pReadBuf;
-		pInfo->pSourceLimit = a + pInfo->pSource;
-	}
-	if (pInfo->pSourceLimit == pInfo->pSource)
+	const auto size = pInfo->pSourceStream->Read(
+		static_cast<int>(sizeof(pInfo->readBuffer)),
+		reinterpret_cast<char*>(pInfo->readBuffer));
+	if (size <= 0)
 		return 0;
 
-	auto length = std::min(pInfo->pSourceLimit - pInfo->pSource, static_cast<ptrdiff_t>(*size));
-	memcpy(buf, pInfo->pSource, length);
-	pInfo->pSource += length;
-	*size = static_cast<unsigned>(length);
-
-	return static_cast<unsigned>(length);
+	*buffer = pInfo->readBuffer;
+	return static_cast<unsigned>(size);
 }
 
 ///////////////////////////////////////
 
-void PkExplodeWriter(char* buf, unsigned int* size, void* param)
+int PkExplodeWriter(void* param, unsigned char* buffer, unsigned size)
 {
 	auto* pInfo = reinterpret_cast<sPkExplodeInfo*>(param);
 
-	auto actualSize = *size;
-
 	if (pInfo->skip)
 	{
-		if (pInfo->skip > actualSize)
-		{
-			pInfo->skip -= actualSize;
-			return;
-		}
-
-		actualSize -= pInfo->skip;
-		buf += pInfo->skip;
-		pInfo->skip = 0;
-
+		const auto skipped = std::min<unsigned>(pInfo->skip, size);
+		pInfo->skip -= skipped;
+		buffer += skipped;
+		size -= skipped;
 	}
 
-	if (actualSize + pInfo->pDest > pInfo->pDestLimit)
-		actualSize = static_cast<unsigned>(pInfo->pDestLimit - pInfo->pDest);
-
-	memcpy(pInfo->pDest, buf, actualSize);
-	pInfo->pDest += actualSize;
-	if (pInfo->pDest > pInfo->pDestLimit)
+	const auto available = static_cast<size_t>(pInfo->pDestLimit - pInfo->pDest);
+	const auto copied = std::min<size_t>(available, size);
+	if (copied)
+	{
+		memcpy(pInfo->pDest, buffer, copied);
+		pInfo->pDest += copied;
+	}
+	if (copied != size || pInfo->pDest == pInfo->pDestLimit)
+	{
 		pInfo->fComplete = 1;
+		return 1;
+	}
+	return 0;
 }
 
 ///////////////////////////////////////
 
 int PkExplodeStreamToMem(IStoreStream* pSourceStream, void* pDest, int skip, int destMax)
 {
-	static char* pPkBuffer = nullptr;
-
-	if (!pPkBuffer)
-		pPkBuffer = static_cast<char*>(Malloc(0x13134u));
-
-	auto pWorkBuf = pPkBuffer;
 	if (!destMax)
 		destMax = 134217728;
 
 	sPkExplodeInfo explodeInfo{};
 	explodeInfo.pSourceStream = pSourceStream;
-	explodeInfo.pReadBuf = pPkBuffer + EXP_BUFFER_SIZE;
-	explodeInfo.pSource = pPkBuffer + EXP_BUFFER_SIZE;
-	explodeInfo.pSourceLimit = pPkBuffer + EXP_BUFFER_SIZE;
 	explodeInfo.pDest = static_cast<char*>(pDest);
 	explodeInfo.pDestLimit = static_cast<char*>(pDest) + destMax;
 	explodeInfo.skip = skip;
 	explodeInfo.fComplete = 0;
 
-	auto result = DynPkExplode(PkExplodeReader, PkExplodeWriter, (char*)pWorkBuf, &explodeInfo);
-	if (result && (result != 4 || !explodeInfo.fComplete) || explodeInfo.pDest > (char*)explodeInfo.pDestLimit)
+	auto result = blast(PkExplodeReader, &explodeInfo,
+		PkExplodeWriter, &explodeInfo, nullptr, nullptr);
+	if ((result != 0 && (result != 1 || !explodeInfo.fComplete)) ||
+		explodeInfo.pDest > explodeInfo.pDestLimit)
 	{
 		CriticalMsg1("Expansion failed (%d)!", result);
 		return 0;
