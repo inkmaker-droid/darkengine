@@ -323,14 +323,14 @@ BOOL ScrnSetModeRaw(const sScrnMode* mode)
                 if (kind == kDispFullScreen)
                 {
                     flags |= kDispAttemptFlippable;
-                    pDD = lgd3d_get_device_info(idx)->p_ddraw_guid;
+                    pDD = NULL;
                 }
                 else
                     pDD = NULL;
 
 #ifndef SHIP
                 if (config_is_defined("d3d_driver_index"))
-                    mprintf("Using D3D device: %s\n", lgd3d_get_device_info(idx)->p_ddraw_desc);
+                    mprintf("Using renderer: %s\n", lgd3d_get_device_info(idx)->name);
 #endif
 
                 g_lgd3d_device_index = idx;

@@ -1,5 +1,3 @@
-#include <win32_platform.h>
-#include <d3d.h>
 #include <render_backend.h>
 #include <dev2d.h>
 #include <lgd3d.h>
@@ -32,9 +30,8 @@ static BOOL g_dither = FALSE, g_antialias = FALSE, g_shading = TRUE;
 static int g_chromaR = 255, g_chromaG = 0, g_chromaB = 255;
 static grs_bitmap *g_defaultBitmap = NULL;
 static lgd3ds_device_info g_deviceInfo;
-static D3DDEVICEDESC g_deviceDesc;
 static short g_supportedModes[GRD_MODES + 1];
-static char g_deviceName[] = "Direct3D 11";
+static const char g_deviceName[] = "Modern renderer";
 
 extern "C" {
 extern void SetTextureId(int n);
@@ -199,24 +196,15 @@ static void InitTextureManager(lgd3ds_device_info *info) {
 }
 
 extern "C" int lgd3d_enumerate_devices(void) {
-  // Enumeration happens before the display mode creates its swap chain.
-  // D3D11 device creation is validated by the presenter during mode setup.
+  // Enumeration happens before the platform renderer creates its output.
   int i;
-  ZeroMemory(&g_deviceDesc, sizeof(g_deviceDesc));
-  g_deviceDesc.dwSize = sizeof(g_deviceDesc);
-  g_deviceDesc.dcmColorModel = D3DCOLOR_RGB;
-  g_deviceDesc.dwDeviceRenderBitDepth = DDBD_16 | DDBD_24 | DDBD_32;
-  g_deviceDesc.dwDeviceZBufferBitDepth = DDBD_16 | DDBD_24 | DDBD_32;
-  g_deviceDesc.dpcTriCaps.dwSize = sizeof(g_deviceDesc.dpcTriCaps);
-  g_deviceDesc.dpcTriCaps.dwRasterCaps = D3DPRASTERCAPS_FOGVERTEX;
   int supportedModeCount = gr_get_registered_mode_count(16);
   for (i = 0; i < supportedModeCount && i < GRD_MODES; ++i)
     g_supportedModes[i] = (short)gr_get_registered_mode(i, 16);
   g_supportedModes[i] = -1;
-  ZeroMemory(&g_deviceInfo, sizeof(g_deviceInfo));
-  g_deviceInfo.device_desc = &g_deviceDesc;
+  memset(&g_deviceInfo, 0, sizeof(g_deviceInfo));
   g_deviceInfo.supported_modes = g_supportedModes;
-  g_deviceInfo.p_ddraw_desc = g_deviceName;
+  g_deviceInfo.name = g_deviceName;
   g_deviceInfo.flags = LGD3DF_CAN_DO_ZBUFFER | LGD3DF_CAN_DO_VERTEX_FOG |
                        LGD3DF_CAN_DO_SINGLE_PASS_MT | LGD3DF_CAN_DO_WINDOWED |
                        LGD3DF_CAN_DO_ITERATE_ALPHA;
@@ -237,7 +225,7 @@ extern "C" BOOL lgd3d_is_hardware(void) { return TRUE; }
 extern "C" void lgd3d_texture_set_RGB(bool isRGB) {}
 
 extern "C" BOOL lgd3d_init(lgd3ds_device_info *info) {
-  DWORD white = 0xffffffff;
+  uint32 white = 0xffffffff;
   int i;
   if (!RenderBackendAvailable())
     return FALSE;
@@ -365,10 +353,10 @@ extern "C" void lgd3d_set_pal_slot_flags(uint start, uint n, uchar *pal,
 extern "C" void lgd3d_set_pal(uint start, uint n, uchar *pal) {
   lgd3d_set_pal_slot(start, n, pal, 0);
 }
-extern "C" BOOL lgd3d_get_texture_wrapping(DWORD level) {
+extern "C" BOOL lgd3d_get_texture_wrapping(uint level) {
   return level < 2 ? g_wrap[level] : FALSE;
 }
-extern "C" BOOL lgd3d_set_texture_wrapping(DWORD level, BOOL wrap) {
+extern "C" BOOL lgd3d_set_texture_wrapping(uint level, BOOL wrap) {
   BOOL old;
   if (level >= 2)
     return FALSE;
@@ -419,7 +407,7 @@ extern "C" void lgd3d_get_texblending_modes(ulong *a, ulong *b) {
   if (b)
     *b = LGD3D_MULTITEXTURE_COLOR;
 }
-extern "C" BOOL lgd3d_get_error(DWORD *code, DWORD *result) {
+extern "C" BOOL lgd3d_get_error(uint32 *code, uint32 *result) {
   if (code)
     *code = LGD3D_EC_OK;
   if (result)

@@ -22,14 +22,9 @@ extern "C" {
 
     typedef struct ILGSurface ILGSurface;
 
-    typedef struct _D3DDeviceDesc DevDesc;
-
     typedef struct lgd3ds_device_info {
-        GUID         device_guid;
-        GUID* p_ddraw_guid;
-        DevDesc* device_desc;
         short* supported_modes; // -1 terminated list 
-        char* p_ddraw_desc;
+        const char* name;
         ulong        flags;
     } lgd3ds_device_info;
 
@@ -264,8 +259,8 @@ do if (g_tmgr) g_tmgr->unload_texture(bm); while (0)
     // texture wrapping
     //  TRUE == wrap the texture (texture is a torus), 
     //  FALSE == clamp the texture (texture is a closed rectangle)
-    extern BOOL lgd3d_get_texture_wrapping(DWORD dwLevel);
-    extern BOOL lgd3d_set_texture_wrapping(DWORD dwLevel, BOOL bSetSmooth);
+    extern BOOL lgd3d_get_texture_wrapping(uint level);
+    extern BOOL lgd3d_set_texture_wrapping(uint level, BOOL wrap);
 
 
     // palettes
@@ -432,7 +427,7 @@ do if (g_tmgr) g_tmgr->unload_texture(bm); while (0)
 
 
 
-    BOOL lgd3d_get_error(DWORD* pdwCode, DWORD* phResult);
+    BOOL lgd3d_get_error(uint32* code, uint32* result);
 
 
 #ifdef __cplusplus

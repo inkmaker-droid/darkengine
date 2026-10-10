@@ -1347,7 +1347,7 @@ protected:
       for (long i = 0; i < NUM_LIST; i++) {
          if (i < mNumVidDevices) {
             info = lgd3d_get_device_info (i);
-            mListButtonStrs[i] = info->p_ddraw_desc;
+            mListButtonStrs[i] = info->name;
          }
          else
             mListButtonStrs[i] = "";

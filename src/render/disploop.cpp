@@ -100,7 +100,7 @@ static void compute_kind(StateRecord* state)
          }
 
          flags = kDispAttemptFlippable|kDispAttempt3D;
-         pDDrawGuid = lgd3d_get_device_info(idx)->p_ddraw_guid;
+         pDDrawGuid = NULL;
 
          g_lgd3d_device_index = idx;
          g_lgd3d = TRUE; 
