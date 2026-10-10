@@ -765,7 +765,6 @@
     <ClInclude Include="framewrk\Netmsg.h" />
     <ClInclude Include="framewrk\Netsim.h" />
     <ClInclude Include="framewrk\Netsynch.h" />
-    <ClInclude Include="framewrk\Netvoice.h" />
     <ClInclude Include="framewrk\Pickgame.h" />
     <ClInclude Include="framewrk\R3app.h" />
     <ClInclude Include="framewrk\Rand.h" />
@@ -1983,7 +1982,6 @@
     <ClCompile Include="framewrk\Netprops.cpp" />
     <ClCompile Include="framewrk\Netsim.cpp" />
     <ClCompile Include="framewrk\Netsynch.cpp" />
-    <ClCompile Include="framewrk\Netvoice.cpp" />
     <ClCompile Include="framewrk\Pickgame.cpp" />
     <ClCompile Include="framewrk\R3app.c" />
     <ClCompile Include="framewrk\Rand.cpp" />

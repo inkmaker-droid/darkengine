@@ -65,7 +65,6 @@
 #include <status.h>   // for Status()
 #include <dwordset.h> // for cDWORDSet
 #include <objhp.h>    // for ObjGet|Set[Max]HitPoints
-#include <netvoice.h>
 #include <objpos.h>   // attempt to put avatars in the right place...
 #include <ghostapi.h>
 #include <rendprop.h> // for ObjSetHasRefs()
@@ -75,7 +74,7 @@
 // Include these absolutely last
 #include <dbmem.h>
 
-const tNetPlayerID NULL_NET_ID = DPID_UNKNOWN;
+const tNetPlayerID NULL_NET_ID = NET_PLAYER_UNKNOWN;
 
 const int MAX_MESSAGE_SIZE = (8 * 1024);
 
@@ -120,7 +119,7 @@ struct sNetMsg_Hi {
 };
 
 // The message used for creating the player. This can't be done through
-// cNetMsg, because it needs to get at the actual DPID.
+// cNetMsg, because it needs to get at the actual tNetTransportPlayerID.
 struct sNetMsg_CreatePlayer {
    tNetMsgHandlerID handlerID;
    eNetMessageType type;
@@ -358,15 +357,15 @@ public:
    TimeTable() {}
    ~TimeTable() {}
 
-   void Add(DWORD val, ulong time) { Set.Set(val, time); }
-   BOOL InSet(DWORD val, ulong *pTime) { return Set.Lookup(val, pTime); }
-   void Delete(DWORD val) { Set.Delete(val); }
+   void Add(uint32 val, ulong time) { Set.Set(val, time); }
+   BOOL InSet(uint32 val, ulong *pTime) { return Set.Lookup(val, pTime); }
+   void Delete(uint32 val) { Set.Delete(val); }
    int Size() { return Set.nElems(); }
    void ClearAll() { Set.Clear(); }
 
 private:
-   typedef cScalarHashFunctions<DWORD> cSetHashFns;
-   typedef cHashTable<DWORD, ulong, cSetHashFns> cSetTable;
+   typedef cScalarHashFunctions<uint32> cSetHashFns;
+   typedef cHashTable<uint32, ulong, cSetHashFns> cSetTable;
    cSetTable Set;
 };
 
@@ -459,8 +458,8 @@ typedef cDListNode<cPlayerMsgBundle, 1> cPlayerMsgBundleNode;
 class cPlayerMsgBundle : public cPlayerMsgBundleNode
 {
 public:
-   cPlayerMsgBundle(DPID me)
-      : m_DPID(me),
+   cPlayerMsgBundle(tNetTransportPlayerID me)
+      : m_Player(me),
         m_NumMsgs(0),
         m_TotalMsgSize(0)
    {}
@@ -501,7 +500,7 @@ public:
       m_TotalMsgSize = 0;
    }
 
-   DPID m_DPID;
+   tNetTransportPlayerID m_Player;
    int m_NumMsgs;
    ulong m_TotalMsgSize;
    cBundledMessageList m_Msgs;
@@ -516,7 +515,7 @@ public:
    }
 
    // Add a player to this list:
-   void AddPlayer(DPID player)
+   void AddPlayer(tNetTransportPlayerID player)
    {
       if (GetPlayer(player) == NULL)
       {
@@ -525,12 +524,12 @@ public:
       }
    }
 
-   cPlayerMsgBundle *GetPlayer(DPID player)
+   cPlayerMsgBundle *GetPlayer(tNetTransportPlayerID player)
    {
       cPlayerMsgBundle *pBundle = GetFirst();
       while (pBundle)
       {
-         if (pBundle->m_DPID == player)
+         if (pBundle->m_Player == player)
             return pBundle;
          else
             pBundle = pBundle->GetNext();
@@ -539,7 +538,7 @@ public:
    }
 
    // Remove a player from this list:
-   void KillPlayer(DPID player)
+   void KillPlayer(tNetTransportPlayerID player)
    {
       cPlayerMsgBundle *pBundle = GetPlayer(player);
       if (pBundle)
@@ -568,7 +567,7 @@ typedef cDListNode<cStoredMessage, 1> cStoredMessageNode;
 class cStoredMessage : public cStoredMessageNode
 {
 public:
-   cStoredMessage(DPID from, const char *msg, ulong size)
+   cStoredMessage(tNetTransportPlayerID from, const char *msg, ulong size)
       : m_From(from),
         m_Size(size)
    {
@@ -582,7 +581,7 @@ public:
       free(m_Msg);
    }
 
-   DPID m_From;
+   tNetTransportPlayerID m_From;
    char *m_Msg;
    ulong m_Size;
 };
@@ -601,7 +600,7 @@ public:
 // PlayerInfo property, the cPlayerMsgBundle, and ObjID stored in the
 // DPlay info. It's a real mess to work with. All of these should be
 // unified into one structure, which is properly save/loaded, and is
-// efficiently indexed into by all three indexes (DPID, playerNum, and
+// efficiently indexed into by all three indexes (tNetTransportPlayerID, playerNum, and
 // ObjID).
 //
 
@@ -623,7 +622,7 @@ public:
 //
 // What we really want is a proper cPlayerInfo structure, which will more
 // or less subsume all of these old concepts. This will contain the
-// player's name and IP address; his DPID, ObjID, and playerNumber, as
+// player's name and IP address; his tNetTransportPlayerID, ObjID, and playerNumber, as
 // far as those are yet known; and his message bundle. This structure
 // should probably be defined in a separate file, both to reduce the
 // size of netman and to force me to think more clearly about the
@@ -640,12 +639,12 @@ public:
 //
 // The structure should be semi-persistent, picking up the elements of
 // persistence that we now have. cAvatar currently saves the player's
-// number and objID; along with that, we save the DPID. This triplet
+// number and objID; along with that, we save the tNetTransportPlayerID. This triplet
 // should be saved out of the new structure; if we do it right, we can
 // probably even avoid invalidating old savegames.
 //
 // We will probably continue to index into this in all three dimensions.
-// Besides the property and gm_Net DPID pointer (both of which become
+// Besides the property and gm_Net tNetTransportPlayerID pointer (both of which become
 // slightly optional; we should consider their value), we will keep the
 // array table, indexed by playerNum. This should probably be an array
 // of pointers, rather than a container; that way, we can quickly see
@@ -805,7 +804,7 @@ public:
 ////////////////////////////////////////
 
 struct sNetPlayer {
-   DPID dpId;         // the DirectPlay ID for this player.
+   tNetTransportPlayerID dpId;         // the DirectPlay ID for this player.
    IAvatar *pAvatar;  // the avatar that represents this player locally
    tSimTime lastBeat; // the timestamp on the last msg from this player
    char name[MAX_PLAYER_NAME_LEN+1];  // this player's name
@@ -1725,7 +1724,7 @@ private:
    BOOL m_bGameStarted;
    // The number of players who have joined the game:
    ulong m_NumPlayers;
-   // Players who have either been rejected or destroyed, listed by DPID:
+   // Players who have either been rejected or destroyed, listed by tNetTransportPlayerID:
    cDWORDSet m_DefunctPlayers;
    // How many players have indicated that they have finished
    // resetting their databases? (This is generally zero.)
@@ -1807,7 +1806,7 @@ private:
    // The following are static, because they are needed while running
    // callbacks that don't have a 'this' pointer.
    static BOOL gm_bAmSessionHost;  // TRUE iff this is the session host
-   static DPID gm_PlayerDPID;   // This player's DPID.
+   static tNetTransportPlayerID gm_PlayerTransportID;   // This player's tNetTransportPlayerID.
    static ObjID gm_DefaultHostPlayer; // The player that will be designated the default host.
    static tNetMsgHandlerID gm_NetManagerHandlerID; // for representing the NetManager in messages
    static INetPlayerProperty *gm_NetPlayerProp; // a private property for the net manager
@@ -1840,7 +1839,7 @@ private:
    //
 #ifndef SHIP
    void RawSpew(BOOL bSend,
-                DPID player,
+                tNetTransportPlayerID player,
                 ulong msgSize,
                 sNetMsg_Generic *msg)
    {
@@ -1849,7 +1848,7 @@ private:
       // First, the introduction to the line:
       mprintf("NET: %s %s:",
               (bSend ? "SEND to" : "RECEIVE from"),
-              ((player == DPID_ALLPLAYERS) ?
+              ((player == NET_PLAYER_ALL) ?
                "all" : 
                _itoa(FromNetPlayerID(player), buf, 10)));
                
@@ -1872,14 +1871,14 @@ private:
    //
    // A DirectPlay style callback for EnumPlayers. Used during
    // handling of database reset.
-   static BOOL CALLBACK _DestroyNetPlayerCallback(DPID dpId, 
-                                                  DWORD dwPlayerType, 
-                                                  LPCDPNAME lpname, 
-                                                  DWORD dwFlags, 
-                                                  LPVOID lpContext)
+   static BOOL _DestroyNetPlayerCallback(tNetTransportPlayerID dpId,
+                                                  uint32 dwPlayerType,
+                                                  const sNetTransportName * lpname,
+                                                  uint32 dwFlags,
+                                                  void * lpContext)
    {
       cNetManager *This = (cNetManager *)lpContext;
-      if (dpId != gm_PlayerDPID)
+      if (dpId != gm_PlayerTransportID)
       {
          ObjID obj = This->FromNetPlayerID((tNetPlayerID)dpId);
          if (obj != OBJ_NULL)
@@ -1973,7 +1972,7 @@ private:
       GhostAddLocal(PlayerObject(),1.0,kGhostCfPlayer);
    }
 
-   void HandleCreatePlayerMsg(DPID fromDPID, sNetMsg_CreatePlayer *msg)
+   void HandleCreatePlayerMsg(tNetTransportPlayerID fromPlayerId, sNetMsg_CreatePlayer *msg)
    {
       ObjID arch;
       if (config_is_defined("net_simple_avatars")) {
@@ -2054,9 +2053,9 @@ private:
                msg->isHost ? "Is host" : "Is NOT host"));
 
       // Now store the avatar for this player
-      sNetPlayer nplyr = { fromDPID, pAvatar, 0 };
+      sNetPlayer nplyr = { fromPlayerId, pAvatar, 0 };
       gm_NetPlayerProp->Set(playerObj, &nplyr);
-      gm_Net->SetPlayerData(fromDPID, (void *)&playerObj, 4, DPSET_LOCAL);
+      gm_Net->SetPlayerData(fromPlayerId, (void *)&playerObj, 4, NET_DATA_LOCAL);
 
       // See if this is the Default Host
       if (msg->isHost)
@@ -2094,7 +2093,7 @@ private:
    // This is a filter for messages, to bundle some of them up to send on
    // a frame-by-frame basis. We only bundle up message if we're in game
    // mode, and it's a guaranteed message, currently.
-   void SendOrBundle(DPID dpId,
+   void SendOrBundle(tNetTransportPlayerID dpId,
                      void *msg,
                      ulong size,
                      BOOL guaranteed)
@@ -2110,11 +2109,11 @@ private:
           m_bSynchFlushing)
       {
          // Don't try to bundle it up, just send it
-         SendToDPID(dpId, msg, size, guaranteed, FALSE);
+         SendToPlayer(dpId, msg, size, guaranteed, FALSE);
 
 #ifdef PLAYTEST
          int totalSize = size + m_packetOverhead;
-         m_NetStats.NewSend(dpId==DPID_ALLPLAYERS 
+         m_NetStats.NewSend(dpId==NET_PLAYER_ALL
                             ? totalSize*(m_NumPlayers-1) 
                             : totalSize,
                             guaranteed, 
@@ -2123,7 +2122,7 @@ private:
       } else {
          // Let's bundle, baby! Yeah!
          cBundledMessage *pMsg = new cBundledMessage((char *) msg, size);
-         if (dpId == DPID_ALLPLAYERS) {
+         if (dpId == NET_PLAYER_ALL) {
             // It's a broadcast message, so put it on all the player lists:
             cPlayerMsgBundle *pBundle;
             if (guaranteed)
@@ -2156,7 +2155,7 @@ private:
    // How long to wait on a blocking message. Shouldn't be too long:
 #define BLOCK_DELAY 5000
    // Send this message to 'player'
-   void SendToDPID(DPID dpId, 
+   void SendToPlayer(tNetTransportPlayerID dpId,
                    void *msg,
                    ulong size, 
                    BOOL guaranteed,
@@ -2178,20 +2177,20 @@ private:
       }
 #endif
 
-      int flags = guaranteed ? DPSEND_GUARANTEED : 0;
+      int flags = guaranteed ? NET_SEND_GUARANTEED : 0;
       // give guaranteed messages a higher priority
-      DWORD priority = 0; // guaranteed ? 1 : 0;
+      uint32 priority = 0; // guaranteed ? 1 : 0;
       // All messages need to set the right timeout, because DPlay will
       // die horribly if a message times out. (And it has a default
       // timeout for all messages.)
-      DWORD timeout = m_playerTimeout;
+      uint32 timeout = m_playerTimeout;
       if (blocking) {
          // Don't wait *too* long on a blocking message. Use blocking
          // messages *very* sparingly, only when absolutely necessary:
          timeout = BLOCK_DELAY;
       } else {
          // Async messages don't block.
-         flags |= DPSEND_ASYNC;
+         flags |= NET_SEND_ASYNC;
       }
 
 #ifdef PLAYTEST
@@ -2203,9 +2202,9 @@ private:
       // by the other side.
       AssertMsg(size < MAX_MESSAGE_SIZE, "Network message too big.");
 
-      //HRESULT hr = gm_Net->Send(gm_PlayerDPID,dpId,flags,msg,size);
-      DWORD msgID;
-      HRESULT hr = gm_Net->SendEx(gm_PlayerDPID,
+      //HRESULT hr = gm_Net->Send(gm_PlayerTransportID,dpId,flags,msg,size);
+      uint32 msgID;
+      HRESULT hr = gm_Net->SendEx(gm_PlayerTransportID,
                                   dpId,
                                   flags,
                                   msg,
@@ -2214,7 +2213,7 @@ private:
                                   timeout,
                                   NULL,
                                   &msgID);
-      if (hr == DPERR_PENDING) {
+      if (hr == NET_PENDING) {
          // Record that the message is in progress
          m_PendingMsgIDs.Add(msgID, tm_get_millisec());
          if (m_bSynchFlushing)
@@ -2228,7 +2227,7 @@ private:
             m_round[m_curRound].msgsSentByMe++;
       } else {
          Warning(("Send error.  Return value: %x %s\n", 
-                  hr, gm_Net->DPlayErrorAsString(hr)));
+                  hr, gm_Net->ErrorString(hr)));
       }
    }
 
@@ -2505,7 +2504,7 @@ protected:
       config_get_int("net_ave_latency", &ave);
       config_get_int("net_max_latency", &max);
       config_get_int("net_loss_percent", &loss);
-      gm_Net->SetInternetParameters(loss, min, ave, max);
+      gm_Net->SetInternetParameters(min, ave, max, loss);
       // only turn on simulation if ave is between 1% & 49%.
       if (simulate!=0)
          if (( ave > min ) && (ave < (min+max/2)))
@@ -2542,8 +2541,6 @@ protected:
       if (config_is_defined("net_dump_histogram"))
          m_NetStats.DumpHistogram(kHistoSend | kHistoReceive);
 #endif
-      if (config_is_defined("net_voice"))
-         StopVoiceChat();
       Leave();
       // Remove any lingering listeners:
       int i;
@@ -2561,7 +2558,7 @@ protected:
    {
       sNetMsg_Quit msg = {gm_NetManagerHandlerID, kNetMsg_Quit};
       NetSpew(("NET: Quitting session...\n"));
-      SendToDPID(DPID_ALLPLAYERS, &msg, sizeof(msg), TRUE, TRUE);
+      SendToPlayer(NET_PLAYER_ALL, &msg, sizeof(msg), TRUE, TRUE);
    }
 
 protected:
@@ -2601,12 +2598,12 @@ protected:
       }
    }
 
-   void KillDPlayer(DPID DPlayer, ObjID corpse)
+   void KillDPlayer(tNetTransportPlayerID DPlayer, ObjID corpse)
    {
       if (m_DefunctPlayers.InSet(DPlayer)) {
          // Just ignore it; this player isn't really here any more
       } else {
-         NetSpew(("Destroying player DPID %d\n", DPlayer));
+         NetSpew(("Destroying player tNetTransportPlayerID %d\n", DPlayer));
          IAvatar *pAvatar = NULL;
          if (corpse != OBJ_NULL) {
             // Get the player's avatar
@@ -2630,7 +2627,7 @@ protected:
    // This is usually called as messages are coming in, but may be
    // called later if we have to store messages and process them later
    // due to NonNetworkLevel().
-   void HandleRawNetMsg(DPID from, const char *buffer, ulong size)
+   void HandleRawNetMsg(tNetTransportPlayerID from, const char *buffer, ulong size)
    {
       // message from a player
       sNetMsg_Generic *msg = (sNetMsg_Generic *)buffer;
@@ -2654,10 +2651,10 @@ protected:
             {
                char response = ((sNetMsg_Hi *)msg)->yourPlayerNum;
                if (response <= 0) {
-                  DWORD failReason = -response;
+                  uint32 failReason = -response;
                   // We've been rejected; horror, pity.
                   NotifyListeners(kNetMsgRejected, failReason);
-                  gm_Net->DestroyPlayer(gm_PlayerDPID);
+                  gm_Net->DestroyPlayer(gm_PlayerTransportID);
                   gm_bNetworkGame = FALSE;
                   NotifyListeners(kNetMsgNetworkLost, NULL);
                   gm_Net->Close();
@@ -2721,9 +2718,9 @@ protected:
 
    void PollNetwork()
    {
-      DPID from,to;
+      tNetTransportPlayerID from,to;
       static char buffer[MAX_MESSAGE_SIZE];
-      DWORD size, flags;
+      uint32 size, flags;
       HRESULT hr;
       int msgCount = 0;
       while (TRUE)
@@ -2733,24 +2730,24 @@ protected:
          if (m_frameMsgMax && (msgCount > m_frameMsgMax))
             // We've taken up enough time already this frame:
             return;
-         hr = gm_Net->Receive(&from,&to,flags,(LPVOID)buffer,&size);
-         if (hr == DPERR_NOMESSAGES)
+         hr = gm_Net->Receive(&from,&to,flags,(void *)buffer,&size);
+         if (hr == NET_NO_MESSAGES)
             return;
-         else if (hr != DP_OK)
+         else if (hr != NET_OK)
          {
-            Warning(("NET Receive got error: %x %s\n", hr, gm_Net->DPlayErrorAsString(hr)));
-            NetRawSpew(("NET Receive got error: %x %s\n", hr, gm_Net->DPlayErrorAsString(hr)));
+            Warning(("NET Receive got error: %x %s\n", hr, gm_Net->ErrorString(hr)));
+            NetRawSpew(("NET Receive got error: %x %s\n", hr, gm_Net->ErrorString(hr)));
             return;
          }
 
-         if (from==DPID_SYSMSG) 
+         if (from==NET_PLAYER_SYSTEM)
          {
-            DPMSG_GENERIC *msg=(DPMSG_GENERIC*)buffer;
-            switch (msg->dwType) {
-               case DPSYS_CREATEPLAYERORGROUP:
+            sNetTransportSystemHeader *msg=(sNetTransportSystemHeader*)buffer;
+            switch (msg->type) {
+               case kNetSystemCreatePlayer:
                {
-                  DPMSG_CREATEPLAYERORGROUP *createMsg
-                     = (DPMSG_CREATEPLAYERORGROUP *)msg;
+                  sNetTransportCreatePlayer *createMsg
+                     = (sNetTransportCreatePlayer *)msg;
                   if (m_bGameStarted ||
                       (m_NumPlayers >= (ulong)m_MaxPlayers))
                   {
@@ -2771,16 +2768,16 @@ protected:
                      // allow Hi messages to fall on the floor...
                      BOOL saveNonNetworkLevel = m_bNonNetworkLevel;
                      m_bNonNetworkLevel = FALSE;
-                     SendToDPID(createMsg->dpId, &msg, sizeof(msg), TRUE);
+                     SendToPlayer(createMsg->player, &msg, sizeof(msg), TRUE);
                      m_bNonNetworkLevel = saveNonNetworkLevel;
-                     m_DefunctPlayers.Add(createMsg->dpId);
+                     m_DefunctPlayers.Add(createMsg->player);
                   } else {
                      m_NumPlayers++;
-                     NetSpew(("DPSYS_CREATEPLAYERORGROUP (numplayers = %d)\n",
+                     NetSpew(("kNetSystemCreatePlayer (numplayers = %d)\n",
                               m_NumPlayers));
-                     gm_Net->ResetPlayerData(createMsg->dpId, NULL);
-                     m_PlayerBundles.AddPlayer(createMsg->dpId);
-                     m_PlayerBundlesNG.AddPlayer(createMsg->dpId);
+                     gm_Net->ResetPlayerData(createMsg->player, NULL);
+                     m_PlayerBundles.AddPlayer(createMsg->player);
+                     m_PlayerBundlesNG.AddPlayer(createMsg->player);
                      if (gm_bAmSessionHost)
                      {
                         // Send the new player a hello, to let them know
@@ -2794,7 +2791,7 @@ protected:
                         // allow Hi messages to fall on the floor...
                         BOOL saveNonNetworkLevel = m_bNonNetworkLevel;
                         m_bNonNetworkLevel = FALSE;
-                        SendToDPID(createMsg->dpId, &msg, sizeof(msg), TRUE);
+                        SendToPlayer(createMsg->player, &msg, sizeof(msg), TRUE);
                         m_bNonNetworkLevel = saveNonNetworkLevel;
                         char temp[40];
                         sprintf(temp, "Added player #%d", m_NumPlayers);
@@ -2808,51 +2805,51 @@ protected:
                   }
                   break;
                }
-               case DPSYS_DESTROYPLAYERORGROUP:
+               case kNetSystemDestroyPlayer:
                {
-                  DPMSG_DESTROYPLAYERORGROUP *destroyMsg=(DPMSG_DESTROYPLAYERORGROUP *)msg;
-                  NetSpew(("DPSYS_DESTROYPLAYERORGROUP\n"));
-   ObjID corpse = (ObjID)(intptr_t)destroyMsg->lpLocalData;
-                  KillDPlayer(destroyMsg->dpId, corpse);
-                  m_PlayerBundles.KillPlayer(destroyMsg->dpId);
-                  m_PlayerBundlesNG.KillPlayer(destroyMsg->dpId);
+                  sNetTransportDestroyPlayer *destroyMsg=(sNetTransportDestroyPlayer *)msg;
+                  NetSpew(("kNetSystemDestroyPlayer\n"));
+                  ObjID corpse = (ObjID)(intptr_t)destroyMsg->local_data;
+                  KillDPlayer(destroyMsg->player, corpse);
+                  m_PlayerBundles.KillPlayer(destroyMsg->player);
+                  m_PlayerBundlesNG.KillPlayer(destroyMsg->player);
                   break;
                }
-               case DPSYS_SENDCOMPLETE:
+               case kNetSystemSendComplete:
                {
-                  DPMSG_SENDCOMPLETE *sendMsg = (DPMSG_SENDCOMPLETE *) msg;
-                  DWORD msgID = sendMsg->dwMsgID;
+                  sNetTransportSendComplete *sendMsg = (sNetTransportSendComplete *) msg;
+                  uint32 msgID = sendMsg->message_id;
                   ulong timeSent;
                   NetRawSpew(("Finished sending %x; latency %d ms; "
                               "time %d ms.\n", 
                               msgID,
-                              sendMsg->dwSendTime,
+                              sendMsg->send_time,
                               (m_PendingMsgIDs.InSet(msgID, &timeSent)
                                ? (tm_get_millisec() - timeSent)
                                : -1)));
-                  switch (sendMsg->hr)
+                  switch (sendMsg->result)
                   {
-                     case DP_OK:
+                     case NET_OK:
                         // Normal case -- delivered successfully
                         break;
-                     case DPERR_TIMEOUT:
+                     case NET_TIMEOUT:
                         NetRawSpew(("ERROR: Message timed out!\n"));
                         break;
                      default:
                         NetRawSpew(("ERROR: Message returned %x!\n", hr));
                         break;
                   }
-                  m_PendingMsgIDs.Delete(sendMsg->dwMsgID);
+                  m_PendingMsgIDs.Delete(sendMsg->message_id);
                   break;
                }
-               case DPSYS_HOST:
-                  NetSpew(("DPSYS_HOST\n")); 
+               case kNetSystemHostChanged:
+                  NetSpew(("kNetSystemHostChanged\n"));
                   break;
-               case DPSYS_SESSIONLOST:
+               case kNetSystemSessionLost:
                   // We've been cut off! Horror, shame! Tell anyone
                   // who is listening what has happened...
                   NetSpew(("Networking Session has been lost!\n"));
-                  gm_Net->DestroyPlayer(gm_PlayerDPID);
+                  gm_Net->DestroyPlayer(gm_PlayerTransportID);
                   NotifyListeners(kNetMsgNetworkLost, NULL);
                   ClearState();
                   gm_bNetworkGame = FALSE;
@@ -2910,7 +2907,7 @@ protected:
       {
          // Just a single message, so just send it straight:
          cBundledMessage *pMsg = pBundle->m_Msgs.GetFirst()->item;
-         SendToDPID(pBundle->m_DPID,
+         SendToPlayer(pBundle->m_Player,
                     pMsg->m_Msg,
                     pMsg->m_Size,
                     guaranteed,
@@ -2984,8 +2981,8 @@ protected:
          NetRawSpew(("Sending bundle of %d %s messages to %d\n",
                      pBundle->m_NumMsgs,
                      (guaranteed ? "guaranteed" : "nonguaranteed"),
-                     pBundle->m_DPID));
-         SendToDPID(pBundle->m_DPID, pBlock, totalSize, guaranteed, FALSE);
+                     pBundle->m_Player));
+         SendToPlayer(pBundle->m_Player, pBlock, totalSize, guaranteed, FALSE);
 
          // And clean up:
          free(pBlock);
@@ -3065,23 +3062,23 @@ protected:
    // Enumerate all of the players currently in the session, and set
    // up their message bundles. Should be called immediately after joining
    // the session.
-   void AddPlayer(DPID player)
+   void AddPlayer(tNetTransportPlayerID player)
    {
-      if (player != gm_PlayerDPID)
+      if (player != gm_PlayerTransportID)
       {
          m_PlayerBundles.AddPlayer(player);
          m_PlayerBundlesNG.AddPlayer(player);
       }
    }
 
-   static BOOL CALLBACK EnumPlayersCallback(DPID playerDPID,
-                                            DWORD type,
-                                            LPCDPNAME /* lpName */,
-                                            DWORD flags,
+   static BOOL EnumPlayersCallback(tNetTransportPlayerID playerId,
+                                            uint32 type,
+                                            const sNetTransportName * /* lpName */,
+                                            uint32 flags,
                                             void *pNetMan)
    {
-      if (type == DPPLAYERTYPE_PLAYER)
-         ((cNetManager *) pNetMan)->AddPlayer(playerDPID);
+      if (type == NET_PLAYER_TYPE)
+         ((cNetManager *) pNetMan)->AddPlayer(playerId);
 
       return(TRUE);
    }
@@ -3091,7 +3088,7 @@ protected:
       HRESULT hr = gm_Net->EnumPlayers(NULL,
                                        EnumPlayersCallback,
                                        this,
-                                       DPENUMPLAYERS_REMOTE);
+                                       NET_ENUM_REMOTE);
    }
 
    ////////////////////////////////////////////////////////////
@@ -3178,7 +3175,7 @@ protected:
                // away...
                gm_NetPlayerProp->Get(player, &netinfo);
                netinfo->pAvatar->WriteTagInfo(file);
-               // And write out the DPID for that player:
+               // And write out the tNetTransportPlayerID for that player:
                tNetPlayerID dpid = ToNetPlayerID(player);
                file->Write((char *) &dpid,
                            sizeof(tNetPlayerID));
@@ -3239,7 +3236,7 @@ protected:
                }
             }
             m_WaitingAvatars[playerNum] = pAvatar;
-            // Now read in the corresponding DPID, right after the
+            // Now read in the corresponding tNetTransportPlayerID, right after the
             // avatar:
             tNetPlayerID dpid;
             file->Read((char *) &dpid, sizeof(tNetPlayerID));
@@ -3557,7 +3554,7 @@ public:
    void ClearState()
    {
       gm_DefaultHostPlayer = OBJ_NULL;
-      gm_PlayerDPID = DPID_UNKNOWN;
+      gm_PlayerTransportID = NET_PLAYER_UNKNOWN;
       gm_bAmSessionHost = FALSE;
       gm_bNetworkingReady = FALSE;
       gm_bNetworkGame = FALSE;
@@ -3718,15 +3715,15 @@ public:
       if (!gm_bNetworkGame)
          return m_LastPlayerAddr;
 
-      // Go from the player object to the DPID:
-      DPID playerDPID;
+      // Go from the player object to the tNetTransportPlayerID:
+      tNetTransportPlayerID playerId;
       if (player == OBJ_NULL) {
-         playerDPID = gm_PlayerDPID;
+         playerId = gm_PlayerTransportID;
       } else {
-         playerDPID = (DPID) ToNetPlayerID(player);
+         playerId = (tNetTransportPlayerID) ToNetPlayerID(player);
       }
 
-      gm_Net->GetPlayerAddress(playerDPID, m_LastPlayerAddr, 128);
+      gm_Net->GetPlayerAddress(playerId, m_LastPlayerAddr, 128);
 
       return m_LastPlayerAddr;
    }
@@ -3756,14 +3753,14 @@ public:
    {
 #ifdef PLAYTEST
       // @TBD: we do realize when we call this dwHundredBaud is always 0?
-      DPCAPS caps;
-      caps.dwSize = sizeof(DPCAPS);
+      sNetTransportCaps caps = {};
+      caps.size = sizeof(caps);
       if (SUCCEEDED(gm_Net->GetCaps(&caps, 0))) {
-         m_NetStats.SetOverhead(caps.dwHeaderLength, caps.dwHundredBaud);
-         m_packetOverhead = caps.dwHeaderLength;  // not to be confused with m_PacketOverhead!
+         m_NetStats.SetOverhead(caps.header_length, caps.hundred_baud);
+         m_packetOverhead = caps.header_length;  // not to be confused with m_PacketOverhead!
          NetSpew(("NET: Packet overhead is %d; bandwidth is %d.\n",
-                  caps.dwHeaderLength,
-                  caps.dwHundredBaud));
+                  caps.header_length,
+                  caps.hundred_baud));
       }
 #endif
    }
@@ -3780,7 +3777,7 @@ public:
       }
 
       if (gm_Net->Host((char *) pMedia, (char *) pSession)) {
-         gm_PlayerDPID = gm_Net->SimpleCreatePlayer(m_PlayerName);
+         gm_PlayerTransportID = gm_Net->SimpleCreatePlayer(m_PlayerName);
          gm_bNetworkGame = TRUE;
          gm_bAmSessionHost = TRUE;
          // The host doesn't get a kNetMsg_Hi message, so we initilize
@@ -3790,8 +3787,6 @@ public:
          PrepCaps();
 
          // Initialize voice chat:
-         if (config_is_defined("net_voice"))
-            StartVoiceChat(NULL);
 
          Status("Now net host");
          NetSpew(("MY PLAYER NUM = %d\n", m_MyPlayerNum));
@@ -3823,7 +3818,7 @@ public:
 
       if (gm_Net->Join((char *) pMedia, (char *) pSession, (char *) pAddress))
       {
-         gm_PlayerDPID = gm_Net->SimpleCreatePlayer(m_PlayerName);
+         gm_PlayerTransportID = gm_Net->SimpleCreatePlayer(m_PlayerName);
          gm_bNetworkGame = TRUE;
          char temp[128];
          sprintf(temp, "Joined %s", pAddress);
@@ -3834,8 +3829,6 @@ public:
 
          PrepCaps();
 
-         if (config_is_defined("net_voice"))
-            StartVoiceChat((char *) pAddress);
 
          NotifyListeners(kNetMsgNetworkGame, NULL);
 
@@ -3858,7 +3851,7 @@ public:
    {
       if (gm_bNetworkGame) {
          SendQuitMessage();
-         gm_Net->DestroyPlayer(gm_PlayerDPID);
+         gm_Net->DestroyPlayer(gm_PlayerTransportID);
          gm_Net->Close();
          NotifyListeners(kNetMsgNetworkLost, FALSE);
          ClearState();
@@ -3928,7 +3921,7 @@ public:
       gm_NetPlayerProp->Get(player, &netinfo);
 
       AssertMsg1(netinfo, "Trying to send msg to non-player %d!", player);
-      AssertMsg1(netinfo->dpId, "Trying to send msg to player %d w/o DPID!",
+      AssertMsg1(netinfo->dpId, "Trying to send msg to player %d w/o tNetTransportPlayerID!",
                  player);
 
       // Don't send any messages until we have entered
@@ -3952,7 +3945,7 @@ public:
       AssertMsg(gm_bNetworkGame, "Trying to send msg in non-network game!");
 
       if (!m_SuspendMessaging && gm_bNetworkingReady) {
-         SendOrBundle(DPID_ALLPLAYERS,msg,size,guaranteed);
+         SendOrBundle(NET_PLAYER_ALL,msg,size,guaranteed);
       } else {
          ConfigSpew("net_suppress_spew", ("SEND MSG SUPPRESSED\n"));
       }
@@ -3972,7 +3965,7 @@ public:
       if (always)
          m_bNonNetworkLevel = FALSE;
 
-      SendOrBundle(DPID_ALLPLAYERS,msg,size,TRUE);
+      SendOrBundle(NET_PLAYER_ALL,msg,size,TRUE);
 
       if (always)
          m_bNonNetworkLevel = saveNonNetworkLevel;
@@ -4013,7 +4006,7 @@ public:
    {
       sNetPlayer *netinfo;
       if (player == PlayerObject())
-         return gm_PlayerDPID;
+         return gm_PlayerTransportID;
       else if (gm_NetPlayerProp->Get(player, &netinfo))
               return netinfo->dpId;
       else
@@ -4027,12 +4020,12 @@ public:
       ObjID obj = OBJ_NULL;
       long data;   // Local player data must be 4 bytes.
       ulong size=4;
-      if (netPlayer == gm_PlayerDPID)
+      if (netPlayer == gm_PlayerTransportID)
          obj = PlayerObject();
-      else if (SUCCEEDED(gm_Net->GetPlayerData((DPID)netPlayer, 
+      else if (SUCCEEDED(gm_Net->GetPlayerData((tNetTransportPlayerID)netPlayer,
                                                &data, 
                                                &size, 
-                                               DPGET_LOCAL)))
+                                               NET_DATA_LOCAL)))
       {
          obj = (ObjID)data;
       } else {
@@ -4104,7 +4097,7 @@ public:
    }
 
    // Tell all the appropriate listeners about an event
-   void NotifyListeners(eNetListenMsgs situation, DWORD data)
+   void NotifyListeners(eNetListenMsgs situation, uint32 data)
    {
       int i;
       for (i = 0; i < m_Listeners.Size(); i++) {
@@ -4806,7 +4799,7 @@ IObjectNetworking *cNetManager::gm_ObjNet = NULL;
 tNetMsgHandlerID cNetManager::gm_NetManagerHandlerID = 0;
 INet *cNetManager::gm_Net = NULL;
 ObjID cNetManager::gm_DefaultHostPlayer = OBJ_NULL;
-DPID cNetManager::gm_PlayerDPID = DPID_UNKNOWN;
+tNetTransportPlayerID cNetManager::gm_PlayerTransportID = NET_PLAYER_UNKNOWN;
 BOOL cNetManager::gm_bAmSessionHost = FALSE;
 BOOL cNetManager::gm_bNetworkingReady = FALSE;
 BOOL cNetManager::gm_bNetworkGame = FALSE;

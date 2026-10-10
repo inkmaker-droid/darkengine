@@ -1839,9 +1839,6 @@
     <ClInclude Include="framewrk\Netsynch.h">
       <Filter>Framework</Filter>
     </ClInclude>
-    <ClInclude Include="framewrk\Netvoice.h">
-      <Filter>Framework</Filter>
-    </ClInclude>
     <ClInclude Include="framewrk\Pickgame.h">
       <Filter>Framework</Filter>
     </ClInclude>
@@ -5135,9 +5132,6 @@
       <Filter>Framework</Filter>
     </ClCompile>
     <ClCompile Include="framewrk\Netsynch.cpp">
-      <Filter>Framework</Filter>
-    </ClCompile>
-    <ClCompile Include="framewrk\Netvoice.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
     <ClCompile Include="framewrk\Pickgame.cpp">
