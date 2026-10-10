@@ -107,7 +107,7 @@ BOOL cWinInputDevices::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LR
             case WM_KEYUP:
                 if (bPassKeyToGame && WinKeyToLGKey(msg, wParam, lParam, event))
                 {
-                    DebugMsgEx3(KEYBOARD, "Received keyboard event (%s). Sending to game as (0x%x, 0x%x)...", LogStrWinMsg(m_pOuter->GetHwnd(), msg, wParam, lParam), event.code, event.state);
+                    DebugMsgEx3(KEYBOARD, "Received keyboard message 0x%x. Sending to game as (0x%x, 0x%x)...", msg, event.code, event.state);
 
                     // Dispatch event...
                     CONNECTION_POINT_ITERATE()
@@ -117,7 +117,7 @@ BOOL cWinInputDevices::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LR
                     }
                 }
                 else
-                    DebugMsgEx1(KEYBOARD, "Received keyboard event (%s)", LogStrWinMsg(m_pOuter->GetHwnd(), msg, wParam, lParam));
+                    DebugMsgEx1(KEYBOARD, "Received keyboard message 0x%x", msg);
         }
     }
     else if ((msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST) ||

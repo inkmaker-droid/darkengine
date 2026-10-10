@@ -5,8 +5,6 @@
 // $Revision: 1.7 $
 //
 
-#ifdef _WIN32
-
 #include <lg.h>
 #undef Free
 #undef Malloc
@@ -19,10 +17,6 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-volatile cFastMutex g_AllocMutex;
-
-///////////////////////////////////////////////////////////////////////////////
-//
 // CLASS: cPrimaryMalloc, members
 //
 
@@ -78,7 +72,6 @@ STDMETHODIMP_(void *) cPrimaryMalloc::Alloc(SIZE_T size)
 #ifndef SHIP
             if (totalAlloc > peakAlloc)
                 peakAlloc = totalAlloc;
-#endif
             AllocThreadUnlock();
             return p;
         }

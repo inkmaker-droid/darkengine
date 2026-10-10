@@ -33,7 +33,6 @@
 #include <filemenu.h>
 
 #include <comtools.h>
-#include <wappapi.h>
 #include <loopapi.h>
 #include <appagg.h>
 #include <winui.h>

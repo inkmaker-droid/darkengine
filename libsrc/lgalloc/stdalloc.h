@@ -47,7 +47,7 @@ public:
 #endif
 
 private:
-    HANDLE m_hHeap;
+    void *m_hHeap;
 
 };
 

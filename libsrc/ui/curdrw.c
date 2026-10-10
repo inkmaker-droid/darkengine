@@ -15,8 +15,6 @@
 #include <slab.h>
 #include <string.h>
 
-#ifdef _WIN32
-
 //-----------------------------------------------------------------------------
 // Jacobson, 1-30-96
 // This include helps the UI library keep track of where it's writing to
@@ -25,8 +23,6 @@
 #include <comtools.h>
 #include <dispapi.h>
 extern IDisplayDevice *g_pUiDisplayDevice;
-
-#endif
 
 void cursor_draw_callback(lgMouseEvent* e, void* data)
 {
@@ -136,9 +132,7 @@ void _bitmap_cursor_drawfunc(int cmd, Region* r, Cursor* c, Point pos)
 void bitmap_cursor_drawfunc(int cmd, Region* r, Cursor* c, Point pos)
 {
    grs_bitmap* bm = (grs_bitmap*)(c->state);
-#ifdef _WIN32
    IDisplayDevice_Lock(g_pUiDisplayDevice);
-#endif
    _bitmap_cursor_drawfunc(cmd,r,c,pos);
    if (SecondCursorCanvas != NULL)
    {
@@ -153,7 +147,6 @@ void bitmap_cursor_drawfunc(int cmd, Region* r, Cursor* c, Point pos)
       CursorCanvas = tmp_canvas;
       SaveUnder.bm.bits = saveunder;
    }
-#ifdef _WIN32
    IDisplayDevice_Unlock(g_pUiDisplayDevice);
    // DromEd does not redraw continuously while an editor viewport is idle, so
    // the software cursor must present its dirty rectangle immediately.  The
@@ -161,5 +154,4 @@ void bitmap_cursor_drawfunc(int cmd, Region* r, Cursor* c, Point pos)
    // presents without a vsync wait.
    IDisplayDevice_FlushRect(g_pUiDisplayDevice, pos.x, pos.y,
                             pos.x + bm->w, pos.y + bm->h);
-#endif
 }

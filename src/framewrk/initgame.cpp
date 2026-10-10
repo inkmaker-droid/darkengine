@@ -48,7 +48,6 @@
 // COM object initializaiton
 //
 
-#ifdef _WIN32
 //
 // Called to notify start-up code is complete, COM initialization is
 // pending.
@@ -133,14 +132,6 @@ tResult LGAPI AppExit()
    CoreEngineAppExit();
    return NOERROR;
 }
-
-
-
-
-#endif
-
-
-
 
 /*
 Local Variables:

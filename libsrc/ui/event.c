@@ -20,8 +20,6 @@
 #include <mousevel.h>
 #include <joystick.h>
 
-#ifdef _WIN32
-
 //-----------------------------------------------------------------------------
 // Jacobson, 1-30-96
 // This include helps the UI library keep track of where it's writing to
@@ -31,8 +29,6 @@
 #include <dispapi.h>
 
 IDisplayDevice * g_pUiDisplayDevice;
-
-#endif
 
 // ---------------------
 // HANDLER CHAIN DEFINES
@@ -1038,12 +1034,10 @@ errtype uiInit(uiSlab* slab)
    int i;
    errtype err;
    extern errtype ui_init_cursors(void);
-#ifdef _WIN32
    // Jacobson, 2-12-96
    // Get a pointer to the current display interface so we can correctly
    // lock the frame during cursor draws, among other things.
    g_pUiDisplayDevice = AppGetObj(IDisplayDevice);    // Stores the current display
-#endif
    Spew(DSRC_UI_Handlers,("entering uiInit(%x)\n",slab));
    uiSetCurrentSlab(slab);
    Spew(DSRC_UI_Handlers,("uiInit(): CurFocus = %d\n",CurFocus));
@@ -1081,9 +1075,7 @@ void uiShutdown(void)
    mouse_shutdown();
    kb_shutdown();
 #endif 
-#ifdef _WIN32
    SafeRelease(g_pUiDisplayDevice);
-#endif    
 
    Free(EventQueue.vec);
 }

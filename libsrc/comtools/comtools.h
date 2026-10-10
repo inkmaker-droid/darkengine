@@ -248,11 +248,7 @@ inline BOOL IsEqualGUID(REFGUID rguid1, REFGUID rguid2)
 
 inline BOOL operator==(const GUID& guidOne, const GUID& guidOther)
 {
-#ifdef _WIN32
     return !memcmp(&guidOne,&guidOther,sizeof(GUID));
-#else
-    return !_fmemcmp(&guidOne,&guidOther,sizeof(GUID));
-#endif
 }
 
 inline BOOL operator!=(const GUID& guidOne, const GUID& guidOther)

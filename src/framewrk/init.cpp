@@ -254,23 +254,7 @@ static void init_monochrome()
    char monofname[256];
    monofname[0] = '\0';
 
-#ifdef _WIN32
-#ifndef SHIP
-   {
-      bool is_mono=!config_is_defined("mono_no_screen");
-      char *buf;
-      // for now, we know NT cant do Mono's
-      if ((buf=getenv("OS"))!=NULL)
-         if (stricmp(buf,"Windows_NT")==0)
-            is_mono=FALSE;
-      mono_win_init(is_mono);
-   }
-#else
    mono_win_init(FALSE);
-#endif
-#else
-   mono_init();
-#endif
 
    mono_clear();
    mono_set_flags(MONO_FLG_WRAPCLEAR,NULL);
