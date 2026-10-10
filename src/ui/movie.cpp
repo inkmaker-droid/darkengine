@@ -22,7 +22,7 @@
 
 #include <movie.h>
 #include <mprintf.h>
-#include <mfmovie.h>
+#include <movie_backend.h>
 
 // Must be last header 
 #include <dbmem.h>
@@ -46,7 +46,7 @@ EXTERN BOOL MoviePlaySynchronous(const char * pszFile, int volume)
 
    // Prefer the modern H.264/AAC sibling when retail data provides one.
    // This avoids depending on the obsolete 32-bit Intel Indeo codec.
-   if (ModernMoviePlaySynchronous(fileSpec.GetName(), volume))
+   if (MovieBackendPlaySynchronous(fileSpec.GetName(), volume))
       return TRUE;
    
    // remember old gamma setting, set gamma to default

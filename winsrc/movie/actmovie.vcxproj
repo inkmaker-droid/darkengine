@@ -71,16 +71,16 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(ProjectDir);$(SolutionDir)h;$(SolutionDir)libsrc\compapis;$(SolutionDir)libsrc\comtools;$(SolutionDir)libsrc\cpptools;$(SolutionDir)libsrc\dev2d;$(SolutionDir)libsrc\dispdev;$(SolutionDir)libsrc\dstruct;$(SolutionDir)libsrc\lg;$(SolutionDir)libsrc\lgalloc;$(SolutionDir)libsrc\fix;$(SolutionDir)libsrc\font;$(SolutionDir)libsrc\g2;$(SolutionDir)libsrc\gadget;$(SolutionDir)libsrc\matrix;$(SolutionDir)libsrc\mprintf;$(SolutionDir)libsrc\namedres;$(SolutionDir)libsrc\res;$(SolutionDir)winsrc\input;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)libsrc\actmovie;$(SolutionDir)h;$(SolutionDir)libsrc\compapis;$(SolutionDir)libsrc\comtools;$(SolutionDir)libsrc\cpptools;$(SolutionDir)libsrc\dev2d;$(SolutionDir)libsrc\dispdev;$(SolutionDir)libsrc\dstruct;$(SolutionDir)libsrc\lg;$(SolutionDir)libsrc\lgalloc;$(SolutionDir)libsrc\fix;$(SolutionDir)libsrc\font;$(SolutionDir)libsrc\g2;$(SolutionDir)libsrc\gadget;$(SolutionDir)libsrc\matrix;$(SolutionDir)libsrc\mprintf;$(SolutionDir)libsrc\namedres;$(SolutionDir)libsrc\res;$(SolutionDir)winsrc\input;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(ProjectDir);$(SolutionDir)h;$(SolutionDir)libsrc\compapis;$(SolutionDir)libsrc\comtools;$(SolutionDir)libsrc\cpptools;$(SolutionDir)libsrc\dev2d;$(SolutionDir)libsrc\dispdev;$(SolutionDir)libsrc\dstruct;$(SolutionDir)libsrc\lg;$(SolutionDir)libsrc\lgalloc;$(SolutionDir)libsrc\fix;$(SolutionDir)libsrc\font;$(SolutionDir)libsrc\g2;$(SolutionDir)libsrc\gadget;$(SolutionDir)libsrc\matrix;$(SolutionDir)libsrc\mprintf;$(SolutionDir)libsrc\namedres;$(SolutionDir)libsrc\res;$(SolutionDir)winsrc\input;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)libsrc\actmovie;$(SolutionDir)h;$(SolutionDir)libsrc\compapis;$(SolutionDir)libsrc\comtools;$(SolutionDir)libsrc\cpptools;$(SolutionDir)libsrc\dev2d;$(SolutionDir)libsrc\dispdev;$(SolutionDir)libsrc\dstruct;$(SolutionDir)libsrc\lg;$(SolutionDir)libsrc\lgalloc;$(SolutionDir)libsrc\fix;$(SolutionDir)libsrc\font;$(SolutionDir)libsrc\g2;$(SolutionDir)libsrc\gadget;$(SolutionDir)libsrc\matrix;$(SolutionDir)libsrc\mprintf;$(SolutionDir)libsrc\namedres;$(SolutionDir)libsrc\res;$(SolutionDir)winsrc\input;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir);$(SolutionDir)h;$(SolutionDir)libsrc\compapis;$(SolutionDir)libsrc\comtools;$(SolutionDir)libsrc\cpptools;$(SolutionDir)libsrc\dev2d;$(SolutionDir)libsrc\dispdev;$(SolutionDir)libsrc\dstruct;$(SolutionDir)libsrc\lg;$(SolutionDir)libsrc\lgalloc;$(SolutionDir)libsrc\fix;$(SolutionDir)libsrc\font;$(SolutionDir)libsrc\g2;$(SolutionDir)libsrc\gadget;$(SolutionDir)libsrc\matrix;$(SolutionDir)libsrc\mprintf;$(SolutionDir)libsrc\namedres;$(SolutionDir)libsrc\res;$(SolutionDir)winsrc\input;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)libsrc\actmovie;$(SolutionDir)h;$(SolutionDir)libsrc\compapis;$(SolutionDir)libsrc\comtools;$(SolutionDir)libsrc\cpptools;$(SolutionDir)libsrc\dev2d;$(SolutionDir)libsrc\dispdev;$(SolutionDir)libsrc\dstruct;$(SolutionDir)libsrc\lg;$(SolutionDir)libsrc\lgalloc;$(SolutionDir)libsrc\fix;$(SolutionDir)libsrc\font;$(SolutionDir)libsrc\g2;$(SolutionDir)libsrc\gadget;$(SolutionDir)libsrc\matrix;$(SolutionDir)libsrc\mprintf;$(SolutionDir)libsrc\namedres;$(SolutionDir)libsrc\res;$(SolutionDir)winsrc\input;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir);$(SolutionDir)h;$(SolutionDir)libsrc\compapis;$(SolutionDir)libsrc\comtools;$(SolutionDir)libsrc\cpptools;$(SolutionDir)libsrc\dev2d;$(SolutionDir)libsrc\dispdev;$(SolutionDir)libsrc\dstruct;$(SolutionDir)libsrc\lg;$(SolutionDir)libsrc\lgalloc;$(SolutionDir)libsrc\fix;$(SolutionDir)libsrc\font;$(SolutionDir)libsrc\g2;$(SolutionDir)libsrc\gadget;$(SolutionDir)libsrc\matrix;$(SolutionDir)libsrc\mprintf;$(SolutionDir)libsrc\namedres;$(SolutionDir)libsrc\res;$(SolutionDir)winsrc\input;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)libsrc\actmovie;$(SolutionDir)h;$(SolutionDir)libsrc\compapis;$(SolutionDir)libsrc\comtools;$(SolutionDir)libsrc\cpptools;$(SolutionDir)libsrc\dev2d;$(SolutionDir)libsrc\dispdev;$(SolutionDir)libsrc\dstruct;$(SolutionDir)libsrc\lg;$(SolutionDir)libsrc\lgalloc;$(SolutionDir)libsrc\fix;$(SolutionDir)libsrc\font;$(SolutionDir)libsrc\g2;$(SolutionDir)libsrc\gadget;$(SolutionDir)libsrc\matrix;$(SolutionDir)libsrc\mprintf;$(SolutionDir)libsrc\namedres;$(SolutionDir)libsrc\res;$(SolutionDir)winsrc\input;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -158,7 +158,7 @@
     <ClInclude Include="evcode.h" />
     <ClInclude Include="getlgvid.h" />
     <ClInclude Include="imutil.h" />
-    <ClInclude Include="mfmovie.h" />
+    <ClInclude Include="..\..\libsrc\actmovie\movie_backend.h" />
     <ClInclude Include="lgvdguid.h" />
     <ClInclude Include="lgvidapi.h" />
     <ClInclude Include="mtype.h" />

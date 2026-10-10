@@ -24,7 +24,7 @@
     <ClInclude Include="imutil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="mfmovie.h">
+    <ClInclude Include="..\..\libsrc\actmovie\movie_backend.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="lgvdguid.h">

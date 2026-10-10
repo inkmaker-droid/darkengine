@@ -14,7 +14,7 @@
 #include <uuids.h>
 #include <wappapi.h>
 
-#include "mfmovie.h"
+#include <movie_backend.h>
 #include "mfaudio.h"
 #include <render_backend.h>
 
@@ -794,7 +794,7 @@ static BOOL PlayMediaFoundationMovie(const WCHAR *moviePath, int volume)
     return played;
 }
 
-BOOL ModernMoviePlaySynchronous(const char *legacyPath, int volume)
+bool MovieBackendPlaySynchronous(const char *legacyPath, int volume)
 {
     WCHAR moviePath[MAX_PATH];
     HWND movieHost = NULL;
