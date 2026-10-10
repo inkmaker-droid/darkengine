@@ -193,7 +193,6 @@
     <ClCompile Include="lglog.cpp" />
     <ClCompile Include="lgprntf.c" />
     <ClCompile Include="lgsprntf.c" />
-    <ClCompile Include="memgrow.c" />
     <ClCompile Include="memreq.cpp" />
     <ClCompile Include="memstat.c" />
     <ClCompile Include="stack.c" />

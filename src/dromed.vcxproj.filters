@@ -5635,12 +5635,6 @@
     <ClCompile Include="portal\Oracle.c">
       <Filter>Portal</Filter>
     </ClCompile>
-    <ClCompile Include="portal\Perfcore.c">
-      <Filter>Portal</Filter>
-    </ClCompile>
-    <ClCompile Include="portal\Perftest.c">
-      <Filter>Portal</Filter>
-    </ClCompile>
     <ClCompile Include="portal\Portal.c">
       <Filter>Portal</Filter>
     </ClCompile>

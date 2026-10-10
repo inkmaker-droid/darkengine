@@ -293,9 +293,7 @@
     <ClCompile Include="valloc.c" />
     <ClCompile Include="vesac.c" />
     <ClCompile Include="vgadtab.c" />
-    <ClCompile Include="vgastate.c" />
     <ClCompile Include="vsadtab.c" />
-    <ClCompile Include="vsastate.c" />
     <ClCompile Include="w32dtab.c" />
   </ItemGroup>
   <ItemGroup>

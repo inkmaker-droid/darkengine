@@ -122,9 +122,6 @@
     <ClCompile Include="lgsprntf.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="memgrow.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="memreq.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
