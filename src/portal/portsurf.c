@@ -497,9 +497,11 @@ void set_up_temp_lightmap(PortalLightMap *map)
 
 void add_to_temp_lightmap(LightmapEntry *source, uchar intensity)
 {
-   int r,g,b;
-   int i, j;
+   ulong r,g,b;
+   uint i, j;
+#if !defined(RGB_LIGHTING) || defined(RGB_888)
    uint v;
+#endif
    LightmapEntry *dest = &temp_lightmap_bits[0];
 
 #ifndef RGB_LIGHTING
@@ -541,7 +543,7 @@ void add_to_temp_lightmap(LightmapEntry *source, uchar intensity)
          r = ((((plus & pl_red_mask)>>RED_SHIFT)*intensity)>>8)<<RED_SHIFT;
          g = ((((plus & pl_green_mask)>>GREEN_SHIFT)*intensity)>>8)<<GREEN_SHIFT;
          b = ((((plus & pl_blue_mask)>>BLUE_SHIFT)*intensity)>>8)<<BLUE_SHIFT;
-         plus = r+g+b;
+          plus = (int)(r+g+b);
 
          sum = cur + plus;
 
@@ -560,7 +562,7 @@ void add_to_temp_lightmap(LightmapEntry *source, uchar intensity)
             if (r > pl_red_mask) r = pl_red_mask;
             if (g > pl_green_mask) g = pl_green_mask;
             if (b > pl_blue_mask) b = pl_blue_mask;
-            sum = r + g + b;
+             sum = (int)(r + g + b);
          }
 
          dest[j] = sum;
@@ -710,7 +712,7 @@ ushort portal_color_convert(ushort color)
    r = (color & pl_red_mask) >> RED_SHIFT;
    g = (color & pl_green_mask) >> GREEN_SHIFT;
    b = (color & pl_blue_mask) >> BLUE_SHIFT;
-   return pl_red_convert[r] + pl_blue_convert[b] + pl_green_convert[g];
+   return (ushort)(pl_red_convert[r] + pl_blue_convert[b] + pl_green_convert[g]);
 }
 #endif // ~RGB_888
 #endif

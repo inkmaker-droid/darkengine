@@ -130,7 +130,7 @@ HRESULT cLoopClientFactory::AddClient(const sLoopClientDesc* pClientDesc)
 	return S_OK;
 }
 
-HRESULT cLoopClientFactory::RemoveClient(ulong cookie)
+HRESULT cLoopClientFactory::RemoveClient(tLoopClientCookie cookie)
 {
 	auto pClientDesc = m_ClientDescs.RemoveByKey(reinterpret_cast<tLoopClientID*>(cookie));
 	if (!pClientDesc)

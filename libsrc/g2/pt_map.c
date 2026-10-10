@@ -139,8 +139,8 @@ static void scan_convert(grs_point *p1, grs_point *p2)
    x = p1->sx + fix_mul(dx, fix_ceil(p1->sy) - p1->sy);
 
    if (g2pt_poly_lit) {
-      di = (p2->i - p1->i)*SHADES * 65536 / (p2->sy - p1->sy);
-      i  = p1->i*SHADES + fix_mul(di, fix_ceil(p1->sy) - p1->sy);
+      di = (fix)((p2->i - p1->i)*SHADES * 65536 / (p2->sy - p1->sy));
+      i  = (fix)(p1->i*SHADES + fix_mul(di, fix_ceil(p1->sy) - p1->sy));
       if (di < 0) di += 1;
 
       // now generate all crossings for this edge
@@ -289,8 +289,8 @@ static void scan_convert_uv(r3s_point *p1, r3s_point *p2)
    info.dv2 = dv2;
 
    if (g2pt_poly_lit) {
-      di = (p2->grp.i - p1->grp.i)*SHADES * 65536 / (p2->grp.sy - p1->grp.sy);
-      i  = p1->grp.i*SHADES + fix_mul(di, fix_ceil(p1->grp.sy) - p1->grp.sy);
+      di = (fix)((p2->grp.i - p1->grp.i)*SHADES * 65536 / (p2->grp.sy - p1->grp.sy));
+      i  = (fix)(p1->grp.i*SHADES + fix_mul(di, fix_ceil(p1->grp.sy) - p1->grp.sy));
       if (di < 0) di += 1;
 
       this_x = fix_cint(x);
@@ -350,7 +350,7 @@ static void real_render_poly_lit_float(int y0, int y1)
    int x,len, i;
    int row;
    uchar *dest, *destcore;
-   float a,b,c, ma,mb,mc;
+   double a,b,c, ma,mb,mc;
    extern int g2pt16_mask;
 
 #ifdef DBG_ON
@@ -401,10 +401,10 @@ static void real_render_poly_float(int y0, int y1)
 {  PROF
 #ifndef USE_ASM_OUTER_LOOP
    int x,len, i;
-   float a,b,c;
+   double a,b,c;
    uchar *dest;
 #endif
-   float ma,mb,mc;
+   double ma,mb,mc;
    int row;
    uchar *destcore;
 
@@ -441,10 +441,10 @@ static void real_render_poly_float(int y0, int y1)
       len = xdata[i][1] - x;
 
       if (len > 0) {
-         float end_a, end_b, end_c;
+         double end_a, end_b, end_c;
 #ifdef DBG_ON
-         float orig_a, orig_b, orig_c;
-         float old_u_step, old_v_step;
+         double orig_a, orig_b, orig_c;
+         double old_u_step, old_v_step;
 #endif
 
          dest = destcore + x;
@@ -751,7 +751,7 @@ static void render_rpi(RenderPolyInfo *rpi)
    int y,len, x, dy, skip_i;
    int row;
    uchar *dest, *destcore;
-   float a,b,c, ma,mb,mc;
+   double a,b,c, ma,mb,mc;
    SpanItem *si, *end;
 
    if (g2ptmap_setup(rpi->bm)!=G2PTC_OK)
@@ -860,9 +860,9 @@ static void render_rpi_unlit(RenderPolyInfo *rpi)
 #ifdef RPI_UNLIT_ASM
    double mabc[3];
 #else
-   float a,b,c, ma,mb,mc;
+   double a,b,c, ma,mb,mc;
    uchar *dest;
-   int i,x,dy,len;
+   int x,dy,len;
 #endif
    SpanItem *si, *end;
 

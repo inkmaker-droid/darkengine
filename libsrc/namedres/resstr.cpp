@@ -1,3 +1,5 @@
+#include <cctype>
+
 #include <resstr.h>
 #include <resbastm.h>
 #include <growblk.h>
@@ -58,7 +60,7 @@ public:
 
 	tHashSetKey GetKey(tHashSetNode p) const override
 	{
-		return p ? reinterpret_cast<tHashSetKey>(reinterpret_cast<cStringResEntry*>(p)->m_pName) : nullptr;
+		return p ? reinterpret_cast<tHashSetKey>(reinterpret_cast<cStringResEntry*>(p)->m_pName) : 0;
 	}
 };
 
@@ -147,12 +149,12 @@ void* cStringResource::LoadData(ulong* pSize, ulong* pTimestamp, IResMemOverride
 					pBlock.Append('\t');
 					break;
 				default:
-					pBlock.Append(c);
+					pBlock.Append(static_cast<char>(c));
 				}
 			}
 			else
 			{
-				pBlock.Append(c);
+				pBlock.Append(static_cast<char>(c));
 			}
 
 			if (finished)
@@ -341,7 +343,7 @@ int cStringResource::GetStrName(IStoreStream* pStream, char* pBuf)
 				continue;
 			}
 			
-			pBuf[idx++] = c;
+			pBuf[idx++] = static_cast<char>(c);
 		}
 
 		pStream->SetPos(pStream->GetPos() - 1);

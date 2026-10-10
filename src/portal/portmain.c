@@ -214,7 +214,6 @@ r3s_context con;
 extern void WorldRepLoadGodFile(char *);
 extern void WorldRepLoadWrFile(char *);
 
-#pragma off(unreferenced)
 void main(int argc,char **argv)
 {
    grs_screen *screen;
@@ -314,4 +313,3 @@ void main(int argc,char **argv)
 #endif
    }
 }
-#pragma on(unreferenced)

@@ -8,7 +8,7 @@
  */
 
 #ifdef _WIN32
-#include <windows.h>
+#include <platform_services.h>
 #else
 #include <dpmi.h>
 #endif
@@ -250,18 +250,21 @@ int DetermineLargest(int uVal,uchar **ptrPtr)
 
 int MallocableTotal(int lowMemReserved,uchar val)
 {
-#ifdef WIN32
+#ifdef _WIN32
 
-   MEMORYSTATUS memoryStatus;
+   sPlatformMemoryStatus memoryStatus;
    const ulong kMinCap = 0x600000;               // 6mb
    const ulong kMaxCap = 0x1000000;              // 16 mb
    const ulong kNonDynReserved = 0x300000;       // 3mb
    ulong targetCap;
-   memoryStatus.dwLength = sizeof(memoryStatus);
-   GlobalMemoryStatus(&memoryStatus);
-   targetCap = memoryStatus.dwTotalPhys - kNonDynReserved;
+   PlatformGetMemoryStatus(&memoryStatus);
+   targetCap = memoryStatus.total_physical_bytes > kNonDynReserved
+                  ? memoryStatus.total_physical_bytes - kNonDynReserved
+                  : 0;
+   if (targetCap > kMaxCap)
+      targetCap = kMaxCap;
 
-   return max(kMinCap, min(kMaxCap, targetCap));
+   return targetCap > kMinCap ? targetCap : kMinCap;
 
 #else
 

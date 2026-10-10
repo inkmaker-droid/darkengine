@@ -4,8 +4,6 @@
 */
 
 // $Header: r:/t2repos/thief2/src/framewrk/buftagf.cpp,v 2.2 2000/03/07 19:56:48 toml Exp $
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <stdio.h>
 #include <io.h>
 #include <sys/types.h>
@@ -14,6 +12,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <cfgdbg.h>
+#include <platform_services.h>
 
 #include <lg.h>
 #include <vernum.h>
@@ -63,11 +62,10 @@ VFILE * vfopen(const char * file, const char * mode)
    static int fHaveMem = -1;
    if (fHaveMem == -1)
    {
-      MEMORYSTATUS memoryStatus;
-      memoryStatus.dwLength = sizeof(memoryStatus);
-      GlobalMemoryStatus(&memoryStatus);
+      sPlatformMemoryStatus memoryStatus;
+      PlatformGetMemoryStatus(&memoryStatus);
       
-      fHaveMem = (memoryStatus.dwTotalPhys >= kMinSysMem);
+      fHaveMem = (memoryStatus.total_physical_bytes >= kMinSysMem);
    }
       
    if (fHaveMem && *mode == 'r' && config_is_defined("large_read_buffers"))
@@ -77,21 +75,13 @@ VFILE * vfopen(const char * file, const char * mode)
       {
          if (s.st_size > kMinSize)
          {
-#ifdef DEBUG_BUFTAGF
             pVFile->pBuf = (BYTE *)malloc(s.st_size);
-#else
-            pVFile->pBuf = (BYTE *)VirtualAlloc(NULL, s.st_size, MEM_COMMIT, PAGE_READWRITE);
-#endif
             if (pVFile->pBuf)
             {
                fread(pVFile->pBuf, s.st_size, 1, pVFile->file);
                if (ferror(pVFile->file) != 0)
                {
-#ifdef DEBUG_BUFTAGF
                   free(pVFile->pBuf);
-#else
-                  VirtualFree(pVFile->pBuf, 0, MEM_RELEASE);
-#endif
                   pVFile->pBuf = NULL;
                }
                pVFile->pReadLoc = pVFile->pBuf;
@@ -110,7 +100,7 @@ size_t vfread(void * pTo, size_t s, size_t n, VFILE * pVFile)
 {
    if (pVFile->pBuf)
    {
-      int sz = s * n;
+      size_t sz = s * n;
       
       if (pVFile->pReadLoc >= pVFile->pLimit)
          return 0;
@@ -170,7 +160,7 @@ int vfseek(VFILE * pVFile, long offset, int type)
 long vftell(VFILE * pVFile)
 {
    if (pVFile->pBuf)
-      return pVFile->pReadLoc - pVFile->pBuf;
+   return (long)(pVFile->pReadLoc - pVFile->pBuf);
    
    return ftell(pVFile->file);
 }
@@ -186,11 +176,7 @@ int vfclose(VFILE * pVFile)
 
    if (pVFile->pBuf)
    {
-#ifdef DEBUG_BUFTAGF
       free(pVFile->pBuf);
-#else
-      VirtualFree(pVFile->pBuf, 0, MEM_RELEASE);
-#endif
    }
 
    delete pVFile;
@@ -262,7 +248,7 @@ void BufTagFileTable::Read(VFILE* file)
 {
    ulong items;
    READ(file,items);
-   for (int i = 0; i < items; i++)
+   for (ulong i = 0; i < items; i++)
    {
       BufTagTableEntry e;
       READ(file,e);
@@ -358,10 +344,6 @@ int BufTagFileBase::PrepSeek(ulong& offset, TagFileSeekMode mode)
 
 ////////////////////////////////////////
 
-#define max(x,y) ((x) > (y) ? (x) : (y))
-#define min(x,y) ((x) < (y) ? (x) : (y))
-
-
 STDMETHODIMP BufTagFileBase::Seek(ulong offset, TagFileSeekMode mode)
 {
    if (block == NULL)
@@ -384,7 +366,8 @@ STDMETHODIMP BufTagFileBase::Seek(ulong offset, TagFileSeekMode mode)
 
    if (OpenMode() == kTagOpenWrite)
    {
-      block->size = max(block->size,blockptr);
+      if (blockptr > block->size)
+         block->size = blockptr;
    }
 
    return S_OK;
@@ -525,7 +508,7 @@ STDMETHODIMP BufTagFileWrite::OpenBlock(const TagFileTag* tag, TagVersion* versi
 
    SetCurBlock(tag);
 
-   int len = vfwrite(&header,1,sizeof(header),file);
+   int len = (int)vfwrite(&header,1,sizeof(header),file);
    if (len != sizeof(header))
    {
       Warning(("BufTagFileWrite::NewBlock(): wrote only %d out of %d bytes\n",len,sizeof(header)));
@@ -574,10 +557,11 @@ STDMETHODIMP_(long) BufTagFileWrite::Write(const char* buf, int buflen)
    if (file == NULL)
       return -1;
 
-   long len = vfwrite(buf,1,buflen,file);
+   long len = (long)vfwrite(buf,1,buflen,file);
    blockptr += len; 
    
-   block->size = max(blockptr,block->size);
+   if (blockptr > block->size)
+      block->size = blockptr;
 
    return len;
 }
@@ -673,7 +657,7 @@ STDMETHODIMP BufTagFileRead::OpenBlock(const TagFileTag* tag, TagVersion* versio
    vfseek(file,block->offset,SEEK_SET);
 
    BufTagFileBlockHeader header;
-   int len = vfread(&header,1,sizeof(header),file);
+   int len = (int)vfread(&header,1,sizeof(header),file);
    if (len != sizeof(header))
    { 
       Warning(("BufTagFileRead::OpenBlock(): read only %d of %d bytes\n",len,sizeof(header)));
@@ -734,10 +718,12 @@ STDMETHODIMP_(long) BufTagFileRead::Read(char* buf, int buflen)
    }
 
    ulong bytesleft = block->size - blockptr; 
-   if (buflen > bytesleft)
-      buflen = max(bytesleft,0);
+   if (buflen < 0)
+      return -1;
+   if ((ulong)buflen > bytesleft)
+      buflen = (int)bytesleft;
    
-   int len = vfread(buf,1,buflen,file);
+   int len = (int)vfread(buf,1,buflen,file);
    blockptr += len;
    return len;
 }

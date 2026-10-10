@@ -1,17 +1,17 @@
 #pragma once
 
-#include <Windows.h>
+#include <win32_platform.h>
 
 /*
  * GUIDS used by DirectPlay objects
  */
  class __declspec(uuid("D1EB6D20-8923-11d0-9D97-00A0C90A43CB"))  DirectPlay;
- class __declspec(uuid("2b74f7c0-9154-11cf-a9cd-00aa006886e3"))  IDirectPlay2;
- class __declspec(uuid("9d460580-a822-11cf-960c-0080c7534e82"))  IDirectPlay2A;
- class __declspec(uuid("133efe40-32dc-11d0-9cfb-00a0c90a43cb"))  IDirectPlay3;
- class __declspec(uuid("133efe41-32dc-11d0-9cfb-00a0c90a43cb"))  IDirectPlay3A;
- class __declspec(uuid("0ab1c530-4745-11d1-a7a1-0000f803abfc"))  IDirectPlay4;
- class __declspec(uuid("0ab1c531-4745-11d1-a7a1-0000f803abfc"))  IDirectPlay4A;
+ struct __declspec(uuid("2b74f7c0-9154-11cf-a9cd-00aa006886e3")) IDirectPlay2;
+ struct __declspec(uuid("9d460580-a822-11cf-960c-0080c7534e82")) IDirectPlay2A;
+ struct __declspec(uuid("133efe40-32dc-11d0-9cfb-00a0c90a43cb")) IDirectPlay3;
+ struct __declspec(uuid("133efe41-32dc-11d0-9cfb-00a0c90a43cb")) IDirectPlay3A;
+ struct __declspec(uuid("0ab1c530-4745-11d1-a7a1-0000f803abfc")) IDirectPlay4;
+ struct __declspec(uuid("0ab1c531-4745-11d1-a7a1-0000f803abfc")) IDirectPlay4A;
 
 struct __declspec(uuid("685BC400-9D2C-11cf-A9CD-00AA006886E3")) DPSPGUID_IPX;
 struct __declspec(uuid("36E95EE0-8577-11cf-960C-0080C7534E82")) DPSPGUID_TCPIP;

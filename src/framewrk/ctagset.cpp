@@ -76,7 +76,7 @@ BOOL cTagSet::FromString(const char *pszString)
    cStr CopyString = pszString; // copy our input so we can play with it
    CopyString.Trim();
    char *pszCopy = CopyString.Detach();
-   int iLen = strlen(pszCopy);
+   int iLen = (int)strlen(pszCopy);
 
    // This makes us robust for trailing separators.
    if (iLen && pszCopy[iLen - 1] == kTagSetStringSeparator) {

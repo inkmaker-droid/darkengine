@@ -467,7 +467,6 @@ void doit(void)
    }
 }
 
-#pragma off(unreferenced)
 int main(int argc, char **argv)
 {
    int i,j;
@@ -506,4 +505,3 @@ int main(int argc, char **argv)
    gr_close();
    return 0;
 }
-#pragma on(unreferenced)

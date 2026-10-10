@@ -709,7 +709,7 @@ static void ClearFog()
 static ITagFile* tagfile = NULL;
 static void movefunc(void *buf, size_t elsize, size_t nelem)
 {
-   ITagFile_Move(tagfile,(char*)buf,elsize*nelem);
+   ITagFile_Move(tagfile,(char*)buf,(int)(elsize*nelem));
 }
 
 enum eMinorVersions
@@ -938,7 +938,6 @@ static void db_message(DispatchData* msg)
 // Here's where we do the dirty work.
 //
 
-#pragma off(unreferenced)
 static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMessageData hdata)
 {
    // useful stuff for most clients
@@ -977,7 +976,6 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
 // Loop client factory function. 
 //
 
-#pragma off(unreferenced)
 static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData data)
 {
    StateRecord* state;
@@ -987,7 +985,6 @@ static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData
    
    return CreateSimpleLoopClient(_LoopFunc,state,pDesc);
 }
-#pragma on(unreferenced)
 
 ///////////////
 // DESCRIPTOR

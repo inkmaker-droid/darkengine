@@ -48,7 +48,7 @@ typedef void (*tTrapBindPostFunc) (BOOL bBound);
 // of IB_VARSTRMAX length, for which to stuff the prevailing
 // value of the conflicting channels. Should also return
 // TRUE if conflict was resolved.
-typedef BOOL CDECL (*tBindAggCallback) (struct _intrnl_var_channel **ppChannels, long iNum, char *pBuf);
+typedef BOOL (CDECL *tBindAggCallback) (struct _intrnl_var_channel **ppChannels, long iNum, char *pBuf);
 
 // Accepts variable name, value in string form, and 
 // whether or not the control was already down.

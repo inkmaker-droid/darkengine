@@ -7,10 +7,6 @@
 
 #include <float.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 #include <comtools.h>
 #include <recapi.h>
 #include <gshelapi.h>
@@ -33,7 +29,6 @@
 #include <string.h>
 #include <cfgtool.h>
 #include <breakkey.h>
-#include <hchkthrd.h>
 #include <iobjsys.h>
 #include <scrptapi.h>
 #include <scrnmode.h>
@@ -62,7 +57,6 @@
 #include <reaction.h>
 #include <stimul8r.h>
 #include <stimsrc.h>
-#include <dxload.h>
 #include <simtime.h>
 #include <gametool.h>
 #include <aiapi.h>
@@ -80,8 +74,7 @@
 #include <movie.h>
 #include <arqapi.h>
 #include <diskfree.h>
-#include <dxwrndlg.h>
-#include <cdplayer.h>
+#include <platform_services.h>
 #include <dyntex.h>
 #include <scrptne_.h>
 #include <random.h>
@@ -95,8 +88,6 @@
 #ifdef __WATCOMC__
 #pragma warning 555 9
 #endif
-
-EXTERN BOOL CheckForCD(void);
 
 //------------------------------------------------------------
 // CONFIG INITIALIZATION
@@ -119,84 +110,52 @@ static void RegisterDisplayMode(int width, int height)
       grd_mode_info[mode].flags |= GRM_CAN_WINDOW;
 }
 
-static BOOL CALLBACK RegisterMonitorModes(HMONITOR monitor, HDC,
-                                          LPRECT, LPARAM)
-{
-   MONITORINFOEXA info;
-   DEVMODEA displayMode;
-   DWORD index;
-
-   memset(&info, 0, sizeof(info));
-   info.cbSize = sizeof(info);
-   if (!GetMonitorInfoA(monitor, &info))
-      return TRUE;
-
-   for (index = 0; ; ++index)
-   {
-      memset(&displayMode, 0, sizeof(displayMode));
-      displayMode.dmSize = sizeof(displayMode);
-      if (!EnumDisplaySettingsExA(info.szDevice, index, &displayMode, 0))
-         break;
-      if (displayMode.dmBitsPerPel >= 24)
-         RegisterDisplayMode(displayMode.dmPelsWidth,
-                             displayMode.dmPelsHeight);
-   }
-
-   RegisterDisplayMode(info.rcMonitor.right - info.rcMonitor.left,
-                       info.rcMonitor.bottom - info.rcMonitor.top);
-   return TRUE;
-}
-
 static void RegisterDisplayModes(void)
 {
+   sPlatformDisplayMode modes[512];
+   int count;
+   int i;
+
    // Register the union of modes exposed by every connected monitor before
    // screen-mode configuration is read.  D3D11 presents these as internal
    // render sizes, so no exclusive legacy display-mode switch is required.
-   EnumDisplayMonitors(NULL, NULL, RegisterMonitorModes, 0);
+   count = PlatformGetDisplayModes(kPlatformAllDisplays, modes,
+                                   sizeof(modes) / sizeof(modes[0]),
+                                   NULL, NULL);
+   for (i = 0; i < count; ++i)
+      if (modes[i].bit_depth >= 24)
+         RegisterDisplayMode(modes[i].width, modes[i].height);
    RegisterDisplayMode(640, 480);
    RegisterDisplayMode(800, 600);
 }
 
 #ifdef THIEF2_GAME
-static const char kUserSettingsKey[] =
-   "Software\\OpenDarkEngine\\Thief2";
-
-static BOOL ReadUserDword(HKEY key, const char *name, DWORD *value)
-{
-   DWORD type = REG_DWORD;
-   DWORD size = sizeof(*value);
-   return RegQueryValueExA(key, name, NULL, &type, (BYTE *)value, &size) ==
-             ERROR_SUCCESS &&
-          type == REG_DWORD && size == sizeof(*value);
-}
+static const char kUserSettingsStore[] = "Thief2";
 
 static void LoadUserVideoSettings(void)
 {
-   HKEY key;
-   DWORD version;
-   DWORD width;
-   DWORD height;
-   DWORD depth;
-   DWORD fullscreen;
-   DWORD fit;
-   DWORD gamma_milli;
+   uint32 version;
+   uint32 width;
+   uint32 height;
+   uint32 depth;
+   uint32 fullscreen;
+   uint32 fit;
+   uint32 gamma_milli;
 
-   if (RegOpenKeyExA(HKEY_CURRENT_USER, kUserSettingsKey, 0, KEY_QUERY_VALUE,
-                     &key) != ERROR_SUCCESS)
-      return;
-
-   if (ReadUserDword(key, "VideoSettingsVersion", &version) &&
+   if (PlatformReadUserUInt(kUserSettingsStore, "VideoSettingsVersion",
+                            &version) &&
        (version == 1 || version == 2))
    {
-      if (ReadUserDword(key, "GammaMilli", &gamma_milli) &&
+      if (PlatformReadUserUInt(kUserSettingsStore, "GammaMilli",
+                               &gamma_milli) &&
           gamma_milli >= 100 && gamma_milli <= 4000)
       {
          float gamma = gamma_milli / 1000.0f;
          config_set_float_from_var("gamma", gamma);
       }
 
-      if (ReadUserDword(key, "ScreenWidth", &width) &&
-          ReadUserDword(key, "ScreenHeight", &height) &&
+      if (PlatformReadUserUInt(kUserSettingsStore, "ScreenWidth", &width) &&
+          PlatformReadUserUInt(kUserSettingsStore, "ScreenHeight", &height) &&
           width > 0 && height > 0)
       {
          int dimensions[2] = { (int)width, (int)height };
@@ -204,15 +163,15 @@ static void LoadUserVideoSettings(void)
                           dimensions, 2);
       }
 
-      if (ReadUserDword(key, "ScreenDepth", &depth) && depth > 0)
+      if (PlatformReadUserUInt(kUserSettingsStore, "ScreenDepth", &depth) &&
+          depth > 0)
          config_set_int("game_screen_depth", (int)depth);
-      if (ReadUserDword(key, "Fullscreen", &fullscreen))
+      if (PlatformReadUserUInt(kUserSettingsStore, "Fullscreen", &fullscreen))
          config_set_int("game_full_screen", fullscreen != 0);
-      if (version >= 2 && ReadUserDword(key, "Fit", &fit))
+      if (version >= 2 &&
+          PlatformReadUserUInt(kUserSettingsStore, "Fit", &fit))
          config_set_int("game_screen_fit", fit != 0);
    }
-
-   RegCloseKey(key);
 }
 #else
 static void LoadUserVideoSettings(void)
@@ -223,29 +182,22 @@ static void LoadUserVideoSettings(void)
 void LGAPI CoreEngineSaveVideoSettings(void)
 {
 #ifdef THIEF2_GAME
-   HKEY key;
-   DWORD disposition;
-   DWORD version = 2;
-   DWORD width;
-   DWORD height;
-   DWORD depth;
-   DWORD fullscreen;
-   DWORD fit;
-   DWORD gamma_milli;
+   uint32 version = 2;
+   uint32 width;
+   uint32 height;
+   uint32 depth;
+   uint32 fullscreen;
+   uint32 fit;
+   uint32 gamma_milli;
    int dimensions[2];
    int count = 2;
    int value;
    float gamma = 1.0f;
 
-   if (RegCreateKeyExA(HKEY_CURRENT_USER, kUserSettingsKey, 0, NULL, 0,
-                       KEY_SET_VALUE, NULL, &key, &disposition) != ERROR_SUCCESS)
-      return;
-
    if (config_get_float("gamma", &gamma))
    {
-      gamma_milli = (DWORD)(gamma * 1000.0f + 0.5f);
-      RegSetValueExA(key, "GammaMilli", 0, REG_DWORD,
-                     (const BYTE *)&gamma_milli, sizeof(gamma_milli));
+      gamma_milli = (uint32)(gamma * 1000.0f + 0.5f);
+      PlatformWriteUserUInt(kUserSettingsStore, "GammaMilli", gamma_milli);
    }
 
    if (config_get_value("game_screen_size", CONFIG_INT_TYPE,
@@ -253,34 +205,27 @@ void LGAPI CoreEngineSaveVideoSettings(void)
    {
       width = dimensions[0];
       height = dimensions[1];
-      RegSetValueExA(key, "ScreenWidth", 0, REG_DWORD,
-                     (const BYTE *)&width, sizeof(width));
-      RegSetValueExA(key, "ScreenHeight", 0, REG_DWORD,
-                     (const BYTE *)&height, sizeof(height));
+      PlatformWriteUserUInt(kUserSettingsStore, "ScreenWidth", width);
+      PlatformWriteUserUInt(kUserSettingsStore, "ScreenHeight", height);
    }
 
    if (config_get_int("game_screen_depth", &value))
    {
       depth = value;
-      RegSetValueExA(key, "ScreenDepth", 0, REG_DWORD,
-                     (const BYTE *)&depth, sizeof(depth));
+      PlatformWriteUserUInt(kUserSettingsStore, "ScreenDepth", depth);
    }
    if (config_get_int("game_full_screen", &value))
    {
       fullscreen = value != 0;
-      RegSetValueExA(key, "Fullscreen", 0, REG_DWORD,
-                     (const BYTE *)&fullscreen, sizeof(fullscreen));
+      PlatformWriteUserUInt(kUserSettingsStore, "Fullscreen", fullscreen);
    }
    if (config_get_int("game_screen_fit", &value))
    {
       fit = value != 0;
-      RegSetValueExA(key, "Fit", 0, REG_DWORD,
-                     (const BYTE *)&fit, sizeof(fit));
+      PlatformWriteUserUInt(kUserSettingsStore, "Fit", fit);
    }
 
-   RegSetValueExA(key, "VideoSettingsVersion", 0, REG_DWORD,
-                  (const BYTE *)&version, sizeof(version));
-   RegCloseKey(key);
+   PlatformWriteUserUInt(kUserSettingsStore, "VideoSettingsVersion", version);
 #endif
 }
 
@@ -309,7 +254,7 @@ static void init_monochrome()
    char monofname[256];
    monofname[0] = '\0';
 
-#ifdef WIN32
+#ifdef _WIN32
 #ifndef SHIP
    {
       bool is_mono=!config_is_defined("mono_no_screen");
@@ -472,21 +417,10 @@ tResult LGAPI CoreEngineCreateObjects(int argc, const char *argv[])
       if (!CheckForDiskspaceAndMessage(NULL,MIN_STARTUP_DISK_MB))
          Exit(1,NULL); // CheckFor does a message box
 
-      if (!LoadDirectX())
-         Exit(1,NULL);  // message already printed in LoadDirectX itself
    }
 
    // umm, ship only or something?
    init_monochrome();
-
-#ifndef DONT_CHECK_CD
-   // Is the CD in the drive? - in ship, we always check this
-#ifndef SHIP
-   if (!config_is_defined("skip_starting_checks"))
-#endif
-      if (!CheckForCD())
-         Exit(1,NULL);
-#endif
 
    //
    //  Next let's do fault
@@ -568,7 +502,6 @@ tResult LGAPI CoreEngineCreateObjects(int argc, const char *argv[])
    CampaignCreate(); 
    InputBinderCreate (&g_pInputBinder);
    AsyncReadQueueCreate();
-   CDPlayerCreate();
    DynTextureCreate();
 
    // @TODO: move these out to an "engine features" app object creation function,
@@ -640,9 +573,6 @@ tResult LGAPI CoreEngineAppInit()
    if (config_is_defined("breakkey"))
       BreakKeyActivate(VK_F12,VK_F11);
 
-   if (config_is_defined("heapcheck"))
-      HeapCheckActivate(VK_F9);
-
    tm_init();
 
    // D3D11 presents these as render-canvas sizes instead of requesting
@@ -670,15 +600,11 @@ tResult LGAPI CoreEngineAppInit()
    // the display under the pointer, which is the best available "current"
    // display before the game creates its window.
    {
-      POINT point = { 0, 0 };
-      MONITORINFO info = { sizeof(info) };
       int native_width;
       int native_height;
 
-      GetCursorPos(&point);
-      GetMonitorInfo(MonitorFromPoint(point, MONITOR_DEFAULTTOPRIMARY), &info);
-      native_width = info.rcMonitor.right - info.rcMonitor.left;
-      native_height = info.rcMonitor.bottom - info.rcMonitor.top;
+      PlatformGetDisplayModes(kPlatformCurrentDisplay, NULL, 0,
+                              &native_width, &native_height);
 
       SetSupportedScreenSize("screen_size", "screen_depth",
                              native_width, native_height);
@@ -699,9 +625,6 @@ tResult LGAPI CoreEngineAppInit()
    //input binding stuff. load all contexts from "default.bnd" and "<game>.bnd"
    g_pInputBinder->Init (NULL, NULL);
    InitIBVars ();
-
-   //  pop dialog box about dxdrivers
-   DxWarnDlg();
 
    // initialize the random number lib
    // note fullwise: we retardedly could be calling this twice,

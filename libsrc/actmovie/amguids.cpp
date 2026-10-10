@@ -5,6 +5,7 @@
 // $Revision: 1.1 $
 //
 
+#include <win32_platform.h>
 #include <objbase.h>
 #include <initguid.h>
 #include <uuids.h>

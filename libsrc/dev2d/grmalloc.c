@@ -15,7 +15,12 @@
    functions gr_malloc() and gr_free(). they default to malloc() and
    free(). library clients can change the default with gr_set_malloc()
    and gr_set_free(). */
-void *(*gr_malloc)(int n) = malloc;
+static void *default_gr_malloc(int n)
+{
+   return malloc((size_t)n);
+}
+
+void *(*gr_malloc)(int n) = default_gr_malloc;
 void (*gr_free)(void *m) = free;
 
 /* set 2d's internal function pointer to a malloc routine. */

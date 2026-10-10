@@ -441,7 +441,7 @@ static void ReleaseBlood(const sDamageMsg* msg)
          ObjID arch = pOS->GetObjectNamed(blood_arch);
 
          mxs_vector dir; 
-         dir.x=0.2; dir.y=0.0; dir.z=0.0;
+         dir.x=0.2f; dir.y=0.0f; dir.z=0.0f;
 
          // Look in the event history for the raw collision event
          sPhysClsnEvent* ev = (sPhysClsnEvent*)msg->Find(kEventKindCollision); 
@@ -469,13 +469,13 @@ static void ReleaseBlood(const sDamageMsg* msg)
             {  // get the particle property, tweak the data here
                ParticleGroup *pPGroup = ObjGetParticleGroup(blood);
                float scale=(float)msg->data.damage->amount/(float)maxDmg;
-               if (scale<0.33) scale=0.33; else if (scale>1.0) scale=1.0;
-               pPGroup->n*=scale;
+               if (scale<0.33f) scale=0.33f; else if (scale>1.0f) scale=1.0f;
+               pPGroup->n = (int)(pPGroup->n * scale);
                ObjSetParticleGroup(blood,pPGroup);
             }
          }
          else
-            launchProjectile(victim,arch,0.1,PRJ_FLG_PUSHOUT|PRJ_FLG_GRAVITY,NULL,&dir,NULL);
+            launchProjectile(victim,arch,0.1f,PRJ_FLG_PUSHOUT|PRJ_FLG_GRAVITY,NULL,&dir,NULL);
 
          SafeRelease(pOS);
       }
@@ -603,7 +603,6 @@ static eDamageResult LGAPI damage_listener(const sDamageMsg* msg, tDamageCallbac
    }
    return kDamageNoOpinion;
 }
-#pragma on(unreferenced)
 
 ////////////////////////////////////////////////////////////
 // "In Combat" test for voice overs

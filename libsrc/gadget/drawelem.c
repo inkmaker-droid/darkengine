@@ -27,6 +27,16 @@ uchar elem_clut[256];
 
 static guiStyle* draw_style = NULL;
 
+static int elem_int_param(const void *param)
+{
+   return (int)(intptr_t)param;
+}
+
+static Ref elem_ref_param(const void *param)
+{
+   return (Ref)(uintptr_t)param;
+}
+
 void ElementSetStyle(guiStyle* style)
 {
    draw_style = style;
@@ -57,7 +67,6 @@ static ulong elem_bcolor(DrawElement* d)
 is non-NULL, then that means to not actually draw, but instead fill in the Point with the width of thing
 as if it were going to draw.  This is primarily to prevent a lot of redundant code with the sizing functions. */
 
-#pragma off(unreferenced)
 // Boy, this is an exciting function!
 void ElementDrawNone(DrawElement *d, DrawElemState state, short x, short y, short w, short h, Point *size)
 {
@@ -249,7 +258,7 @@ void ElementDrawText(DrawElement *d, DrawElemState state, short x, short y, shor
             if (lgad_string_get == NULL)
                Warning(("ElementDrawText: lgad_string_get is null!\n"));
             else
-               lgad_string_get((Ref)d->draw_data, s2, DRAWELEM_STRLEN);
+               lgad_string_get(elem_ref_param(d->draw_data), s2, DRAWELEM_STRLEN);
          }
          v = (int *)d->draw_data2;
          if (v == NULL)
@@ -262,9 +271,9 @@ void ElementDrawText(DrawElement *d, DrawElemState state, short x, short y, shor
          break;
       case DRAWTYPE_TEXTREF:
          if (lgad_string_get)
-            lgad_string_get((Ref)d->draw_data, s, DRAWELEM_STRLEN);
+            lgad_string_get(elem_ref_param(d->draw_data), s, DRAWELEM_STRLEN);
          else
-            strcpy(s,(char *)RefGet((Ref)d->draw_data));
+            strcpy(s,(char *)RefGet(elem_ref_param(d->draw_data)));
          break;
    }
 
@@ -358,7 +367,7 @@ void ElementDrawBitmap(DrawElement *d, DrawElemState state, short x, short y, sh
          break;
       case DRAWTYPE_BITMAPOFFSET:
       {
-         int limit = (int)d->draw_data2;
+         int limit = elem_int_param(d->draw_data2);
          if (limit == 0 || state < limit)
          {
             draw_me = *(((grs_bitmap**)d->draw_data) + state);
@@ -372,7 +381,7 @@ void ElementDrawBitmap(DrawElement *d, DrawElemState state, short x, short y, sh
          break;
       case DRAWTYPE_IRESOFFSET:
       {
-         int limit = (int)d->draw_data2;
+         int limit = elem_int_param(d->draw_data2);
          if (limit == 0 || state < limit)
          {
             named_res = ((IRes **)d->draw_data)[state];
@@ -383,15 +392,15 @@ void ElementDrawBitmap(DrawElement *d, DrawElemState state, short x, short y, sh
       }
       case DRAWTYPE_RES:
          if (state == dsDEPRESSED && d->draw_data2 != 0)
-            draw_ref = (Ref)d->draw_data2; 
+            draw_ref = elem_ref_param(d->draw_data2);
          else
-            draw_ref = (Ref)d->draw_data;
+            draw_ref = elem_ref_param(d->draw_data);
          goto common_ref;
 
       case DRAWTYPE_RESOFFSET:
-         draw_ref = (Ref)d->draw_data;
+         draw_ref = elem_ref_param(d->draw_data);
          { 
-            int limit = (int)d->draw_data2;
+            int limit = elem_int_param(d->draw_data2);
             if (limit == 0 || state < limit)
             {
                Ref ref = draw_ref + state; 
@@ -447,7 +456,6 @@ void ElementDrawBitmap(DrawElement *d, DrawElemState state, short x, short y, sh
       RefUnlock(draw_ref);
 }
 
-#pragma on(unreferenced)
 
 // Big lookup table for how we deal with each kind of element, with duplicate entries for
 // common functionality.
@@ -518,7 +526,7 @@ void ElementDraw(DrawElement *d, DrawElemState state, short x, short y, short w,
    }
    d = elem;
 
-   elem_clut[MAGIC_ELEM_CLUT_COLOR] = elem_bcolor(d);
+   elem_clut[MAGIC_ELEM_CLUT_COLOR] = (uchar)elem_bcolor(d);
 
    // Draw the "outer" elements that are independant of the internal data, like "bevel" or "trek"
    switch((d->draw_flags & DRAWFLAG_BORDER_BITS) >> DRAWFLAG_BORDER_SHIFT)
@@ -735,7 +743,6 @@ void ElementExtrasSize(DrawElement *d, short *pw, short *ph)
 }
 
 // *** Needs to become real when internal drawing elements exist!!!!!
-#pragma off(unreferenced)
 
 // Figure out how far into the draw element the extra (internals, borders) bits go
 // for the upper and left
@@ -826,7 +833,6 @@ void ElementOffsetAlternate(DrawElement *d, short *pw, short *ph)
    // thus far, no internal elements affect the alternative offset.
 }
 
-#pragma on(unreferenced)
 
 void ElementClear(DrawElement *d)
 {

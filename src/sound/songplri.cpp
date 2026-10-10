@@ -237,7 +237,7 @@ cSongPlayer::UnloadSong()
    }
 
    uint numSegments = m_pSong->CountSections();
-   for (int i = 0; i < numSegments; i++)
+   for (uint i = 0; i < numSegments; i++)
    {
       SafeRelease (m_pResArray[i]);
    }
@@ -293,7 +293,7 @@ cSongPlayer::StartPlaying()
    fake_sfx_hack hackola;
    hackola._dummy = 0;
    hackola._flags = FAKE_SFXFLG_HAPPY;
-   m_pSndSample->SetData((long)&hackola);
+   m_pSndSample->SetData((intptr_t)&hackola);
    m_pSndSample->Play();
    // we are not paused
    m_isPaused = FALSE;

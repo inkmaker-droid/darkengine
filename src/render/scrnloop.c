@@ -4,7 +4,6 @@
 */
 
 // $Header: r:/t2repos/thief2/src/render/scrnloop.c,v 1.28 2000/02/25 16:28:37 kevin Exp $ 
-#include <windows.h>
 #include <string.h>
 #include <config.h>
 #include <resapi.h>
@@ -28,6 +27,8 @@
 #include <palmgr.h>
 #include <palette.h>
 #include <gamma.h>
+#include <platform_services.h>
+#include <stdlib.h>
 #include <mprintf.h>
 
 // Must be last header
@@ -114,7 +115,7 @@ eLoopMessageResult LGAPI ScrnManLoopFunc(void* context, eLoopMessage msg, tLoopM
                   else
                      config_get_raw("scrn_loop_fail_msg",buf,sizeof(buf) - 1);
                   buf[sizeof(buf) - 1] = '\0';
-                  MessageBox ((HWND)NULL, buf, (LPCSTR)NULL, MB_ICONWARNING);
+                  PlatformShowError("Display initialization failed", buf);
                   exit(0); 
                }
             }
@@ -202,20 +203,18 @@ eLoopMessageResult LGAPI ScrnManLoopFunc(void* context, eLoopMessage msg, tLoopM
    return result;
 }
 
-#pragma off(unreferenced)
 ILoopClient* LGAPI CreateScrnManClient(sLoopClientDesc * pDesc, tLoopClientData data)
 {
    ScrnManContext* pContext = (ScrnManContext*)data;
    return CreateSimpleLoopClient(ScrnManLoopFunc,pContext,&ScrnManClientDesc);
 }
-#pragma on(unreferenced)
 
 sLoopClientDesc ScrnManClientDesc =
 {
    &LOOPID_ScrnMan,
    "Screen Manager",
    kPriorityNormal,
-   kMsgsMode|kMsgsFrameEdge|kMsgVisual|kMsgsAppOuter,
+   (ulong)kMsgsMode|kMsgsFrameEdge|kMsgVisual|kMsgsAppOuter,
 
    kLCF_Callback,
    CreateScrnManClient,

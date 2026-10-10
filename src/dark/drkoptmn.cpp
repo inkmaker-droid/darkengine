@@ -4,7 +4,6 @@
 */
 
 // $Header: r:/t2repos/thief2/src/dark/drkoptmn.cpp,v 1.75 2000/03/22 18:19:55 patmac Exp $
-#include <windows.h>
 #include <stdlib.h>
 #include <string.h>
 #include <dev2d.h>
@@ -20,7 +19,8 @@
 #include <drksound.h>
 
 #include <appsfx.h>
-#include <d3d11legacy.h>
+#include <render_backend.h>
+#include <platform_services.h>
 #include <gamescrn.h>
 #include <scrnmode.h>
 
@@ -180,17 +180,17 @@ static void AddDisplayResolution(sDisplayResolution *resolutions, int capacity,
    ++*count;
 }
 
-// Enumerate the modes exposed by Windows for the monitor containing the game
-// window. DirectDraw's legacy table includes emulated modes which are not a
-// useful description of the current display.
+// Enumerate the modes exposed by the platform for the display containing the
+// game window. The legacy renderer table includes emulated modes which are not
+// a useful description of the current display.
 static int GetDisplayResolutions(sDisplayResolution *resolutions, int capacity)
 {
-   MONITORINFOEXA monitorInfo;
-   HMONITOR monitor;
-   HWND window = GetActiveWindow();
-   DEVMODEA displayMode;
+   sPlatformDisplayMode displayModes[MAX_DISPLAY_RESOLUTIONS];
+   int displayModeCount;
+   int monitorWidth;
+   int monitorHeight;
    int count = 0;
-   DWORD modeIndex;
+   int modeIndex;
    static const sDisplayResolution compatibilityModes[] =
    {
       { 640, 360 }, { 640, 480 },
@@ -201,37 +201,23 @@ static int GetDisplayResolutions(sDisplayResolution *resolutions, int capacity)
       { 1920, 1080 }
    };
 
-   if (window)
-      monitor = MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST);
-   else
+   displayModeCount = PlatformGetDisplayModes(
+      kPlatformCurrentDisplay, displayModes,
+      sizeof(displayModes) / sizeof(displayModes[0]),
+      &monitorWidth, &monitorHeight);
+   for (modeIndex = 0; modeIndex < displayModeCount && count < capacity;
+        ++modeIndex)
    {
-      POINT cursor;
-      GetCursorPos(&cursor);
-      monitor = MonitorFromPoint(cursor, MONITOR_DEFAULTTOPRIMARY);
-   }
-
-   memset(&monitorInfo, 0, sizeof(monitorInfo));
-   monitorInfo.cbSize = sizeof(monitorInfo);
-   if (!GetMonitorInfoA(monitor, &monitorInfo))
-      return 0;
-
-   for (modeIndex = 0; count < capacity; ++modeIndex)
-   {
-      memset(&displayMode, 0, sizeof(displayMode));
-      displayMode.dmSize = sizeof(displayMode);
-      if (!EnumDisplaySettingsExA(monitorInfo.szDevice, modeIndex,
-                                  &displayMode, 0))
-         break;
-      if (displayMode.dmBitsPerPel < 24 ||
-          displayMode.dmPelsWidth < MIN_RES_X ||
-          displayMode.dmPelsHeight < MIN_RES_Y ||
-          displayMode.dmPelsWidth > 8191 ||
-          displayMode.dmPelsHeight > 8191)
+      if (displayModes[modeIndex].bit_depth < 24 ||
+          displayModes[modeIndex].width < MIN_RES_X ||
+          displayModes[modeIndex].height < MIN_RES_Y ||
+          displayModes[modeIndex].width > 8191 ||
+          displayModes[modeIndex].height > 8191)
          continue;
 
       AddDisplayResolution(resolutions, capacity, &count,
-                           displayMode.dmPelsWidth,
-                           displayMode.dmPelsHeight);
+                           displayModes[modeIndex].width,
+                           displayModes[modeIndex].height);
    }
 
    // Merge the monitor's advertised modes with a guaranteed compatibility
@@ -239,8 +225,6 @@ static int GetDisplayResolutions(sDisplayResolution *resolutions, int capacity)
    // asking Windows to switch the physical display mode.
    {
       int i;
-      int monitorWidth = monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left;
-      int monitorHeight = monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top;
       for (i = 0; i < (int)(sizeof(compatibilityModes) /
                             sizeof(compatibilityModes[0])); ++i)
       {
@@ -629,7 +613,7 @@ protected:
       if ( m_ambientVolume > kAmbientVolumeSliderNotches - 1 ) {
          m_ambientVolume = kAmbientVolumeSliderNotches - 1;
       }
-      m_gamma = 20-(20.0 / (MAX_GAMMA - MIN_GAMMA)) * (g_gamma - MIN_GAMMA);
+      m_gamma = (int)(20 - (20.0f / (MAX_GAMMA - MIN_GAMMA)) * (g_gamma - MIN_GAMMA));
 
       m3dDriver = 0;
       if (config_is_defined("d3d_driver_index"))
@@ -667,7 +651,7 @@ protected:
       LGadDestroyButtonList(&mTabButtons); 
 
       memset(&mTabElems,0,sizeof(mTabElems)); 
-      for (int i = 0, j; i < kNumTabs; i++)
+      for (int i = 0; i < kNumTabs; i++)
          mTabStrs[i] = ""; 
 
       TermSubPanel ();
@@ -785,7 +769,7 @@ protected:
       if (mCurSub == kSubBasicVideo) {
          static int prev_gamma;
          if (prev_gamma != m_gamma) {
-            TouchGamma ((((MAX_GAMMA - MIN_GAMMA) / 20.0) * (float)(20-m_gamma)) + MIN_GAMMA);
+            TouchGamma ((((MAX_GAMMA - MIN_GAMMA) / 20.0f) * (float)(20-m_gamma)) + MIN_GAMMA);
             prev_gamma = m_gamma;
          }
       }
@@ -1123,7 +1107,7 @@ protected:
          // replace spaces within a binding name with underscores
          buf[sizeof(buf) - 1] = 0;
          strncpy( buf, (const char *) controls[i], sizeof(buf) - 1 );
-         len = strlen( buf );
+      len = (int)strlen( buf );
          for ( j = 0; j < len; j++ ) {
             if ( buf[j] == ' ' ) {
                buf[j] = '_';
@@ -1486,7 +1470,7 @@ protected:
    //////////////////////////////////////////////////////
 
    void InitButtonList (LGadButtonListDesc *desc, LGadButtonList *list, Rect *rect_array, DrawElement *draw_elem,
-                        ButtListCB cb, cStr *strs, const char *prefix, int num, int flags)
+                        ButtListCB cb, cStr *strs, const char *prefix, int num, ulong flags)
    {
       // set up drawlelems
       for (int i = 0; i < num; i++) {
@@ -1651,7 +1635,7 @@ protected:
       memset (&draw, 0, sizeof (DrawElement));
       draw.draw_type = DRAWTYPE_TEXT;
       draw.draw_data = s;
-      draw.fcolor = mTextStyle.colors[0];
+         draw.fcolor = (ushort)mTextStyle.colors[0];
       ElementDraw (&draw, dsNORMAL, r.ul.x, r.ul.y, r.lr.x - r.ul.x, r.lr.y - r.ul.y);
    }
 
@@ -1707,7 +1691,7 @@ protected:
 
             memset (&draw, 0, sizeof (DrawElement));
             draw.draw_type = DRAWTYPE_TEXT;
-            draw.fcolor = mTextStyle.colors[0];
+         draw.fcolor = (ushort)mTextStyle.colors[0];
             GetBindingStrings( mTmpBindNum, &tmpBindName, &tmpBinding );
 
             // "Hit key or button to bind to";
@@ -1747,7 +1731,7 @@ protected:
 
    void FillBlack (int rect_num)
    {
-      ushort old_fcolor = grd_canvas->gc.fcolor;
+      ushort old_fcolor = (ushort)grd_canvas->gc.fcolor;
       grd_canvas->gc.fcolor = 0;//fill w/ black
 
       Rect *rect;
@@ -1797,12 +1781,12 @@ protected:
                        &m_ambientVolume, kAmbientVolumeSliderNotches - 1, 1);
 
          if (! CanChangeSoundDeviceNow ()) {
-            mSubPanelDesc[kSubAudio].button_elems[kAudioChannels - kSpeakerTest].fcolor = mGreyStyle.colors[0];  
-            mSubPanelDesc[kSubAudio].button_elems[kAudio3DHWToggle - kSpeakerTest].fcolor = mGreyStyle.colors[0];  
+         mSubPanelDesc[kSubAudio].button_elems[kAudioChannels - kSpeakerTest].fcolor = (ushort)mGreyStyle.colors[0];
+         mSubPanelDesc[kSubAudio].button_elems[kAudio3DHWToggle - kSpeakerTest].fcolor = (ushort)mGreyStyle.colors[0];
          }
 
          if (!CanChangeEAX())
-            mSubPanelDesc[kSubAudio].button_elems[kAudioEAXToggle - kSpeakerTest].fcolor = mGreyStyle.colors[0];
+         mSubPanelDesc[kSubAudio].button_elems[kAudioEAXToggle - kSpeakerTest].fcolor = (ushort)mGreyStyle.colors[0];
       }
       else if (new_sub == kSubGame) {
       }
@@ -1856,7 +1840,7 @@ protected:
 
       if (SFX_GetSoundDevice () == SFXDEVICE_A3D) {
          //@TODO: make the a3d speaker test sound crisper, clearer, more refreshed
-         mxs_vector pos = {0.0, SFX_StereoReversed() ? 10.0 : -10.0, 0.0};
+         mxs_vector pos = {0.0f, SFX_StereoReversed() ? 10.0f : -10.0f, 0.0f};
          SFX_Play_Vec (SFX_3D, &parm, (char *)(const char *)snd_name, &pos);
       }
       else
@@ -2002,15 +1986,15 @@ protected:
             // 640x480 logical canvas; the game resolution is only an initial
             // client-size hint for the newly windowed HWND.
             config_set_int("game_screen_fit", mPendingFit);
-            D3D11LegacySetFitToViewport(mPendingFit);
+            RenderBackendSetFitToViewport(mPendingFit);
             mPendingVideoMode = *SetGameScreenMode(&mPendingVideoMode);
             ScrnModeSetConfig(GetGameScreenMode(), "game_");
             CoreEngineSaveVideoSettings();
             if (mPendingVideoMode.flags & kScrnModeWindowed)
-               D3D11LegacySetWindowedClientSizeHint(mPendingVideoMode.w,
+               RenderBackendSetWindowedClientSizeHint(mPendingVideoMode.w,
                                                     mPendingVideoMode.h);
             else
-               D3D11LegacySetWindowedClientSizeHint(0, 0);
+               RenderBackendSetWindowedClientSizeHint(0, 0);
 
             mPanelVideoMode = mPendingVideoMode;
             mPanelVideoMode.valid_fields = kScrnModeAllValid;
@@ -2061,7 +2045,7 @@ protected:
             cStr snd_name = FetchUIString (panel_name, "leftsound", mResPath);
 
             if (SFX_GetSoundDevice () == SFXDEVICE_A3D) {
-               mxs_vector pos = {0.0, SFX_StereoReversed() ? -10.0 : 10.0, 0.0};
+               mxs_vector pos = {0.0f, SFX_StereoReversed() ? -10.0f : 10.0f, 0.0f};
                //@TODO: make the a3d speaker test sound crisper, clearer, more refreshed
                SFX_Play_Vec (SFX_3D, &parm, (char *)(const char *)snd_name, &pos);
             }
@@ -2107,7 +2091,7 @@ protected:
                   // Hack: This takes the "green" color from the "speaker test" button..... there must be a better way...
                   mSubPanelDesc[kSubAudio].button_elems[kAudioEAXToggle - kSpeakerTest].fcolor = mSubPanelDesc[kSubAudio].button_elems[0].fcolor;
                else
-                  mSubPanelDesc[kSubAudio].button_elems[kAudioEAXToggle - kSpeakerTest].fcolor = mGreyStyle.colors[0];
+      mSubPanelDesc[kSubAudio].button_elems[kAudioEAXToggle - kSpeakerTest].fcolor = (ushort)mGreyStyle.colors[0];
                FillBlack (kAudioEAXToggle);
                
                RedrawDisplay();
@@ -2311,7 +2295,7 @@ protected:
       char buf[16];
 	   //reverse of above, since we are about to reverse it.
 	   g_climb_on_touch = ((atof (climbtouching) != 0.0) ? FALSE : TRUE);
-	   sprintf (buf, "gameopt_0", button);
+	   sprintf (buf, "gameopt_0");
 	   if (atof (climbtouching) == 0.0) {
 	     g_pInputBinder->ProcessCmd ("climb_touch 1");
 	     //do thing here.
@@ -2371,7 +2355,7 @@ protected:
          {
             const char *notified = g_pInputBinder->ProcessCmd ("echo $goal_notify");
             char buf[16];
-            sprintf (buf, "gameopt_3", button);
+            sprintf (buf, "gameopt_3");
             if (atof (notified) == 0.0) {
                g_pInputBinder->ProcessCmd ("goal_notify 1");
                //do work here.
@@ -2391,7 +2375,7 @@ protected:
          {
             const char *notified = g_pInputBinder->ProcessCmd ("echo $auto_equip");
             char buf[16];
-            sprintf (buf, "gameopt_4", button);
+            sprintf (buf, "gameopt_4");
             if (atof (notified) == 0.0) {
                g_pInputBinder->ProcessCmd ("auto_equip 1");
                //do work here.
@@ -2603,10 +2587,10 @@ protected:
             // Capture the final slider position even if this click arrives
             // before another options-frame update, then save the selected
             // gamma and display mode immediately.
-            TouchGamma ((((MAX_GAMMA - MIN_GAMMA) / 20.0) *
+            TouchGamma ((((MAX_GAMMA - MIN_GAMMA) / 20.0f) *
                          (float)(20-m_gamma)) + MIN_GAMMA);
             config_set_int ("game_screen_fit", mPendingFit);
-            D3D11LegacySetFitToViewport (mPendingFit);
+            RenderBackendSetFitToViewport (mPendingFit);
             SetGameScreenMode (&mPendingVideoMode);
             ScrnModeSetConfig (GetGameScreenMode (), "game_");
             CoreEngineSaveVideoSettings();

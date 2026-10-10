@@ -359,15 +359,18 @@ cIBInputMapper::cIBInputMapper()
 			}
 			else if (!strncmp("mouse", control_name, 5))
 			{
-				g_input_controls[1].Add(code_str, control_name, strlen(control_name) + 1);
+				g_input_controls[1].Add(code_str, control_name,
+					static_cast<int>(strlen(control_name) + 1));
 			}
 			else if (!strncmp("joy", control_name, 3))
 			{
-				g_input_controls[2].Add(code_str, control_name, strlen(control_name) + 1);
+				g_input_controls[2].Add(code_str, control_name,
+					static_cast<int>(strlen(control_name) + 1));
 			}
 			else
 			{
-				g_input_controls[0].Add(code_str, control_name, strlen(control_name) + 1);
+				g_input_controls[0].Add(code_str, control_name,
+					static_cast<int>(strlen(control_name) + 1));
 			}
 		}
 	}
@@ -435,7 +438,7 @@ const char* cIBInputMapper::Bind(char** tokens)
 	strcpy(cmd, tokens[1]);
 	strcat(cmd, " control: ");
 	strcat(cmd, m_misc_str);
-	m_control_binds.ChangeInfo(m_misc_str, cmd, strlen(cmd) + 1);
+	m_control_binds.ChangeInfo(m_misc_str, cmd, static_cast<int>(strlen(cmd) + 1));
 	return 0;
 }
 
@@ -607,7 +610,7 @@ BOOL cIBInputMapper::TrapHandler(uiEvent* p_event)
 	}
 	case UI_EVENT_MOUSE: {
 		auto* mouse_event = reinterpret_cast<uiMouseEvent*>(p_event);
-		uint8 action = p_event->subtype;
+		uint8 action = static_cast<uint8>(p_event->subtype);
 		if (action)
 		{
 			if (mouse_event->wheel && action == 128)
@@ -799,9 +802,9 @@ void cIBInputMapper::PollAllKeys()
 	kbs_event keycode = {};
 	for (int i = 0; i < 224; ++i)
 	{
-		keycode.code = i;
+		keycode.code = static_cast<uchar>(i);
 		kb_cook_real(keycode, &cooked, results, 0); // fixme: assert on failure
-		ProcessRawKey(i, kb_state(cooked), 1);
+		ProcessRawKey((short)i, (BOOL)kb_state((uchar)cooked), 1);
 	}
 	kbd_modifier_state = 0;
 }
@@ -1348,7 +1351,7 @@ int cIBInputMapper::ProcessMouseMove(uiMouseEvent* event)
 	if (cmd)
 	{
 		StripControl(final, cmd);
-		float rel_x = x - (res_x >> 1);
+		float rel_x = static_cast<float>(x - (res_x >> 1));
 		sprintf(str, " %8.8f", rel_x);
 		strcat(final, str);
 		g_IB_variable_manager->Cmd(final, 0);
@@ -1358,7 +1361,7 @@ int cIBInputMapper::ProcessMouseMove(uiMouseEvent* event)
 	if (cmd)
 	{
 		StripControl(final, cmd);
-		float rel_y = y - (res_y >> 1);
+		float rel_y = static_cast<float>(y - (res_y >> 1));
 		sprintf(str, " %8.8f", -rel_y);
 		strcat(final, str);
 		g_IB_variable_manager->Cmd(final, 0);

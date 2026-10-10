@@ -194,7 +194,7 @@ static ILoopClient* LGAPI MovieClientFactoryFunc(sLoopClientDesc * pDesc, tLoopC
    return new cMovieClient((const char*) data);    
 }
 
-static ulong movie_factory_id = -1; 
+static tLoopClientCookie movie_factory_id = (tLoopClientCookie)-1;
 
 static void create_movie_factory()
 {

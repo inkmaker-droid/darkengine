@@ -6,8 +6,8 @@
 // $Header: r:/t2repos/thief2/src/framewrk/gen_bind.cpp,v 1.30 2000/03/09 22:58:23 adurant Exp $
 
 //general binds processing
-#include <windows.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>    // for fabs
 
 #include <event.h>
@@ -26,6 +26,7 @@
 #include <plyrmode.h>
 #include <plyrspd.h>
 #include <playrobj.h>
+#include <platform_services.h>
 #include <mprintf.h>
 
 #include <drk_bind.h>
@@ -103,11 +104,16 @@ static BOOL g_freelookon;
 
 BOOL  g_joystickActive = FALSE;
 float g_joystickSensitivity = 1.0;
-float g_joystickDeadzone = 0.05;
+float g_joystickDeadzone = 0.05f;
 float g_rudderSensitivity = 1.0;
-float g_rudderDeadzone = 0.05;
+float g_rudderDeadzone = 0.05f;
 static float g_gamepadLookSensitivity = 1.0;
 static int g_gamepadLookInvertY = 0;
+
+static float parse_float(const char *value)
+{
+   return strtof(value, NULL);
+}
 
 static void GetStates ()
 {
@@ -125,9 +131,9 @@ General binding callbacks
 static char *ForwardProc (const char *, const char *val, BOOL)
 {
 
-   //   mprintf("Forward %g %d\n",atof(val),atoi(val));
+   //   mprintf("Forward %g %d\n",parse_float(val),atoi(val));
    
-   float f = atof (val);
+   float f = parse_float(val);
    if ((f != 0) && (GetPlayerMode() == kPM_Dead))
       return NULL;
 
@@ -199,7 +205,7 @@ static char *ForwardProc (const char *, const char *val, BOOL)
 static char *JoyForwardProc (const char *, const char *val, BOOL)
 {
 
-   float f = atof (val);
+   float f = parse_float(val);
    if ((f != 0) && (GetPlayerMode() == kPM_Dead))
       return NULL;
 
@@ -234,7 +240,7 @@ static char *JoyForwardProc (const char *, const char *val, BOOL)
 
 static char *GamepadForwardProc(const char *, const char *val, BOOL)
 {
-   float f = atof(val);
+   float f = parse_float(val);
    if ((f != 0.0f) && (GetPlayerMode() == kPM_Dead || gNoMoveKeys))
       return NULL;
 
@@ -252,7 +258,7 @@ static char *GamepadForwardProc(const char *, const char *val, BOOL)
 
 static char *TurnProc (const char *, const char *val, BOOL)
 {
-   //   mprintf("Turn %g %d\n",atof(val),atoi(val));
+   //   mprintf("Turn %g %d\n",parse_float(val),atoi(val));
    
    if (gNoLookAround) {
       return NULL;
@@ -262,7 +268,7 @@ static char *TurnProc (const char *, const char *val, BOOL)
    if ((GetForceSidestepState() && gNoMoveKeys))
      return NULL;
 
-   float f = atof (val);
+   float f = parse_float(val);
    if ((f != 0) && (GetPlayerMode() == kPM_Dead))
       return NULL;
 
@@ -273,7 +279,7 @@ static char *TurnProc (const char *, const char *val, BOOL)
 
 static char *JoyTurnProc (const char *, const char *val, BOOL)
 {
-   float f = atof (val);
+   float f = parse_float(val);
 
    if ((f != 0) && (GetPlayerMode() == kPM_Dead))
       return NULL;
@@ -301,7 +307,7 @@ static char *JoyTurnProc (const char *, const char *val, BOOL)
 
 static char *SidestepProc (const char *, const char *val, BOOL)
 {
-   float f = atof (val);
+   float f = parse_float(val);
 
    // support for special movement-lockout mode
    if ((f!=0) && (gNoMoveKeys))
@@ -317,7 +323,7 @@ static char *SidestepProc (const char *, const char *val, BOOL)
 
 static char *JoySidestepProc (const char *, const char *val, BOOL)
 {
-   float f = atof (val);
+   float f = parse_float(val);
 
    // support for special movement-lockout mode
    if ((f != 0) && (gNoMoveKeys))
@@ -348,7 +354,7 @@ static char *JoySidestepProc (const char *, const char *val, BOOL)
 
 static char *GamepadSidestepProc(const char *, const char *val, BOOL)
 {
-   float f = atof(val);
+   float f = parse_float(val);
    if ((f != 0.0f) && (GetPlayerMode() == kPM_Dead || gNoMoveKeys))
       return NULL;
 
@@ -362,9 +368,9 @@ static char *GamepadSidestepProc(const char *, const char *val, BOOL)
 
 static char *JoyXAxisProc (const char *dummy1, const char *val, BOOL dummy2)
 {
-   BOOL joy_rotate = ((atof (g_pInputBinder->ProcessCmd ("echo $joy_rotate")) == 0.0) ? FALSE : TRUE)
+   BOOL joy_rotate = ((parse_float(g_pInputBinder->ProcessCmd ("echo $joy_rotate")) == 0.0) ? FALSE : TRUE)
       && !GetForceSidestepState();
-   float f = atof( val );
+   float f = parse_float( val );
 
    BOOL isZero = fabs(f) < g_joystickDeadzone;
    static int lastJoyRotate = -1;
@@ -406,7 +412,7 @@ static char *CameraHomeProc (const char *, const char *val, BOOL)
 static char *FlyProc (const char *, const char *val, BOOL)
 {
 #ifdef PLAYTEST
-   double dval = atof (val);
+   float dval = parse_float(val);
    if ((dval != 0) &&(GetPlayerMode() == kPM_Dead))
       return NULL;
 
@@ -433,12 +439,12 @@ static char *MTurnProc (const char *, const char *val, BOOL)
    if (gNoLookAround || GetPlayerMode() == kPM_Dead)
       return NULL;
 
-   BOOL freelook = (atof (g_pInputBinder->ProcessCmd ("echo $freelook")) == 0.0) ? FALSE : TRUE;
+   BOOL freelook = (parse_float(g_pInputBinder->ProcessCmd ("echo $freelook")) == 0.0) ? FALSE : TRUE;
 
    if (g_freelookon ^ freelook) 
    {
-      double dval = atof (val);
-      double sens = atof (g_pInputBinder->ProcessCmd ("echo $mouse_sensitivity"));
+      float dval = parse_float(val);
+      float sens = parse_float(g_pInputBinder->ProcessCmd ("echo $mouse_sensitivity"));
       headmoveSetRelPosX (dval * sens);
    }
 
@@ -451,16 +457,16 @@ static char *MLookProc (const char *, const char *val, BOOL)
    if (gNoLookAround || GetPlayerMode() == kPM_Dead)
       return NULL;
 
-   BOOL freelook = (atof (g_pInputBinder->ProcessCmd ("echo $freelook")) == 0.0) ? FALSE : TRUE;
+   BOOL freelook = (parse_float(g_pInputBinder->ProcessCmd ("echo $freelook")) == 0.0) ? FALSE : TRUE;
 
    //mouse looking
    if (g_freelookon ^ freelook) 
    {
-      double dval = atof (val);
-      double sens = atof (g_pInputBinder->ProcessCmd ("echo $mouse_sensitivity"));
+      float dval = parse_float(val);
+      float sens = parse_float(g_pInputBinder->ProcessCmd ("echo $mouse_sensitivity"));
 
       const char *inverted = g_pInputBinder->ProcessCmd ("echo $mouse_invert");
-      if (atof (inverted) == 0.0)
+      if (parse_float(inverted) == 0.0)
          headmoveSetRelPosY (-dval * sens);//non-inverted
       else
          headmoveSetRelPosY (dval * sens);//inverted
@@ -473,7 +479,7 @@ static char *LookProc(const char *, const char *val, BOOL)
    if (GetPlayerMode() == kPM_Dead)
       return NULL;
    
-   float dval = atof(val);
+   float dval = parse_float(val);
    float rot_scale = GetRotSpeedScale();
    if (dval == 0.0)
         headmoveKeyboardTiltReset();
@@ -487,7 +493,7 @@ static char *LookProc(const char *, const char *val, BOOL)
 
 static char *LookUpProc (const char *, const char *val, BOOL)
 {
-   double dval = atof (val);
+   float dval = parse_float(val);
    if ((dval != 0) && (GetPlayerMode() == kPM_Dead))
       return NULL;
 
@@ -504,7 +510,7 @@ static char *LookUpProc (const char *, const char *val, BOOL)
 
 static char *LookDownProc (const char *, const char *val, BOOL)
 {
-   double dval = atof (val);
+   float dval = parse_float(val);
    if ((dval != 0) && (GetPlayerMode() == kPM_Dead))
       return NULL;
 
@@ -533,7 +539,7 @@ static char *LookCenterProc (const char *, const char *, BOOL)
 static char *TiltLeftProc (const char *, const char *val, BOOL)
 {
 
-   double dval = atof (val);
+   float dval = parse_float(val);
 
    // support for special movement-lockout mode
    if ((dval != 0) && (gNoMoveKeys))
@@ -556,7 +562,7 @@ static char *TiltLeftProc (const char *, const char *val, BOOL)
 static char *TiltRightProc (const char *, const char *val, BOOL)
 {
 
-   double dval = atof (val);
+   float dval = parse_float(val);
 
    // support for special movement-lockout mode
    if ((dval!=0) && (gNoMoveKeys))
@@ -578,7 +584,7 @@ static char *TiltRightProc (const char *, const char *val, BOOL)
 
 static char *LeanLeftProc (const char *, const char *val, BOOL)
 {
-   double dval = atof (val);
+   float dval = parse_float(val);
 
    // support for special movement-lockout mode
    if ((dval != 0) && (gNoMoveKeys))
@@ -620,7 +626,7 @@ static char *LeanLeftProc (const char *, const char *val, BOOL)
 
 static char *LeanRightProc (const char *, const char *val, BOOL)
 {
-   double dval = atof (val);
+   float dval = parse_float(val);
 
    // support for special movement-lockout mode
    if ((dval != 0) && (gNoMoveKeys))
@@ -663,7 +669,7 @@ static char *LeanRightProc (const char *, const char *val, BOOL)
 static char *LeanForwardProc (const char *, const char *val, BOOL)
 {
 
-   double dval = atof (val);
+   float dval = parse_float(val);
 
    // support for special movement-lockout mode
    if ((dval != 0) && (gNoMoveKeys))
@@ -709,7 +715,7 @@ static char *JumpProc (const char *, const char *val, BOOL)
    if (gNoMoveKeys)
       return(NULL);
 
-   double dval = atof (val);
+   float dval = parse_float(val);
    if ((dval != 0) && (GetPlayerMode() == kPM_Dead))
       return NULL;
 
@@ -734,7 +740,7 @@ static char *CrouchProc (const char *, const char *val, BOOL)
    if (gNoMoveKeys)
       return(NULL);
 
-   double dval = atof (val);
+   float dval = parse_float(val);
    if ((dval != 0) && (GetPlayerMode() == kPM_Dead))
       return NULL;
 
@@ -750,7 +756,7 @@ static char *CrouchProc (const char *, const char *val, BOOL)
 
 static char *CrouchHoldProc (const char *, const char *val, BOOL)
 {
-   double dval = atof (val);
+   float dval = parse_float(val);
 
    // support for special movement-lockout mode
    if ((dval == 1.0) && (gNoMoveKeys))
@@ -778,11 +784,11 @@ static char *FreelookOnProc (const char *, const char *val, BOOL)
    if (GetPlayerMode() == kPM_Dead)
       return NULL;
 
-   double dval = atof (val);
+   float dval = parse_float(val);
    if (dval == 0.0) {
       g_freelookon = FALSE;
 
-      if (atof (g_pInputBinder->ProcessCmd ("echo $lookspring")) != 0.0) 
+      if (parse_float(g_pInputBinder->ProcessCmd ("echo $lookspring")) != 0.0)
       {
          LookCenterProc (NULL, NULL, 0);
       }
@@ -800,7 +806,7 @@ static char *FreelookOnProc (const char *, const char *val, BOOL)
 
 static char *CreepOnProc (const char *, const char *val, BOOL)
 {
-   double dval = atof (val);
+   float dval = parse_float(val);
 
    // support for special movement-lockout mode
    if ((dval != 0) && (gNoMoveKeys))
@@ -850,7 +856,7 @@ static char *CreepOnProc (const char *, const char *val, BOOL)
 
 static char *RunOnProc (const char *, const char *val, BOOL)
 {
-   double dval = atof (val);
+   float dval = parse_float(val);
 
    // support for special movement-lockout mode
    if ((dval != 0) && (gNoMoveKeys))
@@ -909,7 +915,7 @@ static char *RunOnProc (const char *, const char *val, BOOL)
 static char *SlideOnProc (const char *, const char *val, BOOL)
 {
 
-   double dval = atof (val);
+   float dval = parse_float(val);
 
    // support for special movement-lockout mode
    if ((dval != 0) && (gNoMoveKeys))
@@ -934,7 +940,7 @@ static char *RudderTurnProc (const char *, const char *val, BOOL)
    if (!g_joystickActive)
       return NULL;
 
-   BOOL freelook = (atof (g_pInputBinder->ProcessCmd ("echo $freelook")) == 0.0) ? FALSE : TRUE;
+   BOOL freelook = (parse_float(g_pInputBinder->ProcessCmd ("echo $freelook")) == 0.0) ? FALSE : TRUE;
 
    if (g_freelookon ^ freelook) 
    {
@@ -942,7 +948,7 @@ static char *RudderTurnProc (const char *, const char *val, BOOL)
       static float lastVal = 1.0; 
       BOOL isNoise;
 
-      fval = atof(val);
+      fval = parse_float(val);
       // ignore small values around zero (noise), but let a 0 through if the
       //  the previous value was nonzero, to avoid leaving view slowly turning
       isNoise = fabs(fval) < g_rudderDeadzone;
@@ -950,7 +956,7 @@ static char *RudderTurnProc (const char *, const char *val, BOOL)
          if ( isNoise ) {
             fval = 0.0;
          }
-#define RUDDER_SENSITIVITY_SCALER 200.0
+#define RUDDER_SENSITIVITY_SCALER 200.0f
          headmoveSetRelPosX (fval * RUDDER_SENSITIVITY_SCALER * g_rudderSensitivity);
          lastVal = fval;
       }
@@ -964,9 +970,9 @@ static char *GamepadTurnProc(const char *, const char *val, BOOL)
    if (gNoLookAround || GetPlayerMode() == kPM_Dead)
       return NULL;
 
-   BOOL freelook = (atof(g_pInputBinder->ProcessCmd("echo $freelook")) != 0.0);
+   BOOL freelook = (parse_float(g_pInputBinder->ProcessCmd("echo $freelook")) != 0.0);
    if (g_freelookon ^ freelook)
-      headmoveSetRelPosX(atof(val) * 200.0f * g_gamepadLookSensitivity);
+      headmoveSetRelPosX(parse_float(val) * 200.0f * g_gamepadLookSensitivity);
    return NULL;
 }
 
@@ -975,10 +981,10 @@ static char *GamepadLookProc(const char *, const char *val, BOOL)
    if (gNoLookAround || GetPlayerMode() == kPM_Dead)
       return NULL;
 
-   BOOL freelook = (atof(g_pInputBinder->ProcessCmd("echo $freelook")) != 0.0);
+   BOOL freelook = (parse_float(g_pInputBinder->ProcessCmd("echo $freelook")) != 0.0);
    if (g_freelookon ^ freelook)
    {
-      float value = atof(val) * 200.0f * g_gamepadLookSensitivity;
+      float value = parse_float(val) * 200.0f * g_gamepadLookSensitivity;
       headmoveSetRelPosY(g_gamepadLookInvertY ? -value : value);
    }
    return NULL;
@@ -1112,28 +1118,12 @@ char *GenericBind (const char *cmd, const char *val, BOOL already_down)
 
 static uchar GetCountryCode()
 {
-   unsigned short WhichLang;
-   WhichLang = PRIMARYLANGID(GetSystemDefaultLangID());
-
-   switch(WhichLang) {
-      case LANG_ENGLISH:
-         return KBC_US;
-         break;
-      case LANG_FRENCH:
-         return KBC_FR;
-         break;
-      case LANG_GERMAN:
-         return KBC_GR;
-         break;
-      case LANG_ITALIAN:
-         return KBC_IT;
-         break;
-      case LANG_SPANISH:
-         return KBC_SP;
-         break;
-      default:
-         return KBC_US;
-   }
+   const char *language = PlatformGetLanguageCode();
+   if (!strcmp(language, "fr")) return KBC_FR;
+   if (!strcmp(language, "de")) return KBC_GR;
+   if (!strcmp(language, "it")) return KBC_IT;
+   if (!strcmp(language, "es")) return KBC_SP;
+   return KBC_US;
 }
 
 static void SetCountryKeyboard()
@@ -1494,15 +1484,15 @@ void InitIBVars ()
 
    SetCountryKeyboard();
 
-   g_joystickActive = (atof (g_pInputBinder->ProcessCmd ("echo $joystick_enable")) == 0.0) ? FALSE : TRUE;
+   g_joystickActive = (parse_float(g_pInputBinder->ProcessCmd ("echo $joystick_enable")) == 0.0) ? FALSE : TRUE;
 
    // @TODO: this should get replaced with somewhere that this is set.
    if ( !config_get_float("joystick_sensitivity", &g_joystickSensitivity) ) {
-      g_joystickSensitivity = atof (g_pInputBinder->ProcessCmd ("echo $joystick_sensitivity"));
+      g_joystickSensitivity = parse_float(g_pInputBinder->ProcessCmd ("echo $joystick_sensitivity"));
    }
-   g_joystickDeadzone = atof (g_pInputBinder->ProcessCmd ("echo $joystick_deadzone"));
-   g_rudderSensitivity = atof (g_pInputBinder->ProcessCmd ("echo $rudder_sensitivity"));
-   g_rudderDeadzone = atof (g_pInputBinder->ProcessCmd ("echo $rudder_deadzone"));
+   g_joystickDeadzone = parse_float(g_pInputBinder->ProcessCmd ("echo $joystick_deadzone"));
+   g_rudderSensitivity = parse_float(g_pInputBinder->ProcessCmd ("echo $rudder_sensitivity"));
+   g_rudderDeadzone = parse_float(g_pInputBinder->ProcessCmd ("echo $rudder_deadzone"));
    config_get_float("gamepad_look_sensitivity", &g_gamepadLookSensitivity);
    config_get_int("gamepad_look_invert_y", &g_gamepadLookInvertY);
 

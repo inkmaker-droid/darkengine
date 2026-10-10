@@ -333,7 +333,7 @@ static BOOL   gedit_snap_placement=TRUE;
 // returns whether or not it snapped, in its mind
 BOOL _floatSnap(float *val, float snap)
 {
-   float newval=floor(((*val)+snap/2) / snap) * snap;
+   float newval=floorf(((*val)+snap/2) / snap) * snap;
    float oldval=*val;
    *val=newval;
    return newval!=oldval;
@@ -912,7 +912,7 @@ void gedit_make_skybox(char *pszArg)
 
       // set filename & take our shot
       sprintf(aszFilename, "%s%c.bmp", pszArg, g_achSuffix[i]);
-      dmp_bmp_dump_screen(aszFilename);
+      dmp_bmp_dump_file(aszFilename);
    }
 
    // try to restore order in wake of wild cheating
@@ -952,7 +952,7 @@ void gedit_brush_to_room(float grow_pct)
    tmp->sz=modBrush->sz;
    tmp->ang=modBrush->ang;
    if (grow_pct>0.01)
-      mx_scaleeq_vec(&tmp->sz,1.0+(grow_pct/100.0));
+      mx_scaleeq_vec(&tmp->sz,1.0f+(grow_pct/100.0f));
    gedit_full_create_brush(tmp,modBrush,GEDIT_CREATE_AT_END,brType_ROOM);
    vBrush_NewBrush(tmp);
 }
@@ -1245,7 +1245,7 @@ void gedit_change_current_brush(void)
 static void stretch(int axis)
 {
    editBrush *modBrush=cur();
-   float amt = 0.125 * scale_factor;
+   float amt = 0.125f * scale_factor;
    if (axis >= 3) { amt = -amt; axis -= 3; }
    if (axis >= 0 && axis < 3) {
       // don't allow a brush to be shrunk to nothing
@@ -1268,7 +1268,7 @@ void translate(int axis)
       //mprintf("spacing = %g\n",cur_global_grid.line_spacing);
    }
    else
-      amt = 0.125 * scale_factor;
+      amt = 0.125f * scale_factor;
    if (axis >= 3) { amt = -amt; axis -= 3; }
    if (axis >= 0 && axis < 3) {
       editUndoStoreStart(modBrush);
@@ -1722,7 +1722,7 @@ void set_ambient(char *arg)
       mx_mk_vec(&rgb, -11, -11, -11);// try to tell if we've got too few numbers
       sscanf(arg, "%f %f %f", &rgb.x, &rgb.y, &rgb.z);
       if (rgb.x != -11 && rgb.y != -11 && rgb.z != -11) {
-         mx_scale_vec(&parms.ambient_light, &rgb, 1.0 / 255.0);
+   mx_scale_vec(&parms.ambient_light, &rgb, 1.0f / 255.0f);
          SetMissionRenderParams(&parms);
       } else
          Warning(("Pssst!  Try typing it like this: ambient r g b\n"));

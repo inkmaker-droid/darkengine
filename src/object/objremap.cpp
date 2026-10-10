@@ -72,7 +72,7 @@ EXTERN void SaveObjMappingTable(ITagFile* pFile)
          const char* name = pObjSys->GetName(obj);
          if (name != NULL)
          {
-            ulong size = strlen(name)+1;
+            ulong size = (ulong)strlen(name)+1;
             pFile->Write((char*)&obj,sizeof(obj));
             pFile->Write((char*)&size,sizeof(size));
             pFile->Write(name,size);

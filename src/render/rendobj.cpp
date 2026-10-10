@@ -479,7 +479,7 @@ static void editor_safe_render_pgon(mds_pgon *p)
 #endif // EDITOR
 
 
-#define SECRET_WEDGE_FACTOR 0.5           // antilles, that is
+#define SECRET_WEDGE_FACTOR 0.5f          // antilles, that is
 
 #ifndef SHIP
 void render_wedge(uchar color, uchar *clut)
@@ -628,7 +628,7 @@ static void rendobj_draw_phys_models(ObjID obj)
          if(pts[i].ccodes)
             continue;
          if(size[i]==0) // it a point or non-spherical
-            size[i]=0.1; // make it visible
+      size[i]=0.1f; // make it visible
          s=(int)r3_get_hsize(pts[i].p.z,size[i]);
          rad=fix_div(s,grd_bm.w);
          g2_circle(pts[i].grp.sx,pts[i].grp.sy,rad);
@@ -721,7 +721,7 @@ void rendobj_draw_creature_joints(ObjID obj)
          if(pts[i].ccodes)
             continue;
 
-         s=(int)r3_get_hsize(pts[i].p.z,0.1);
+         s=(int)r3_get_hsize(pts[i].p.z,0.1f);
          rad=fix_div(s,grd_bm.w);
 
          g2_circle(pts[i].grp.sx,pts[i].grp.sy,rad);
@@ -1307,11 +1307,11 @@ static char new_clut[256];
 static void set_lit_clut(uchar *clut, ObjID o)
 {
    // use arbitrary scale factor to compensate for lack of normal-based
-   float brightness = compute_object_lighting(o) * 0.7;
+   float brightness = compute_object_lighting(o) * 0.7f;
    int i;
    uchar *light;
 
-   if (brightness >= .99) brightness = 0.99;
+   if (brightness >= .99f) brightness = 0.99f;
    light = &grd_light_table[((int) (brightness*16)) << 8];
 
    for (i=0; i < 256; ++i)
@@ -2173,11 +2173,11 @@ void RenderBitmapGeneric(Position *pos, int idx, int frame, mxs_vector *scale)
    {
       float w,h;
       if (scale != NULL) {
-         w = bm->w / 16.0 * scale->x / 2;
-         h = bm->h / 16.0 * scale->y / 2;
+         w = bm->w / 16.0f * scale->x / 2;
+         h = bm->h / 16.0f * scale->y / 2;
       } else {
-         w = bm->w / 16.0 / 2;
-         h = bm->h / 16.0 / 2;
+         w = bm->w / 16.0f / 2;
+         h = bm->h / 16.0f / 2;
       }
 
       w *= r3d_state.cur_con->trans.cspace_vec.x;
@@ -2203,9 +2203,9 @@ void RenderBitmapGeneric(Position *pos, int idx, int frame, mxs_vector *scale)
 
    // Now we should find out how big it is and mipmap!  But we never will.
    pt[0].grp.u = pt[3].grp.u = 0;
-   pt[1].grp.u = pt[2].grp.u = 0.9999;
+      pt[1].grp.u = pt[2].grp.u = 0.9999f;
    pt[0].grp.v = pt[1].grp.v = 0;
-   pt[2].grp.v = pt[3].grp.v = 0.9999;
+      pt[2].grp.v = pt[3].grp.v = 0.9999f;
 
    vlist[0] = &pt[0];
    vlist[1] = &pt[1];
@@ -2242,8 +2242,8 @@ void RenderBitmapWorldspace(Position *pos, int idx, int frame, ObjID obj,
 
    // set up vertices
    mx_ang2mat(&orient, &pos->fac);
-   mx_scale_vec(&xaxis, &orient.vec[0], .5 * pBWS->m_fXSize);
-   mx_scale_vec(&yaxis, &orient.vec[1], .5 * pBWS->m_fYSize);
+   mx_scale_vec(&xaxis, &orient.vec[0], .5f * pBWS->m_fXSize);
+   mx_scale_vec(&yaxis, &orient.vec[1], .5f * pBWS->m_fYSize);
 
    mx_sub_vec(&v[0], &pos->loc.vec, &xaxis);
    mx_addeq_vec(&v[0], &yaxis);
@@ -2265,8 +2265,8 @@ void RenderBitmapWorldspace(Position *pos, int idx, int frame, ObjID obj,
       float fObjectsPerSecond = pScrollSpeed->x / pBWS->m_fXSize;
       // tiles/second = tiles/object * objects/second
       float fTilesPerSecond = fXTilesPerObject * fObjectsPerSecond;
-      float fTimeSec = GetSimTime() * (1.0 / SIM_TIME_SECOND);
-      pt[0].grp.u = pt[3].grp.u = -fmod(fTimeSec * fTilesPerSecond, 1.0);
+      float fTimeSec = GetSimTime() * (1.0f / SIM_TIME_SECOND);
+      pt[0].grp.u = pt[3].grp.u = -fmodf(fTimeSec * fTilesPerSecond, 1.0f);
       pt[1].grp.u = pt[2].grp.u = pt[0].grp.u + fXTilesPerObject;
    } else {
       pt[0].grp.u = pt[3].grp.u = 0;
@@ -2926,7 +2926,7 @@ void init_object_rendering(void)
    portal_object_visible = rendobj_object_is_visible;
    portal_object_blocks = rendobj_object_blocks;
    config_get_int("highlight_level",&objlight_percentage);
-   objlight_highlight_level=((float)objlight_percentage)/100.0;
+   objlight_highlight_level=((float)objlight_percentage)/100.0f;
 
    portal_render_overlays_cback = render_overlays;
 

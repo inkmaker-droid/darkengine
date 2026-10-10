@@ -109,7 +109,7 @@ STDMETHODIMP_(void) cAICombatDummy::OnActionProgress(IAIAction * pAction)
 
 STDMETHODIMP_(void) cAICombatDummy::OnGameEvent(void *magic)
 {
-   m_BlockDirection=(int)magic;
+   m_BlockDirection=(int)(intptr_t)magic;
    SignalAction();
 }
 

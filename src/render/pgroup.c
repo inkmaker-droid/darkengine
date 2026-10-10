@@ -69,7 +69,7 @@ extern BOOL g_lgd3d;
 //  random numbers
 //
 
-static double RandFloat(void)
+static float RandFloat(void)
 {
    int x = Rand();
 
@@ -536,11 +536,11 @@ static void init_bm(void)
          for (x=0; x < HACK_DIM; ++x) {
             // we want a decaying alpha based on distance from center,
             // using a nice smooth function... how about (1+cos)/2?
-            float radius = sqrt((x-7.5)*(x-7.5) + (y-7.5)*(y-7.5)) / 7.5;
+            float radius = sqrtf((x-7.5f)*(x-7.5f) + (y-7.5f)*(y-7.5f)) / 7.5f;
             if (radius > 1) radius = 1;
             // ranges smoothly from 0..1
             // we want 0..pi/2
-            radius *= 3.141592/2;
+         radius *= 3.141592f/2.0f;
             mem[y*HACK_DIM + x] = (int) ((i+0.5) * ((cos(radius))));
          }
       }
@@ -601,7 +601,7 @@ static void RenderHardwareFadeMulticolor(ParticleGroup *pg, int *list, mxs_real 
 
       if (p->ccodes) continue;
 
-      h  = max(1.1, hs * p->grp.w);
+      h  = max(1.1f, hs * p->grp.w);
 
       if (tm < pg->fade_time)
          c = ((pg->ca) * tm / pg->fade_time) >> 4;
@@ -641,7 +641,7 @@ static void RenderHardwareFade(ParticleGroup *pg, int *list, mxs_real hs, int n)
 
       if (p->ccodes) continue;
 
-      h  = max(1.1, hs * p->grp.w);
+      h  = max(1.1f, hs * p->grp.w);
 
       if (tm < pg->fade_time)
          c = ((pg->ca) * tm / pg->fade_time) >> 4;
@@ -660,7 +660,7 @@ static void RenderHardwareNoFade(ParticleGroup *pg, int *list, mxs_real hs, int 
       float h;
       if (list) p = &pg->points[list[i]];
       if (p->ccodes) continue;
-      h  = max(1.1, hs * p->grp.w);
+      h  = max(1.1f, hs * p->grp.w);
       lgd3d_hack_light_extra(p, h, bm);
    }
 }
@@ -941,12 +941,12 @@ static void RenderBitmap(ParticleGroup *pg, int *list)
 
          if (pg->pl.time_info && ((tm = pg->pl.time_info[i]) < pg->fade_time))
          {
-            c = (float)((pg->ca) * tm / pg->fade_time) / 256.0;
+            c = (float)((pg->ca) * tm / pg->fade_time) / 256.0f;
             if (c == 0)
-               c = 0.001;
+      c = 0.001f;
          }
          else
-            c = (float)(pg->ca) / 256.0;
+            c = (float)(pg->ca) / 256.0f;
 
          if (c > 0)
             lgd3d_set_alpha(c);
@@ -1018,9 +1018,9 @@ static void pgroup_basic_sim(ParticleGroup *pg, float simtime)
       ObjPos *pos = ObjPosGet(pg->obj);
       mxs_vector addend;
       mx_scale_vec(&addend, &pg->spin, simtime);
-      pos->fac.tx += addend.x * 256;   // float to sfix
-      pos->fac.ty += addend.y * 256;
-      pos->fac.tz += addend.z * 256;
+         pos->fac.tx += (mxs_ang)(addend.x * 256);   // float to sfix
+         pos->fac.ty += (mxs_ang)(addend.y * 256);
+         pos->fac.tz += (mxs_ang)(addend.z * 256);
 
       if (pg->scale_vel) {
          pg->fixed_scale += pg->scale_vel * simtime;
@@ -1033,7 +1033,7 @@ static void pgroup_basic_sim(ParticleGroup *pg, float simtime)
          int cur_time  = GetSimTime() - pg->ms_offset + pg->pulse_period;
          // convert into number from 0..1
          float cur_offset = (float) cur_time / pg->pulse_period;
-         cur_offset = sin(3.141592*2*cur_offset);
+         cur_offset = sinf(3.141592f*2*cur_offset);
          cur_offset = (cur_offset + 1)/2 * pg->pulse_percentage;
          pg->cur_scale = pg->fixed_scale * (1 - cur_offset);
       } else
@@ -1049,7 +1049,7 @@ static void pgroup_velocity_sim(ParticleGroup *pg, float simtime)
       mx_scale_addeq_vec(&pos->loc.vec, &pg->velocity, simtime);
       if (pg->motion_type == PGMT_VELOCITY_GRAVITY) {
          mx_scale_addeq_vec(&pg->velocity, &pg->gravity, simtime);
-         mx_scale_addeq_vec(&pos->loc.vec, &pg->gravity, simtime*simtime*0.5);
+         mx_scale_addeq_vec(&pos->loc.vec, &pg->gravity, simtime*simtime*0.5f);
       }
       UpdateChangedLocation(&pos->loc);
       // we really need ObjPosTouch();
@@ -1128,7 +1128,7 @@ static void determine_launch_loc(ParticleGroup *pg, mxs_vector *launch_pt)
 
 static void launch_particle(ParticleGroup *pg, int index, fix time_past)
 {
-   Assert_((unsigned) index < pg->list_length);
+   Assert_(index >= 0 && index < (int)pg->list_length);
 
    determine_launch_loc(pg, &pg->pl.location[index]);
 
@@ -1181,7 +1181,7 @@ static void delete_particle(ParticleGroup *pg, int index)
 {
    int num = pg->pl.n-1;
 
-   Assert_((unsigned) index < pg->pl.n);
+   Assert_(index >= 0 && index < (int)pg->pl.n);
    if (pg->pl.location)
       pg->pl.location[index] = pg->pl.location[num];
    if (pg->pl.velocity)
@@ -1208,7 +1208,7 @@ static void update_particles(ParticleGroup *pg, int index, int num, fix time)
 
    for (i=index; i < num; ) {
       fix time_left = time;
-      Assert_((unsigned) i < pg->pl.n);
+   Assert_(i >= 0 && i < (int)pg->pl.n);
       if (pg->pl.time_info[i] < time_left) {
          // if the time for this particle has expired...
          if (pg->anim_type == PAT_LAUNCH_CONTINUOUS && pg->launching && pg->active) {
@@ -1242,7 +1242,7 @@ static void update_particles(ParticleGroup *pg, int index, int num, fix time)
          if (particle_gravity) {
             mx_scale_addeq_vec(&pg->pl.velocity[i], &pg->gravity, time);
             mx_scale_addeq_vec(&pg->pl.location[i], &pg->gravity,
-                               time*time*0.5);      // d = 1/2at^2 + vt
+                               time*time*0.5f);      // d = 1/2at^2 + vt
          }
       }
       ++i;
@@ -1383,15 +1383,15 @@ static void compute_launch_minmax(ParticleGroup *pg)
 
       g = particle_gravity ? pg->gravity.el[i] : 0;
       // now, seed the min and max locations
-#define BBOX_MIN 0.01
+#define BBOX_MIN 0.01f
       small = a < -BBOX_MIN ? a : -BBOX_MIN;
       large = b >  BBOX_MIN ? b :  BBOX_MIN;
 
       // now find the endpoint of the trajectories with gravity
       t = fix_float(pg->launch->time_range[1]);
 
-      a2 = a + da*t + 0.5*t*t*g;
-      b2 = b + db*t + 0.5*t*t*g;
+      a2 = a + da*t + 0.5f*t*t*g;
+      b2 = b + db*t + 0.5f*t*t*g;
 
       if (a2 < small) small = a2;
       if (b2 > large) large = b2;
@@ -1401,7 +1401,7 @@ static void compute_launch_minmax(ParticleGroup *pg)
          if (db > 0) {
             float tm = -db / g;
             if (tm < t) {
-               b2 = b + db*tm + 0.5*tm*tm*g;
+               b2 = b + db*tm + 0.5f*tm*tm*g;
                if (b2 > large) large = b2;
             }
          }
@@ -1409,7 +1409,7 @@ static void compute_launch_minmax(ParticleGroup *pg)
          if (da < 0) {
             float tm = -da / g;
             if (tm < t) {
-               a2 = b + da*tm + 0.5*tm*tm*g;
+               a2 = b + da*tm + 0.5f*tm*tm*g;
                if (a2 < small) small = a2;
             }
          }
@@ -1421,16 +1421,16 @@ static void compute_launch_minmax(ParticleGroup *pg)
    // compute the radius as the max of any one axis (not really right)
    {
       float rad;
-      pg->radius = fabs(pg->bmin.x);
-      rad = fabs(pg->bmin.y);
+      pg->radius = fabsf(pg->bmin.x);
+      rad = fabsf(pg->bmin.y);
       if (rad > pg->radius) pg->radius = rad;
-      rad = fabs(pg->bmin.z);
+      rad = fabsf(pg->bmin.z);
       if (rad > pg->radius) pg->radius = rad;
-      rad = fabs(pg->bmax.x);
+      rad = fabsf(pg->bmax.x);
       if (rad > pg->radius) pg->radius = rad;
-      rad = fabs(pg->bmax.y);
+      rad = fabsf(pg->bmax.y);
       if (rad > pg->radius) pg->radius = rad;
-      rad = fabs(pg->bmax.z);
+      rad = fabsf(pg->bmax.z);
       if (rad > pg->radius) pg->radius = rad;
    }
 }
@@ -1440,8 +1440,8 @@ static void compute_current_minmax(ParticleGroup *pg)
    int i;
    mxs_vector *mn, *mx, *cur;
 
-   mx_mk_vec(&pg->bmin,-.01,-.01,-.01);
-   mx_mk_vec(&pg->bmax, .01, .01, .01);
+      mx_mk_vec(&pg->bmin,-.01f,-.01f,-.01f);
+      mx_mk_vec(&pg->bmax, .01f, .01f, .01f);
 
    mn = &pg->bmin;
    mx = &pg->bmax;
@@ -1480,9 +1480,9 @@ void initialize_list(int index, int start, int end)
          case PAT_FIXED_SPHERE_SHELL:
             // this is weird, but graphics gem says it's right
             loc->x = RandFloat() * 2 - 1;
-            temp = RandFloat() * 2 * 3.141592; // compute angle
-            loc->y = sqrt(1 - loc->x * loc->x) * cos(temp);
-            loc->z = sqrt(1 - loc->x * loc->x) * sin(temp);
+            temp = RandFloat() * 2 * 3.141592f; // compute angle
+            loc->y = sqrtf(1 - loc->x * loc->x) * cosf(temp);
+            loc->z = sqrtf(1 - loc->x * loc->x) * sinf(temp);
             break;
             
          case PAT_FIXED_CUBE:
@@ -1602,7 +1602,7 @@ void setup_initial_particle_lists(ParticleGroup *pg)
          launch_particle(pg, i, 0);
          // now force the just-launched particle to sim for some fraction
          // of its lifetime
-         update_particles(pg, i, 1, pg->pl.time_info[i] * RandFloat());
+         update_particles(pg, i, 1, (fix)(pg->pl.time_info[i] * RandFloat()));
       }
    }
    

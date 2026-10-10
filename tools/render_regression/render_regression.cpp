@@ -5,7 +5,7 @@
 #include <string.h>
 #include <vector>
 
-#include "d3d11legacy.h"
+#include <render_backend.h>
 #include "d3d11scene.h"
 
 #pragma comment(lib, "d3d11.lib")
@@ -76,9 +76,9 @@ static ID3D11ShaderResourceView *CreateColorTexture(ID3D11Device *device,
   return view;
 }
 
-static sD3D11LegacyVertex Vertex(float x, float y, float r, float g, float b,
-                                 float a) {
-  sD3D11LegacyVertex vertex = {};
+static sRenderBackendVertex Vertex(float x, float y, float r, float g, float b,
+                                   float a) {
+  sRenderBackendVertex vertex = {};
   vertex.x = x;
   vertex.y = y;
   vertex.z = 0.5f;
@@ -95,7 +95,7 @@ static void DrawRect(ID3D11Device *device, ID3D11DeviceContext *context,
                      float left, float top, float right, float bottom,
                      float r, float g, float b, float topAlpha,
                      float bottomAlpha) {
-  sD3D11LegacyVertex vertices[6] = {
+  sRenderBackendVertex vertices[6] = {
       Vertex(left, top, r, g, b, topAlpha),
       Vertex(right, top, r, g, b, topAlpha),
       Vertex(right, bottom, r, g, b, bottomAlpha),
@@ -136,9 +136,9 @@ static bool CheckPixel(const uint8_t *pixels, UINT pitch, UINT x, UINT y,
 }
 
 static bool WriteBmp(const char *path, const uint8_t *pixels, UINT pitch) {
-  FILE *file = fopen(path, "wb");
+  FILE *file = NULL;
   BitmapHeader header = {};
-  if (!file)
+  if (fopen_s(&file, path, "wb") != 0)
     return false;
   header.type = 0x4d42;
   header.pixelOffset = sizeof(header);
@@ -199,8 +199,8 @@ int main(int argc, char **argv) {
   textureDesc.BindFlags = 0;
   textureDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
   if (FAILED(device->CreateTexture2D(&textureDesc, NULL, &staging)) ||
-      FAILED(Compile(kD3D11LegacySceneVS, "vs_4_0", &vsBlob)) ||
-      FAILED(Compile(kD3D11LegacyScenePS, "ps_4_0", &psBlob)) ||
+      FAILED(Compile(kD3D11SceneVS, "vs_4_0", &vsBlob)) ||
+      FAILED(Compile(kD3D11ScenePS, "ps_4_0", &psBlob)) ||
       FAILED(device->CreateVertexShader(vsBlob->GetBufferPointer(),
                                         vsBlob->GetBufferSize(), NULL,
                                         &vertexShader)) ||
@@ -243,10 +243,10 @@ int main(int argc, char **argv) {
   }
   {
     D3D11_BLEND_DESC desc;
-    D3D11LegacyDescribeBlend(kD3D11LegacyBlendOpaque, &desc);
+    D3D11DescribeBlend(kRenderBackendBlendOpaque, &desc);
     if (FAILED(device->CreateBlendState(&desc, &opaque)))
       goto cleanup;
-    D3D11LegacyDescribeBlend(kD3D11LegacyBlendAlpha, &desc);
+    D3D11DescribeBlend(kRenderBackendBlendAlpha, &desc);
     if (FAILED(device->CreateBlendState(&desc, &alpha)))
       goto cleanup;
   }

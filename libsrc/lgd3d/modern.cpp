@@ -1,5 +1,6 @@
+#include <win32_platform.h>
 #include <d3d.h>
-#include <d3d11legacy.h>
+#include <render_backend.h>
 #include <dev2d.h>
 #include <lgd3d.h>
 #include <stdlib.h>
@@ -7,7 +8,6 @@
 #include <tdrv.h>
 #include <texture.h>
 #include <tmgr.h>
-#include <windows.h>
 
 #define MODERN_MAX_PALETTES 256
 
@@ -143,9 +143,9 @@ static int LoadTexture(tdrv_texture_info *info) {
   if (!pixels)
     return TDRV_FAILURE;
   if (g_ModernTextures[info->id])
-    D3D11LegacyDestroyTexture(g_ModernTextures[info->id]);
+    RenderBackendDestroyTexture(g_ModernTextures[info->id]);
   g_ModernTextures[info->id] =
-      D3D11LegacyCreateTexture(info->w, info->h, pixels, info->w * 4);
+      RenderBackendCreateTexture(info->w, info->h, pixels, info->w * 4);
   free(pixels);
   g_ModernBitmaps[info->id] = info->bm;
   return g_ModernTextures[info->id] ? TDRV_SUCCESS : TDRV_FAILURE;
@@ -155,12 +155,12 @@ static void ReloadTexture(tdrv_texture_info *info) {
   uchar *pixels = ConvertTexture(info);
   if (!pixels)
     return;
-  if (!D3D11LegacyUpdateTexture(g_ModernTextures[info->id], info->w, info->h,
+  if (!RenderBackendUpdateTexture(g_ModernTextures[info->id], info->w, info->h,
                                 pixels, info->w * 4)) {
     if (g_ModernTextures[info->id])
-      D3D11LegacyDestroyTexture(g_ModernTextures[info->id]);
+      RenderBackendDestroyTexture(g_ModernTextures[info->id]);
     g_ModernTextures[info->id] =
-        D3D11LegacyCreateTexture(info->w, info->h, pixels, info->w * 4);
+        RenderBackendCreateTexture(info->w, info->h, pixels, info->w * 4);
   }
   free(pixels);
   g_ModernBitmaps[info->id] = info->bm;
@@ -173,14 +173,14 @@ static void ReleaseTexture(int id) {
   if (id >= 0 && id < LGD3D_MAX_TEXTURES) {
     UnsetTextureId(id);
     if (g_ModernTextures[id])
-      D3D11LegacyDestroyTexture(g_ModernTextures[id]);
+      RenderBackendDestroyTexture(g_ModernTextures[id]);
     g_ModernTextures[id] = NULL;
     g_ModernBitmaps[id] = NULL;
   }
 }
 static void Synchronize(void) {}
-static void DriverStartFrame(int frame) { D3D11LegacyBeginFrame(); }
-static void DriverEndFrame(void) { D3D11LegacyEndFrame(); }
+static void DriverStartFrame(int frame) { RenderBackendBeginFrame(); }
+static void DriverEndFrame(void) { RenderBackendEndFrame(); }
 
 static void InitTextureManager(lgd3ds_device_info *info) {
   static texture_driver driver;
@@ -239,7 +239,7 @@ extern "C" void lgd3d_texture_set_RGB(bool isRGB) {}
 extern "C" BOOL lgd3d_init(lgd3ds_device_info *info) {
   DWORD white = 0xffffffff;
   int i;
-  if (!D3D11LegacyAvailable())
+  if (!RenderBackendAvailable())
     return FALSE;
   memset(g_ModernTextures, 0, sizeof(g_ModernTextures));
   memset(g_ModernBitmaps, 0, sizeof(g_ModernBitmaps));
@@ -249,7 +249,7 @@ extern "C" BOOL lgd3d_init(lgd3ds_device_info *info) {
   if (!g_defaultBitmap)
     return FALSE;
   memset(g_defaultBitmap->bits, 255, 4);
-  g_ModernWhiteTexture = D3D11LegacyCreateTexture(1, 1, &white, 4);
+  g_ModernWhiteTexture = RenderBackendCreateTexture(1, 1, &white, 4);
   if (!g_ModernWhiteTexture) {
     gr_free(g_defaultBitmap);
     g_defaultBitmap = NULL;
@@ -257,26 +257,26 @@ extern "C" BOOL lgd3d_init(lgd3ds_device_info *info) {
   }
   g_ModernTextureLevel = 0;
   lgd3d_modern_reset_texture_state();
-  D3D11LegacySetSampler(0, g_wrap[0], g_smooth[0]);
-  D3D11LegacySetSampler(1, g_wrap[1], g_smooth[1]);
-  D3D11LegacySetDepth(FALSE, FALSE);
-  D3D11LegacySetBlend(kD3D11LegacyBlendOpaque);
-  D3D11LegacySetAlphaTest(FALSE);
+  RenderBackendSetSampler(0, g_wrap[0], g_smooth[0]);
+  RenderBackendSetSampler(1, g_wrap[1], g_smooth[1]);
+  RenderBackendSetDepth(FALSE, FALSE);
+  RenderBackendSetBlend(kRenderBackendBlendOpaque);
+  RenderBackendSetAlphaTest(FALSE);
   info->flags |=
       LGD3DF_ZBUFFER | LGD3DF_MULTI_TEXTURING | LGD3DF_MULTITEXTURE_COLOR;
   InitTextureManager(info);
-  D3D11LegacyBeginFrame();
+  RenderBackendBeginFrame();
   lgd3d_render_init(info);
-  D3D11LegacyEndFrame();
+  RenderBackendEndFrame();
   // Renderer initialization needs a temporary hardware frame for state
   // setup, but it is not a rendered scene.  Leaving it active makes menu
   // canvases composite as transparent overlays over an empty/stale scene.
-  D3D11LegacyDeactivateScene();
+  RenderBackendDeactivateScene();
   return TRUE;
 }
 extern "C" void lgd3d_shutdown(void) {
   int i;
-  D3D11LegacyDeactivateScene();
+  RenderBackendDeactivateScene();
   lgd3d_render_shutdown();
   if (g_tmgr) {
     g_tmgr->shutdown();
@@ -285,7 +285,7 @@ extern "C" void lgd3d_shutdown(void) {
   for (i = 0; i < LGD3D_MAX_TEXTURES; ++i)
     ReleaseTexture(i);
   if (g_ModernWhiteTexture)
-    D3D11LegacyDestroyTexture(g_ModernWhiteTexture);
+    RenderBackendDestroyTexture(g_ModernWhiteTexture);
   g_ModernWhiteTexture = NULL;
   if (g_defaultBitmap)
     gr_free(g_defaultBitmap);
@@ -294,7 +294,7 @@ extern "C" void lgd3d_shutdown(void) {
 extern "C" void lgd3d_start_frame(int frame) {
   g_ModernTextureLevel = 0;
   ScrnClearHardwareOverlay();
-  D3D11LegacyBeginFrame();
+  RenderBackendBeginFrame();
   lgd3d_render_start_frame();
   if (g_tmgr)
     g_tmgr->start_frame(frame);
@@ -303,15 +303,15 @@ extern "C" void lgd3d_end_frame(void) {
   lgd3d_render_end_frame();
   if (g_tmgr)
     g_tmgr->end_frame();
-  D3D11LegacyEndFrame();
+  RenderBackendEndFrame();
 }
-extern "C" void lgd3d_scene_suspend(void) { D3D11LegacyDeactivateScene(); }
+extern "C" void lgd3d_scene_suspend(void) { RenderBackendDeactivateScene(); }
 extern "C" BOOL lgd3d_attach_to_lgsurface(ILGSurface *surface) {
-  return D3D11LegacyAvailable();
+  return RenderBackendAvailable();
 }
 extern "C" void lgd3d_clean_render_surface(BOOL depth) {
   if (depth)
-    D3D11LegacyClearDepth();
+    RenderBackendClearDepth();
 }
 extern "C" BOOL lgd3d_overlays_master_switch(BOOL on) { return TRUE; }
 extern "C" void lgd3d_blit(void) {}
@@ -375,7 +375,7 @@ extern "C" BOOL lgd3d_set_texture_wrapping(DWORD level, BOOL wrap) {
   lgd3d_render_flush();
   old = g_wrap[level];
   g_wrap[level] = wrap;
-  D3D11LegacySetSampler(level, wrap, g_smooth[level]);
+  RenderBackendSetSampler(level, wrap, g_smooth[level]);
   return old;
 }
 extern "C" void lgd3d_set_chromakey(int r, int g, int b) {
@@ -405,8 +405,8 @@ extern "C" BOOL lgd3d_set_shading(BOOL smooth) {
   lgd3d_render_flush();
   g_shading = smooth;
   g_smooth[0] = g_smooth[1] = smooth;
-  D3D11LegacySetSampler(0, g_wrap[0], smooth);
-  D3D11LegacySetSampler(1, g_wrap[1], smooth);
+  RenderBackendSetSampler(0, g_wrap[0], smooth);
+  RenderBackendSetSampler(1, g_wrap[1], smooth);
   return old;
 }
 extern "C" BOOL lgd3d_is_smooth_shading_on(void) { return g_shading; }

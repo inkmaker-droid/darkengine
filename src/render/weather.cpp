@@ -74,16 +74,16 @@ void CheckForWeatherCells();
 \* --<<= -+-\-\-\=\=\/\- <<< ((( ((( \ / ))) ))) >>> -/\/=/=/-/-/-+- =>>-- */
 
 const float kSphereCheckDist2 = 10 * 10;
-const float kSphereTeleportSpeed = .1; // feet/millisec.
-const float kMoveEpsilon = .1;
-const float kSnowTurnSpeed = 3;
-const float kRainFromSide = .98;
-const float kMaxPrecipPerFrame = 30;
+const float kSphereTeleportSpeed = .1f; // feet/millisec.
+const float kMoveEpsilon = .1f;
+const float kSnowTurnSpeed = 3.0f;
+const float kRainFromSide = .98f;
+const int kMaxPrecipPerFrame = 30;
 // Splashes which are further from the camera have lower alphas, but
 // no lower than this.
-const float kSplashMinAlpha = .15;
+const float kSplashMinAlpha = .15f;
 // We can have splashes on planes within 45 degrees of horizontal.
-const float kSplashMinPlaneZ = .707;
+const float kSplashMinPlaneZ = .707f;
 
 // per-cell flags
 const uchar kCellHasDebris = 1;
@@ -430,7 +430,7 @@ static void SetDerivedGlobals()
 
    mx_mk_vec(&g_PrecipFall, g_Weather.m_Wind.x, g_Weather.m_Wind.y,
              g_Weather.m_Wind.z - g_Weather.m_fPrecipFallSpeed);
-   g_fPrecipFallSpeed = mx_norm_vec(&g_PrecipFallUnit, &g_PrecipFall) * .001;
+   g_fPrecipFallSpeed = mx_norm_vec(&g_PrecipFallUnit, &g_PrecipFall) * .001f;
 
    // We need two unit vectors, perpendicular to the direction in
    // which the precipitation's falling and to each other.
@@ -455,39 +455,39 @@ static void SetDerivedGlobals()
       // things we only need for rain
       mx_scale_vec(&g_PrecipRainTail, &g_PrecipFallUnit,
                    g_Weather.m_fRainLength);
-      g_iSplashChance = g_Weather.m_fSplashFreq * 32767.0;
-      g_iSplashDuration = g_Weather.m_fSplashDuration * 1000.0;
-      g_fSplashRescale = MX_REAL_PI / (g_Weather.m_fSplashDuration * 1000.0);
-      g_fVisibleDistRecip = 1.0 / g_Weather.m_fVisibleDist;
+      g_iSplashChance = (int)(g_Weather.m_fSplashFreq * 32767.0f);
+      g_iSplashDuration = (int)(g_Weather.m_fSplashDuration * 1000.0f);
+      g_fSplashRescale = (float)(MX_REAL_PI / (g_Weather.m_fSplashDuration * 1000.0f));
+      g_fVisibleDistRecip = 1.0f / g_Weather.m_fVisibleDist;
 
       // make vectors for corners of splashes
       mx_mk_vec(&g_aSplashCorner0[0], -g_Weather.m_fSplashRadius,
                 0, g_Weather.m_fSplashHeight);
-      mx_mk_vec(&g_aSplashCorner0[1], g_Weather.m_fSplashRadius * -.5,
-                g_Weather.m_fSplashRadius * .866, g_Weather.m_fSplashHeight);
-      mx_mk_vec(&g_aSplashCorner0[2], g_Weather.m_fSplashRadius * .5,
-                g_Weather.m_fSplashRadius * .866, g_Weather.m_fSplashHeight);
+      mx_mk_vec(&g_aSplashCorner0[1], g_Weather.m_fSplashRadius * -.5f,
+                 g_Weather.m_fSplashRadius * .866f, g_Weather.m_fSplashHeight);
+      mx_mk_vec(&g_aSplashCorner0[2], g_Weather.m_fSplashRadius * .5f,
+                 g_Weather.m_fSplashRadius * .866f, g_Weather.m_fSplashHeight);
 
       mx_mk_vec(&g_aSplashCorner1[0], g_Weather.m_fSplashRadius,
                 0, g_Weather.m_fSplashHeight);
-      mx_mk_vec(&g_aSplashCorner1[1], g_Weather.m_fSplashRadius * .5,
-                g_Weather.m_fSplashRadius * -.866, g_Weather.m_fSplashHeight);
-      mx_mk_vec(&g_aSplashCorner1[2], g_Weather.m_fSplashRadius * -.5,
-                g_Weather.m_fSplashRadius * -.866, g_Weather.m_fSplashHeight);
+      mx_mk_vec(&g_aSplashCorner1[1], g_Weather.m_fSplashRadius * .5f,
+                 g_Weather.m_fSplashRadius * -.866f, g_Weather.m_fSplashHeight);
+      mx_mk_vec(&g_aSplashCorner1[2], g_Weather.m_fSplashRadius * -.5f,
+                 g_Weather.m_fSplashRadius * -.866f, g_Weather.m_fSplashHeight);
 
       mx_mk_vec(&g_aSplashCorner2[0], g_Weather.m_fSplashRadius,
                 0, 0);
-      mx_mk_vec(&g_aSplashCorner2[1], g_Weather.m_fSplashRadius * .5,
-                g_Weather.m_fSplashRadius * -.866, 0);
-      mx_mk_vec(&g_aSplashCorner2[2], g_Weather.m_fSplashRadius * -.5,
-                g_Weather.m_fSplashRadius * -.866, 0);
+      mx_mk_vec(&g_aSplashCorner2[1], g_Weather.m_fSplashRadius * .5f,
+                 g_Weather.m_fSplashRadius * -.866f, 0);
+      mx_mk_vec(&g_aSplashCorner2[2], g_Weather.m_fSplashRadius * -.5f,
+                 g_Weather.m_fSplashRadius * -.866f, 0);
 
       mx_mk_vec(&g_aSplashCorner3[0], -g_Weather.m_fSplashRadius,
                 0, 0);
-      mx_mk_vec(&g_aSplashCorner3[1], g_Weather.m_fSplashRadius * -.5,
-                g_Weather.m_fSplashRadius * .866, 0);
-      mx_mk_vec(&g_aSplashCorner3[2], g_Weather.m_fSplashRadius * .5,
-                g_Weather.m_fSplashRadius * .866, 0);
+      mx_mk_vec(&g_aSplashCorner3[1], g_Weather.m_fSplashRadius * -.5f,
+                 g_Weather.m_fSplashRadius * .866f, 0);
+      mx_mk_vec(&g_aSplashCorner3[2], g_Weather.m_fSplashRadius * .5f,
+                 g_Weather.m_fSplashRadius * .866f, 0);
    }
 
    for (int i = 0; i < 4; ++i) {
@@ -511,11 +511,11 @@ static void MakeNewPrecip(mxs_vector *pCamPos, ulong nMillisec)
 {
    // This is how many objects we'll try to make.  We don't really
    // make those which are blocked by terrain.
-   g_fAccumNewPrecip += nMillisec * g_Weather.m_fPrecipFreq * .001;
+   g_fAccumNewPrecip += nMillisec * g_Weather.m_fPrecipFreq * .001f;
    if (g_fAccumNewPrecip < 1.0)
       return;
 
-   int iNumNewPrecip = g_fAccumNewPrecip;
+   int iNumNewPrecip = (int)g_fAccumNewPrecip;
 
    ConfigSpew("WeatherMakeSpew", ("weather: trying to make %d.\n",
                                   iNumNewPrecip));
@@ -533,9 +533,9 @@ static void MakeNewPrecip(mxs_vector *pCamPos, ulong nMillisec)
       mxs_vector StartPos, EndPos;
 
       mx_scale_add_vec(&StartPos, &Above, &g_PrecipPerp1,
-                       (RandFloat() - .5) * 2.0 * g_Weather.m_fVisibleDist);
+                       (RandFloat() - .5f) * 2.0f * g_Weather.m_fVisibleDist);
       mx_scale_addeq_vec(&StartPos, &g_PrecipPerp2,
-                       (RandFloat() - .5) * 2.0 * g_Weather.m_fVisibleDist);
+                       (RandFloat() - .5f) * 2.0f * g_Weather.m_fVisibleDist);
 
       // Now then.  Is this position within the world; and in a cell
       // with weather; and not obscured by terrain if we raycast up
@@ -558,7 +558,7 @@ static void MakeNewPrecip(mxs_vector *pCamPos, ulong nMillisec)
             // terrain.  We determine how long it will last using a
             // second raycast going the other direction.
             mx_scale_add_vec(&EndPos, &StartPos, &g_PrecipFallUnit,
-                             3.0 * g_Weather.m_fVisibleDist);
+                             3.0f * g_Weather.m_fVisibleDist);
             MakeLocationFromVector(&EndLoc, &EndPos);
 
             // Finally--we get to make something!
@@ -587,7 +587,7 @@ static void MakeNewPrecip(mxs_vector *pCamPos, ulong nMillisec)
             }
 
             pNew->m_Pos = StartPos;
-            pNew->m_iMillisecsLeft = fFallDist / g_fPrecipFallSpeed;
+            pNew->m_iMillisecsLeft = (long)(fFallDist / g_fPrecipFallSpeed);
             if (g_Weather.m_Precip == kWeatherSnow) {
                pNew->m_Facing = g_Facing;
                g_Facing += 1;
@@ -608,7 +608,7 @@ static void MakeNewPrecip(mxs_vector *pCamPos, ulong nMillisec)
 static void MovePrecip(ulong nMillisec)
 {
    mxs_vector MoveVec;
-   mx_scale_vec(&MoveVec, &g_PrecipFall, ((float) nMillisec) * .001);
+   mx_scale_vec(&MoveVec, &g_PrecipFall, ((float) nMillisec) * .001f);
 
    int i, j, iNum = g_Precip.Size();
 
@@ -632,7 +632,7 @@ static void MovePrecip(ulong nMillisec)
    if (g_Weather.m_Precip == kWeatherSnow) {
       // update the snow angles
       mxs_ang MoveAng = 0;
-      mxs_ang MoveAngDelta = kSnowTurnSpeed * nMillisec;
+      mxs_ang MoveAngDelta = (mxs_ang)(kSnowTurnSpeed * nMillisec);
       for (i = 0; i < 3; ++i) {
          for (j = 0; j < 3; ++j) {
             MoveAng += MoveAngDelta;
@@ -658,8 +658,8 @@ static void MovePrecip(ulong nMillisec)
 // fake enough .05 sec. frames to fill the air with precipitation
 static void ForcePrecip(mxs_vector *pCamPos)
 {
-   float fSecs = g_Weather.m_fVisibleDist * 2.0 / g_Weather.m_fPrecipFallSpeed;
-   int iFrames = fSecs / .05;
+   float fSecs = g_Weather.m_fVisibleDist * 2.0f / g_Weather.m_fPrecipFallSpeed;
+   int iFrames = (int)(fSecs / .05f);
 
    for (int i = 0; i < iFrames; ++i) {
       MakeNewPrecip(pCamPos, 50);
@@ -840,11 +840,11 @@ void WeatherRender()
 
             float fBaseU = g_afSnowTopU[pPos->m_Flake];
             g_aPt[0].grp.u = g_aPt[3].grp.u = fBaseU;
-            g_aPt[1].grp.u = g_aPt[2].grp.u = fBaseU + .5;
+            g_aPt[1].grp.u = g_aPt[2].grp.u = fBaseU + .5f;
 
             float fBaseV = g_afSnowTopV[pPos->m_Flake];
             g_aPt[0].grp.v = g_aPt[1].grp.v = fBaseV;
-            g_aPt[2].grp.v = g_aPt[3].grp.v = fBaseV + .5;
+            g_aPt[2].grp.v = g_aPt[3].grp.v = fBaseV + .5f;
 
             // backface check
             float fNegPlaneConst = mx_dot_vec(&pPos->m_Pos,
@@ -956,7 +956,7 @@ void WeatherRender()
 
             pPos = g_Splash.AsPointer();
             for (i = 0; i < iNumSplash; ++pPos, ++i) {
-               float fS = sin(pPos->m_iMillisecsLeft * g_fSplashRescale);
+               float fS = sinf(pPos->m_iMillisecsLeft * g_fSplashRescale);
 
                // Each splash uses the same texture three times.
                for (j = 0; j < 3; ++j) {
@@ -980,7 +980,7 @@ void WeatherRender()
                      break;
 
                   float fDist = mx_dist_vec(&CamPos, &pPos->m_Impact);
-                  float fAlpha = (1.0 - fDist * g_fVisibleDistRecip)
+                  float fAlpha = (1.0f - fDist * g_fVisibleDistRecip)
                                 * g_Weather.m_fAlpha;
                   if (fAlpha < kSplashMinAlpha)
                      fAlpha = kSplashMinAlpha;

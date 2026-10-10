@@ -123,7 +123,7 @@ sMeshAttachInstance GetBeltLinkAttachment(ObjID o)
       return beltlinkData;
     }
   mx_mk_angvec(&beltlinkData.m_Angles,0,16384,9000);
-  beltlinkData.m_Offset = cMxsVector(0.24,0.75,0.0);
+  beltlinkData.m_Offset = cMxsVector(0.24f,0.75f,0.0f);
   //must set object at other end.
   beltlinkData.m_iJoint=8;
   return beltlinkData;
@@ -217,7 +217,7 @@ sMeshAttachInstance GetAltLinkAttachment(ObjID o)
       return AltLinkData;
     }
   mx_mk_angvec(&AltLinkData.m_Angles,0,16384,9000);
-  AltLinkData.m_Offset = cMxsVector(0.24,0.75,0.0);
+  AltLinkData.m_Offset = cMxsVector(0.24f,0.75f,0.0f);
   //must set object at other end.
   AltLinkData.m_iJoint=8;
   return AltLinkData;

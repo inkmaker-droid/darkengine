@@ -13,7 +13,7 @@
 // The code is essentially boilerplate, which was given to use by RW.
 //
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <netvoice.h>
 
 // This should be last:

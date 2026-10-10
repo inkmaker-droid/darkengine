@@ -286,7 +286,7 @@ void LGAPI RotDoorListener(sPropertyListenMsg *msg, PropListenerData data)
          mxs_angvec cur_ang = ObjPosGet(msg->obj)->fac;
          ObjRotate(msg->obj, &pDoorProp->base_angle);
 
-         pModel->AddAngleLimit(pDoorProp->axis, pDoorProp->open, RotDoorOpenCallback);
+         pModel->AddAngleLimit(pDoorProp->axis, (int)pDoorProp->open, RotDoorOpenCallback);
          pModel->AddAngleLimit(pDoorProp->axis, 0, RotDoorCloseCallback);
 
          ObjRotate(msg->obj, &cur_ang);

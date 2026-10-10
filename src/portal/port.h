@@ -183,7 +183,7 @@ EXTERN void portal_shine_omni_light(int light_index, Location *loc,
                                     uchar lighting_type);
 
   // length of raycasts used to see if something is in sunlight
-#define kPortalSunlightCastLength 1000.0
+#define kPortalSunlightCastLength 1000.0f
 
   // The length of this vector is the brightness of the sunlight.
 EXTERN mxs_vector portal_sunlight;

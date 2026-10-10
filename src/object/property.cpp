@@ -218,7 +218,7 @@ public:
       // the field has fewer bits, make sure no lost data:
       Assert_(msg->propertyID == mpProp->mID);
       msg->netObjID = mpProp->gmObjNet->ObjHostObjID(obj);
-      msg->type = type;
+      msg->type = (ubyte)type;
       // the field has fewer bits, make sure no lost data:
       Assert_(msg->type == type);
       NetPropSpew(("SEND: property %d:%s type: 0x%x size: %d first word: %d\n",

@@ -139,7 +139,7 @@ errtype bugtrak_report_registration(int id)
    char oput[50];
 
    lg_sprintf(oput, "REGISTERING FUNCTIONS TO ID %d\n",id);
-   write(bt_session_handle, oput, strlen(oput) * sizeof(char));
+   write(bt_session_handle, oput, (unsigned)strlen(oput));
    return(OK);
 }
 
@@ -153,10 +153,10 @@ errtype bugtrak_begin_session(char *bt_session_file)
       return(ERR_NODEV);
    }
    lg_sprintf(oput, "NAME: %s\n", getenv("USER"));
-   write(bt_session_handle, oput, strlen(oput) * sizeof(char));
+   write(bt_session_handle, oput, (unsigned)strlen(oput));
    time(&t);
    lg_sprintf(oput, "STARTING SESSION AT: %s\n", ctime(&t));
-   write(bt_session_handle, oput, strlen(oput) * sizeof(char));
+   write(bt_session_handle, oput, (unsigned)strlen(oput));
    return(OK);
 }
 
@@ -167,8 +167,8 @@ errtype bugtrak_end_session(int status_code)
 
    time(&t);
    lg_sprintf(oput, "ENDING SESSION AT: %s\n", ctime(&t));
-   write(bt_session_handle, oput, strlen(oput) * sizeof(char));
+   write(bt_session_handle, oput, (unsigned)strlen(oput));
    lg_sprintf(oput, "STATUS = %d\n", status_code);
-   write(bt_session_handle, oput, strlen(oput) * sizeof(char));
+   write(bt_session_handle, oput, (unsigned)strlen(oput));
    return(OK);
 }

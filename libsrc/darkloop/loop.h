@@ -16,7 +16,7 @@ public:
 	cLoop(IUnknown* pOuterUnknown, cLoopManager* pLoopManager);
 	~cLoop();
 
-	DECLARE_DELEGATION(cLoop);
+	DECLARE_DELEGATION();
 
 
 	// Run the loop

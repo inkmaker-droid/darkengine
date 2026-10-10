@@ -28,6 +28,13 @@ the supported script-manager and engine-service calls into the 64-bit process.
 This is separate from NewDark's Squirrel support and is still being expanded
 and validated against third-party OSMs.
 
+Modern scene submission now crosses the platform-neutral
+`h/render_backend.h` boundary. The Windows display and D3D11 providers live
+under `winsrc/dispdev` and `winsrc/render`; engine, UI, movie, and `lgd3d` code no longer call a
+D3D11-named API directly. This is the renderer seam for a future OpenGL
+provider, but an OpenGL implementation and a complete non-Windows build do
+not exist yet.
+
 The runner currently provides:
 
 - first-run selection and validation of a Thief 2 data directory;
@@ -48,10 +55,10 @@ The runner currently provides:
 - A retail Thief 2 installation containing `cam.cfg` and either `DARK.GAM` or
   `MISS1.MIS`
 
-The legacy DirectX headers and import libraries still needed by engine-facing
-interfaces are under `3rdparty/dx7sdk`. Current Windows output uses a D3D11
-swap chain and Windows Media Foundation. No assembler is required by the
-active x86 or x64 build.
+The Windows SDK supplies the legacy DirectX declarations still exposed by a
+few engine-facing interfaces. Current Windows output uses a D3D11 swap chain
+and Windows Media Foundation. No assembler is required by the active x86 or
+x64 build.
 
 ## Build instructions
 
@@ -332,10 +339,9 @@ repository.
   the IA-32 instructions, imports, and engine services exercised by tested
   legacy `.osm` modules; broader third-party script coverage remains ongoing.
 - Modern rendering is still exposed through the historical `lgd3d` API as a
-  compatibility facade over D3D11. The unusable legacy Direct3D device path is
-  disabled, but dormant D3D2-era branches, files, and build definitions remain
-  to be removed after the remaining texture, lightmap, and render-state
-  behavior has been ported and validated.
+  compatibility facade over the renderer-neutral backend. The unusable
+  Direct3D 2 implementation and its dormant build sources have been removed;
+  callers still need migration away from the facade itself.
 - The native 64-bit build still needs broader mission, save/load, and editing
   validation. The renderer also still uses a 16-bit internal canvas despite
   presenting a 32-bit D3D11 image, so full 32-bit scene rendering remains to

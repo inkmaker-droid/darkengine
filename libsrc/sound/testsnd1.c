@@ -4,7 +4,7 @@
 //  mainly a ripoff of Golf's sound.c module
 //
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <lg.h>
 #include <res.h>
 #include <mprintf.h>

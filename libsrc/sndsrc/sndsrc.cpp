@@ -235,12 +235,12 @@ cSndSource::SamplesToTime( uint32   nSamples )
       // get sample rate from connected player
       sampleRate = (float) mpPlayer->GetFrequency();
    } else {
-      sampleRate = mAttribs.sampleRate;
+      sampleRate = (float)mAttribs.sampleRate;
    }
 
-   msecs = 1000.0 * ((float) nSamples / sampleRate);
+   msecs = 1000.0f * ((float) nSamples / sampleRate);
 
-   imsecs = msecs;
+   imsecs = (uint32)msecs;
    return imsecs;
 }
 
@@ -258,12 +258,12 @@ cSndSource::TimeToSamples( uint32   milliseconds )
       // get sample rate from connected player
       sampleRate = (float) mpPlayer->GetFrequency();
    } else {
-      sampleRate = mAttribs.sampleRate;
+      sampleRate = (float)mAttribs.sampleRate;
    }
 
-   samples = (float) sampleRate * ((float) milliseconds / 1000.0);
+   samples = (float) sampleRate * ((float) milliseconds / 1000.0f);
 
-   nSamples = samples;
+   nSamples = (uint32)samples;
    return nSamples;
 }
 

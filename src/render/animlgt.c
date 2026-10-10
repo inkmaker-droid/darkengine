@@ -83,7 +83,7 @@ sAnimLightToCell g_aAnimLightToCell[MAX_ANIM_LIGHT_TO_CELLS];
 // A RAND_COHERENT light changes up to some amount per frame, as a
 // fraction of the total range of intensities the light can assume.
 // (Actually, it changes +/- half this amount.)
-#define RAND_VARIATION .6
+#define RAND_VARIATION .6f
 
 /* ----- /-/-/-/-/-/-/-/-/ <<< (((((( /\ )))))) >>> \-\-\-\-\-\-\-\-\ ----- *\
 
@@ -279,7 +279,7 @@ void AnimLightSetCellList(sAnimLight *light, uint light_data_index)
    as having changed, so that the surfaces it reaches must be rebuilt.
 
 \* ----- \-\-\-\-\-\-\-\-\ <<< (((((( \/ )))))) >>> /-/-/-/-/-/-/-/-/ ----- */
-#define FLICKER_FACTOR  0.5
+#define FLICKER_FACTOR  0.5f
 BOOL AnimLightUpdateTimer(sAnimLight *light, long time_change)
 {
    float brightness, old_brightness, weight, range, change;
@@ -323,8 +323,8 @@ BOOL AnimLightUpdateTimer(sAnimLight *light, long time_change)
             interval = light->time_rising_ms;
          else
             interval = light->time_falling_ms;
-         randfactor = (1.0 - FLICKER_FACTOR) + ((FLICKER_FACTOR * 2) * (float)Rand() / (float) RAND_MAX);
-         interval = interval * randfactor;
+         randfactor = (1.0f - FLICKER_FACTOR) + ((FLICKER_FACTOR * 2) * (float)Rand() / (float) RAND_MAX);
+         interval = (int)(interval * randfactor);
          //mprintf("randfactor %f, interval %d\n",randfactor,interval);
          time += interval;
       }
@@ -366,7 +366,7 @@ BOOL AnimLightUpdateTimer(sAnimLight *light, long time_change)
          if (changed_state) {
             range = light->max_brightness - light->min_brightness;
             brightness = light->min_brightness
-               + (float) Rand() * (1.0 / (float) RAND_MAX) * range;
+               + (float) Rand() * (1.0f / (float) RAND_MAX) * range;
          } else
             brightness = old_brightness;
          break;
@@ -387,14 +387,14 @@ BOOL AnimLightUpdateTimer(sAnimLight *light, long time_change)
          if (changed_state) {
             range = light->max_brightness - light->min_brightness;
 
-            change = (float) (Rand() - 16384) * (1.0 / (float) RAND_MAX)
+            change = (float) (Rand() - 16384) * (1.0f / (float) RAND_MAX)
                    * (range * RAND_VARIATION);
 
             brightness = old_brightness + change;
 
             if ((brightness > light->max_brightness && change > 0)
              || (brightness < light->min_brightness && change < 0))
-               brightness = old_brightness - (change * .5);
+               brightness = old_brightness - (change * .5f);
          } else
             brightness = old_brightness;
          break;

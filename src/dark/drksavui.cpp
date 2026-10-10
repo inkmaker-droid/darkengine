@@ -325,7 +325,7 @@ void cSavePanel::OnSelect(int which)
          // I wonder if the compiler will optimize this math?
          sprintf(buf," %d:%02d:%02d",time/(60*60),(time/60)%60,time%60); 
 
-         int len = strlen(slot.buf); 
+   int len = (int)strlen(slot.buf);
          strncpy(slot.buf + len,buf,sizeof(slot.buf)-len); 
       }
    }

@@ -23,13 +23,6 @@
 #include <string.h>
 #include <splitpat.h>
 
-#define LDEBUG
-#ifdef LDEBUG
-#define LAssertMsg(b, s) AssertMsg(b, s)
-#else
-#define LAssertMsg(b, s)
-#endif
-
 static int __stdcall DotFound(char *);
 static void __stdcall CopyIt(char *, const char *, unsigned);
 #define WILDCARDS 0x01
@@ -107,7 +100,7 @@ void SplitPath(const char *pszSourcePath, char *driveP, char *dirP,
     pB = buf;
     while (*pszSourcePath == ' ')
         pszSourcePath++;
-    if ((Wrk = strlen(pszSourcePath)) > _MAX_PATH)
+    if ((Wrk = static_cast<int>(strlen(pszSourcePath))) > _MAX_PATH)
         Wrk = _MAX_PATH;
     *pB++ = 0;
     strncpy(pB, pszSourcePath, Wrk);
@@ -333,8 +326,9 @@ BOOL cPathSplitter::DoSplitTo(eComponent /* SplitToComponent */)
             while (isspace(*pcszTarget))
                 pcszTarget++;
 
-        if ((nSignificantTargetLen = strlen(pcszTarget)) >= MaxPath)
-            nSignificantTargetLen = MaxPath;
+        if ((nSignificantTargetLen = static_cast<unsigned>(strlen(pcszTarget))) >=
+            static_cast<unsigned>(MaxPath))
+            nSignificantTargetLen = static_cast<unsigned>(MaxPath);
 
         // @TBD: Should strip trailing space & periods, periods in particular
         }

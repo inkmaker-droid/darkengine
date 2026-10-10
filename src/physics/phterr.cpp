@@ -93,7 +93,7 @@ BOOL cPhysTerrPolyList::GetNormal(mxs_vector & normal, const mxs_vector &sphere_
                end   = &WR_CELL(cell_id)->vpool[WR_CELL(cell_id)->vertex_list[j]];
 
                cEdgeContact edgeContact(*start, *end);
-               mxs_real edge_dist = fabs(edgeContact.GetDist(sphere_loc) - sphere_radius);
+               mxs_real edge_dist = fabsf(edgeContact.GetDist(sphere_loc) - sphere_radius);
                if ((best_edge_dist < 0.0) || (edge_dist < best_edge_dist))
                {
                   best_edge_dist = edge_dist;
@@ -146,7 +146,7 @@ BOOL cPhysTerrPolyList::GetNormal(mxs_vector & normal, const mxs_vector &sphere_
             {
                vertex = &WR_CELL(cell_id)->vpool[WR_CELL(cell_id)->vertex_list[i]];
 
-               mxs_real vertex_dist = fabs(mx_dist_vec(vertex, &sphere_loc) - sphere_radius);
+               mxs_real vertex_dist = fabsf(mx_dist_vec(vertex, &sphere_loc) - sphere_radius);
 
                if ((best_vertex_dist < 0.0) || (vertex_dist < best_vertex_dist))
                {

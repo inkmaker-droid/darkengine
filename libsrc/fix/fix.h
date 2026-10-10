@@ -225,7 +225,7 @@ __inline fix fix_mul_div_fast (fix m0, fix m1, fix d)
 extern fix fix_mul_div_safe (fix m0, fix m1, fix d);
 
 
-#ifndef WIN32
+#ifndef _WIN32
 #define fix_div fix_div_fast
 #define fix_mul_div fix_mul_div_fast
 #else
@@ -242,7 +242,7 @@ fix fix_fast_pyth_dist (fix a, fix b);
 
 // pyth_dist with less fear of overflow.  Either number
 // can be up to 0x2fffffff.
-fix fix_safe_pyth_dist_info (fix a, fix b, char *file, int line);
+fix fix_safe_pyth_dist_info (fix a, fix b, const char *file, int line);
 
 #ifdef WARN_ON
 #define fix_safe_pyth_dist(a,b) fix_safe_pyth_dist_info(a, b, __FILE__, __LINE__)

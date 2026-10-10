@@ -390,7 +390,7 @@ public:
    STDMETHOD_(void,	   SetVolume)(int32 vol);
    STDMETHOD_(void,	   SetPan)(int32 pan) = 0;
    STDMETHOD_(void,	   SetFrequency)(uint32 freq) = 0;
-   STDMETHOD_(void,	   SetData)(int32 data);
+   STDMETHOD_(void,	   SetData)(intptr_t data);
    STDMETHOD_(void,	   SetPriority)(int32 data);
    STDMETHOD_(void,     SetSuperInfo)(void *);
    STDMETHOD_(void,	   SetPosition)(uint32 pos);
@@ -400,7 +400,7 @@ public:
    STDMETHOD_(int32,	   GetVolume)(void);
    STDMETHOD_(int32,	   GetPan)(void);
    STDMETHOD_(uint32,	GetFrequency)(void);
-   STDMETHOD_(int32,	   GetData)(void);
+   STDMETHOD_(intptr_t, GetData)(void);
    STDMETHOD_(int32,	   GetPriority)(void);
    STDMETHOD_(void *,	GetSuperInfo)(void);
    STDMETHOD_(uint32,	GetPosition)(void);
@@ -501,7 +501,7 @@ protected:
 	int32 mVolume;			// we keep this to provide master levels
 	int32 mPan;
 	int32 mFrequency;
-	int32 mAppData;
+	intptr_t mAppData;
    void  *mpSuperInfo;
 
 	cSndFadeTask *mFadeTasks[3];  // should be same as number of eSndFadeTasks

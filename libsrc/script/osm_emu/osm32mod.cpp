@@ -507,7 +507,7 @@ protected:
          uint32_t timer;
          if (!Argument(*state, *memory, 1, &timer, error)) return false;
          m_scriptManager->KillTimedMessage(
-            reinterpret_cast<tScrTimer>(static_cast<uintptr_t>(timer)));
+            static_cast<tScrTimer>(static_cast<uintptr_t>(timer)));
          return Return(state, memory, 8, 0, error);
       }
       if (slot == 26 || slot == 27)
@@ -559,9 +559,7 @@ protected:
          const tScrTimer result = m_scriptManager->SetTimedMessage2(
             static_cast<ObjID>(to), name.c_str(), static_cast<ulong>(time),
             static_cast<eScrTimedMsgKind>(kind), data);
-         return Return(state, memory, 24,
-                       static_cast<uint32_t>(reinterpret_cast<uintptr_t>(
-                          result)), error);
+         return Return(state, memory, 24, static_cast<uint32_t>(result), error);
       }
       if (slot < 29 || slot > 32)
          return cEnvironment::InvokeScriptManager(slot, state, memory, error);

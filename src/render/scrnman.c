@@ -22,7 +22,7 @@
 #include <cursors.h>
 #include <curdat.h>
 #include <lgd3d.h>
-#include <d3d11legacy.h>
+#include <render_backend.h>
 #include <r3d.h>
 
 #include <appagg.h>
@@ -71,7 +71,7 @@ static char g_last_set_res_error[256] = "Screen mode setup was not attempted.";
 ScrnMode ScrnFindModeFlags(short w, short h, ubyte depth,ulong flags)
 {
    int i;
-   i=gr_find_mode_flags(w,h,depth,flags|GRM_IS_SUPPORTED);
+   i=gr_find_mode_flags(w,h,depth,(uchar)(flags|GRM_IS_SUPPORTED));
    if (i!=-1)
       return i;
 
@@ -157,7 +157,6 @@ int ScrnSetDisplay(int kind, int flags, GUID *DD)
    GUID *curDD;
    IDisplayDevice *pDispDev = AppGetObj(IDisplayDevice);
    BOOL different_dd = FALSE;
-   EXTERN BOOL g_no_dx6;
    BOOL last_flip = try_flip;
 
    GET_KIND(pDispDev, (eDisplayDeviceKind *)&dispKind, &dispFlags, &curDD);
@@ -170,13 +169,6 @@ int ScrnSetDisplay(int kind, int flags, GUID *DD)
    // If neither pointer is null, actually compare the guids
    if (different_dd && DD && curDD)
       different_dd = !IsEqualGUID(DD,curDD);
-
-   if (g_no_dx6) {
-      kind = kDispDebug;
-      DD = NULL;
-      flags &= kDispStrictMonitors;
-   }
-
 
    try_flip = flags & kDispAttemptFlippable;
 
@@ -226,7 +218,8 @@ const char* ScrnGetLastSetResError(void)
 static void make_draw_canvas(void)
 {
    IDisplayDevice* pDisp = AppGetObj(IDisplayDevice);
-   int disp_kind, disp_flags;
+   eDisplayDeviceKind disp_kind;
+   int disp_flags;
 
    GET_KIND(pDisp, &disp_kind, &disp_flags, NULL);
 
@@ -386,7 +379,7 @@ BOOL ScrnSetRes(ScrnMode mode,ulong flags)
          // therefore never reports a legacy flip chain.  Treat that as the
          // already-configured modern mode instead of tearing it down and
          // rebuilding it on every repeated resolution request.
-         if (try_flip && D3D11LegacyAvailable())
+         if (try_flip && RenderBackendAvailable())
             goto ScrnSetResMisc;
 
          // Couldn't do it, fall through to old way...
@@ -418,7 +411,7 @@ BOOL ScrnSetRes(ScrnMode mode,ulong flags)
          // is unavailable; aliasing the draw canvas to the replaceable
          // DirectDraw surface leaves stale pointers across logical mode
          // changes and crashes in flat16_memset.
-         if (!D3D11LegacyAvailable())
+         if (!RenderBackendAvailable())
          {
             strcpy(g_last_set_res_error, "The display driver could not enable page flipping.");
             goto ScrnSetResDone;
@@ -747,8 +740,8 @@ void ScrnBlacken(void)
    // scene is active.  An explicit blacken operation must discard that scene
    // first or the cleared canvas simply reveals the previous menu/game frame
    // during movie and mode transitions.
-   if (D3D11LegacyAvailable())
-      D3D11LegacyDeactivateScene();
+   if (RenderBackendAvailable())
+      RenderBackendDeactivateScene();
 
    if (have_canv)
    {
@@ -804,7 +797,7 @@ void ScrnClearHardwareOverlay(void)
 {
    // Called only by lgd3d_start_frame().  Menus use ScrnStartFrame too, but
    // repaint incrementally and must retain their canvas between ticks.
-   if (_off_screen != NULL && !D3D11LegacyPreserveCanvas())
+   if (_off_screen != NULL && !RenderBackendPreserveCanvas())
    {
       gr_push_canvas(_off_screen);
       gr_clear(0);

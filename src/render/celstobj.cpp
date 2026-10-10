@@ -48,12 +48,12 @@ extern "C" BOOL g_lgd3d;
 extern "C" BOOL portal_fog_on;
 
 
-#define PI 3.14159265359
-#define fDeg90 (0.50000*PI)
+#define PI 3.14159265359f
+#define fDeg90 (0.50000f*PI)
 #define fDeg180 (PI)
-#define fDeg360 (2*PI)
+#define fDeg360 (2.0f*PI)
 
-#define DEG (PI/180)
+#define DEG (PI/180.0f)
 
 ////////////////////////////////////////////////////////
 // Mission Loading and Saving
@@ -189,7 +189,7 @@ inline void cCelestialObject::SetEasterEggDefaults()
    pCelestialObj->bEnableFog = TRUE;
    pCelestialObj->bIsAlphaTexture = FALSE;
    strcpy(pCelestialObj->TextureName,"smooth.pcx");
-   pCelestialObj->fAlpha = 0.4;
+   pCelestialObj->fAlpha = 0.4f;
    pCelestialObj->fOffset = 0;
    pCelestialObj->fAng = 30;
    pCelestialObj->fLatAng = 75;
@@ -400,7 +400,7 @@ void cCelestialObject::Term()
 void cCelestialObject::Render()
 {
    grs_bitmap *pBitmap;
-   size_t nStride;
+   int nStride;
    mxs_vector OldPos;
    mxs_vector ZeroPos = {0,0,0};
    BOOL bRestoreZWrite;

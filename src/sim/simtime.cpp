@@ -81,7 +81,7 @@ static tSimTime clamp_frame_time(tSimTime ftime)
    }
 
    if (gParams.scaleFrameTime > 0.0)
-      ftime *= gParams.scaleFrameTime;
+      ftime = (tSimTime)(ftime * gParams.scaleFrameTime);
 
    return ftime;
 }
@@ -303,8 +303,8 @@ typedef struct _StateRecord
 
 static void SlowFrame(long nMilliseconds)
 {
-   long nStart = timeGetTime();
-   while ((timeGetTime()-nStart) < nMilliseconds)
+   DWORD nStart = timeGetTime();
+   while ((timeGetTime()-nStart) < (DWORD)nMilliseconds)
    {}
 }
 
@@ -320,7 +320,6 @@ static int nSlowFrameTime = 0;
 #endif
 static long nLastRealFrameTime = 0;
 
-#pragma off(unreferenced)
 static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMessageData hdata)
 {
    // useful stuff for most clients
@@ -400,7 +399,6 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
 // Loop client factory function.
 //
 
-#pragma off(unreferenced)
 static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData data)
 {
    StateRecord* state;
@@ -410,7 +408,6 @@ static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData
 
    return CreateSimpleLoopClient(_LoopFunc,state,pDesc);
 }
-#pragma on(unreferenced)
 
 ///////////////
 // DESCRIPTOR

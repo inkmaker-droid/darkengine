@@ -30,7 +30,7 @@ struct sVisMeterState
 {
    invRendState* rend; 
    int last_val; 
-   int last_time; 
+   ulong last_time;
 };
 
 static sVisMeterState gState = { NULL, 0, 0, }; 
@@ -44,7 +44,7 @@ static sVisMeterState gState = { NULL, 0, 0, };
 #define NUM_MODELS 16
 
 static int  vismeter_md_idxs[NUM_MODELS];
-static uint vismeter_cutoffs[NUM_MODELS];
+static int  vismeter_cutoffs[NUM_MODELS];
 static int  vismeter_refresh = 50; 
 static int  vismeter_frame_skip = 2; 
 
@@ -72,7 +72,7 @@ void VisMeterEnterMode()
 
    int zoom = 100; 
    config_get_int("vismeter_zoom",&zoom);
-   view.cam_dist *= 1.0*zoom/100; 
+   view.cam_dist *= (float)zoom / 100.0f;
    
    int ang[3] = { 0, 0, 0};
    int angcnt = 3;
@@ -183,7 +183,7 @@ void VisMeterUpdate(ulong time, const Rect* r)
    if (!PlayerObjectExists())
       return;
 
-   if (time - gState.last_time > vismeter_refresh  || gState.last_val == -1)
+   if (time - gState.last_time > (ulong)vismeter_refresh || gState.last_val == -1)
    {
       recompute(); 
       gState.last_time = time; 

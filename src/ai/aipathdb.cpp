@@ -252,9 +252,9 @@ float TriArea(const mxs_vector & v1, const mxs_vector & v2, const mxs_vector & v
    b = Vec2Dist((Vec2 *)&v2, (Vec2 *)&v3);
    c = Vec2Dist((Vec2 *)&v3, (Vec2 *)&v1);
 
-   s = (a + b + c) / 2.0;
+   s = (a + b + c) / 2.0f;
 
-   return sqrt(s*(s-a)*(s-b)*(s-c));
+   return sqrtf(s*(s-a)*(s-b)*(s-c));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -463,15 +463,15 @@ static float DROP_DISTANCE             = 8.0;
 // far above the center of each pathfinding cell.
 static float LIGHT_HEIGHT              = 4.0;
 // This is cos(10).
-static float MIN_RAMP_SLANT            = 0.9848;
+static float MIN_RAMP_SLANT            = 0.9848f;
 // When we're deciding whether the cell is in a corner, we cast out
 // this far in 16 directions and look for a block of hits and a block
 // of misses.
 static float BLOCK_CHECK_DISTANCE      = 5.0;
 
 
-float g_AIPlaneZNormAccept = 0.465;
-float g_AIPlaneZNormPath   = 0.7;
+float g_AIPlaneZNormAccept = 0.465f;
+float g_AIPlaneZNormPath   = 0.7f;
 
 #endif EDITOR
 
@@ -824,7 +824,7 @@ static const mxs_vector & __fastcall ComputeCellCenter(const tAIPathCellID cell,
    tAIPathVertexID id;
    tAIPathCell2VertexLinkID i;
    register cMxsVector * pPoint;
-   const int lastVertex = g_AIPathDB.m_Cells[cell].firstVertex + g_AIPathDB.m_Cells[cell].vertexCount;
+   const tAIPathCell2VertexLinkID lastVertex = g_AIPathDB.m_Cells[cell].firstVertex + g_AIPathDB.m_Cells[cell].vertexCount;
 
    ((cMxsVector *)pCenter)->Set(0, 0, 0);
 
@@ -902,9 +902,9 @@ static float PathFindCliffHeight(const cMxsVector &sampleSourcePt)
 ///////////////////////////////////////
 
 // This constant must match the number of bits allocated for stair size
-static double g_aStairSize[kAIPathCellNumStairSizes]
+static float g_aStairSize[kAIPathCellNumStairSizes]
 = {
-   .5, .75, 1.0, 1.5
+   .5f, .75f, 1.0f, 1.5f
 };
 
 
@@ -924,7 +924,7 @@ static int EdgeStairLevel(mxs_vector *p1, mxs_vector *p2)
    mx_scaleeq_vec(&Perp, STAIR_SAMPLE_DISTANCE);
 
    int iNumSamples = (int) ceil(fEdgeLength / fSampleInterval);
-   float fInc = 1.0 / (iNumSamples - 1.0);
+   float fInc = 1.0f / (iNumSamples - 1.0f);
    float fFraction = 0.0;
    float fSourceZ, fDiffZ;
 
@@ -1034,8 +1034,8 @@ static int CellBlockedDirections(int iCellIndex)
 {
    mxs_vector Center = g_AIPathDB.GetCenter(iCellIndex);
 
-   float radius = g_pAICreatureSizes->sizes[0].width * .5;
-   float fRise = g_pAICreatureSizes->sizes[0].height * .5 + g_StepClearance * .5;
+   float radius = g_pAICreatureSizes->sizes[0].width * .5f;
+   float fRise = g_pAICreatureSizes->sizes[0].height * .5f + g_StepClearance * .5f;
    float fEffectiveHeight = g_pAICreatureSizes->sizes[0].height - g_StepClearance;
 
    Center.z += fRise;
@@ -1047,7 +1047,7 @@ static int CellBlockedDirections(int iCellIndex)
    {
       rv += rv;
 
-      SampleDirection.value = TWO_PI * (1.0 / 16.0) * (float) i;
+      SampleDirection.value = TWO_PI * (1.0f / 16.0f) * (float) i;
 
       ProjectFromLocationOnZPlane(Center, BLOCK_CHECK_DISTANCE,
                                   SampleDirection, &SampleEnd);
@@ -1190,10 +1190,10 @@ static inline BOOL CheckCigarClear(mxs_vector *pCenter,
    ObjID objIgnored;
 
    Top.vec = *pCenter;
-   Top.vec.z += (fHeight * .5 - radius);
+   Top.vec.z += (fHeight * .5f - radius);
 
    Bottom.vec = *pCenter;
-   Bottom.vec.z -= (fHeight * .5 - radius);
+   Bottom.vec.z -= (fHeight * .5f - radius);
    Bottom.cell = Bottom.hint = -1;
    ComputeCellForLocation(&Bottom);
 
@@ -1218,7 +1218,7 @@ static int CheckPathClear(mxs_vector *pV1, mxs_vector *pV2,
    int rv = 0;
 
    mxs_vector v;
-   float fInc = 1.0 / (float(g_EdgePropertySampleSize) - 1.0);
+   float fInc = 1.0f / (float(g_EdgePropertySampleSize) - 1.0f);
    float fPos = 0.0;    // position along edge, [0..1]
 
    for (int i = 0; i < g_EdgePropertySampleSize; ++i)
@@ -1246,7 +1246,7 @@ static int CheckPathClear(mxs_vector *pV1, mxs_vector *pV2,
 // Do raycasts from center of source cell to points along dest cell's edge. If at least n-2 succeed, then
 // we return TRUE.
 
-#define SOME_SMALL_Z 0.5000000
+#define SOME_SMALL_Z 0.5000000f
 #define OMEGA_Z 0.00010000
 static BOOL TestEdgeRaycast(int iFromCell, sAIPathCellLink *pLink)
 {
@@ -1318,8 +1318,8 @@ static int ComputeEdgeProperty(tAIPathVertexID v1, tAIPathVertexID v2, int iFrom
    eEdgeProperties EdgeVal;
    mxs_vector v1a, v1b, v2a, v2b;
 
-   float radius = g_pAICreatureSizes->sizes[0].width * .5;
-   float fRise = g_pAICreatureSizes->sizes[0].height * .5 + g_StepClearance * .5;
+   float radius = g_pAICreatureSizes->sizes[0].width * .5f;
+   float fRise = g_pAICreatureSizes->sizes[0].height * .5f + g_StepClearance * .5f;
    float fEffectiveHeight = g_pAICreatureSizes->sizes[0].height - g_StepClearance;
 
    v1a = g_AIPathDB.m_Vertices[v1].pt;
@@ -1332,10 +1332,10 @@ static int ComputeEdgeProperty(tAIPathVertexID v1, tAIPathVertexID v2, int iFrom
    v2b = g_AIPathDB.m_Vertices[v2].pt;
    v2b.z = g_AIPathDB.GetZAtXY(pLink->dest, v2b);
 
-   fZDiff = __max(__max(fabs(v1a.z-v2a.z),
-                        fabs(v1a.z-v2b.z)),
-                  __max(fabs(v1b.z-v2a.z),
-                        fabs(v1b.z-v2b.z)));
+   fZDiff = __max(__max(fabsf(v1a.z-v2a.z),
+                         fabsf(v1a.z-v2b.z)),
+                   __max(fabsf(v1b.z-v2a.z),
+                         fabsf(v1b.z-v2b.z)));
 
    // First, do old-style test. If that test think this is a wall, do further tests to see if this is
    // a possible LVL.
@@ -1347,10 +1347,10 @@ static int ComputeEdgeProperty(tAIPathVertexID v1, tAIPathVertexID v2, int iFrom
    // If dest is higher than src, then use dest's z. Else if
    // src is higher, then use src's z.
    endPt1 = v2a;
-   endPt1.z += __max((v1a.z-v2a.z), 0) + g_pAICreatureSizes->sizes[0].height * .5 + SOME_SMALL_Z;
+   endPt1.z += __max((v1a.z-v2a.z), 0.0f) + g_pAICreatureSizes->sizes[0].height * .5f + SOME_SMALL_Z;
 
    endPt2 = v2b;
-   endPt2.z += __max((v1a.z-v2a.z), 0) + g_pAICreatureSizes->sizes[0].height * .5 + SOME_SMALL_Z;
+   endPt2.z += __max((v1a.z-v2a.z), 0.0f) + g_pAICreatureSizes->sizes[0].height * .5f + SOME_SMALL_Z;
 
    nPassages = CheckPathClear(&endPt1, &endPt2,
                                fEffectiveHeight, radius, TRUE, FALSE);
@@ -1414,10 +1414,10 @@ static int ComputeEdgeProperty(tAIPathVertexID v1, tAIPathVertexID v2, int iFrom
       const int nNumIncs = 5;
       eEdgeProperties BestEdgeVal = kEdgeIsWall;
       int i;
-      float fRise1 = g_pAICreatureSizes->sizes[0].height * .5 + g_StepClearance * .5;
+      float fRise1 = g_pAICreatureSizes->sizes[0].height * .5f + g_StepClearance * .5f;
       float fEffectiveHeight1 = g_pAICreatureSizes->sizes[0].height - g_StepClearance;
       // Not ideal. Due to LVL, it requires *more* than enough head room in average case.
-      float fRise2 = TERR_LVL_SIZE+g_pAICreatureSizes->sizes[0].height * .5;
+      float fRise2 = TERR_LVL_SIZE+g_pAICreatureSizes->sizes[0].height * .5f;
       float fEffectiveHeight2 = g_pAICreatureSizes->sizes[0].height;
 
       for (i = 0; (i < nNumIncs) && (BestEdgeVal != kEdgeOpen); i++)
@@ -1481,9 +1481,9 @@ static int ComputeEdgeProperty(tAIPathVertexID v1, tAIPathVertexID v2, int iFrom
       {
          const int nNumIncs = 5;
          int i;
-         float fRise1 = TERR_LVL_SIZE+g_pAICreatureSizes->sizes[0].height * .5;
+         float fRise1 = TERR_LVL_SIZE+g_pAICreatureSizes->sizes[0].height * .5f;
          float fEffectiveHeight1 = g_pAICreatureSizes->sizes[0].height;
-         float fRise2 = HUGE_Z+g_pAICreatureSizes->sizes[0].height * .5;
+         float fRise2 = HUGE_Z+g_pAICreatureSizes->sizes[0].height * .5f;
          float fEffectiveHeight2 = g_pAICreatureSizes->sizes[0].height;
          eEdgeProperties BestEdgeVal = kEdgeIsWall;
 
@@ -1604,9 +1604,9 @@ static tAIPathOkBits PathFindComputeOkBits(int iFromCell, int iToCell,
 
 #define kNumVolumes 7
 static float g_afVolumeHeight[kNumVolumes]
-= { 0.0,    3.0,     4.0,    6.0833, 8.0,    12.0,   20.0 };
+= { 0.0f,   3.0f,    4.0f,   6.0833f, 8.0f,  12.0f,  20.0f };
 static float g_afVolumeRadius[kNumVolumes]
-= { 0.0,    .25,     .5,     .875,   1.5,    3.0,    4.0 };
+= { 0.0f,   .25f,    .5f,    .875f,  1.5f,   3.0f,   4.0f };
 
 static void VolumeCigarAtCenter(int iCellIndex)
 {
@@ -1621,7 +1621,7 @@ static void VolumeCigarAtCenter(int iCellIndex)
       // This part here should really be precalculated.
       fHeight = g_afVolumeHeight[i];
       radius = g_afVolumeRadius[i];
-      fRise = fHeight * .5 + g_StepClearance * .5;
+      fRise = fHeight * .5f + g_StepClearance * .5f;
       fEffectiveHeight = fHeight - g_StepClearance;
 
       RaisedCenter = Center;
@@ -1655,7 +1655,7 @@ static float AdjunctCeiling(Location *pSamplePoint, int iCellIndex,
    {
       Location Hit;
       Location CastEnd = *pSamplePoint;
-      CastEnd.vec.z += 1000.0;      // functional gazillion
+      CastEnd.vec.z += 1000.0f;      // functional gazillion
 
       if (PortalRaycast(pSamplePoint, &CastEnd, &Hit, 1))
       {
@@ -1698,8 +1698,8 @@ static void FindAdjunctData(int iCellIndex,
    const int iFirstVertex = pCell->firstVertex;
    const int iVertexLimit = iFirstVertex + pCell->vertexCount;
 
-   float fMaxFloorZ = -4500000000000.0; // -4.5 gazillion
-   float fMinCeilingZ = 4500000000000.0;// 4.5 gazillion
+   float fMaxFloorZ = -4500000000000.0f; // -4.5 gazillion
+   float fMinCeilingZ = 4500000000000.0f;// 4.5 gazillion
 
    mxs_vector CellCenter = g_AIPathDB.GetCenter(iCellIndex);
 
@@ -1717,8 +1717,8 @@ static void FindAdjunctData(int iCellIndex,
             fMaxFloorZ = pVertex->z;
 
          // Now we find the media at swimming and waist heights.
-         mx_interpolate_vec(&SamplePoint.vec, &CellCenter, pVertex, .9);
-         SamplePoint.vec.z += .01;   // scoodge to make sure we're in world
+         mx_interpolate_vec(&SamplePoint.vec, &CellCenter, pVertex, .9f);
+         SamplePoint.vec.z += .01f;   // scoodge to make sure we're in world
          SamplePoint.hint = CELL_INVALID;
 
          // This is our first pass at ceiling height--will we want
@@ -1742,7 +1742,7 @@ static void FindAdjunctData(int iCellIndex,
 
          // Does something which flies have enough room to do it here?
          FlyPoint = SamplePoint;
-         FlyPoint.vec.z = fMinCeilingZ - .01;
+         FlyPoint.vec.z = fMinCeilingZ - .01f;
          if (PortalRaycast(&FlyPoint, &SamplePoint, &DummyPoint, 1))
             if (ComputeCellForLocation(&FlyPoint) != CELL_INVALID)
                if (WR_CELL(FlyPoint.cell)->medium == MEDIA_AIR)
@@ -1770,9 +1770,9 @@ static void FindAdjunctData(int iCellIndex,
 
 
 #define kNumCeilingHeights 7
-static double g_aCeilingHeight[kNumCeilingHeights]
+static float g_aCeilingHeight[kNumCeilingHeights]
 = {
-   2.0, 4.0, 6.0, 8.0, 10.0, 15.0, 20.0
+   2.0f, 4.0f, 6.0f, 8.0f, 10.0f, 15.0f, 20.0f
 };
 
 static void SetCellInfoFromAdjunct(int iCellIndex,
@@ -1810,7 +1810,7 @@ static void SetAdjunctData()
    memset(g_AIPathCellAdjunct, 0, (g_AIPathDB.m_nCells + 1)
                                   * sizeof(sAIPathCellAdjunct));
 
-   for (i = 1; i <= g_AIPathDB.m_nCells; ++i)
+   for (i = 1; i <= (int)g_AIPathDB.m_nCells; ++i)
    {
       memset(AIAddrCellInfo(&g_AIPathDB.m_Cells[i]), 0, kSizeofCellInfo);
    }
@@ -1818,7 +1818,7 @@ static void SetAdjunctData()
    sAIPathCellAdjunct *pAdjunct = g_AIPathCellAdjunct;
    sAIPathCell *pCell = g_AIPathDB.m_Cells;
 
-   for (i = 1; i <= g_AIPathDB.m_nCells; ++i)
+   for (i = 1; i <= (int)g_AIPathDB.m_nCells; ++i)
    {
       ++pAdjunct;
       ++pCell;
@@ -1860,7 +1860,7 @@ static void PropagateFloorTypes()
    sAIPathCellAdjunct *pAdjunct = g_AIPathCellAdjunct;
    sAIPathCell *pCell = g_AIPathDB.m_Cells;
 
-   for (int iCell = 1; iCell <= g_AIPathDB.m_nCells; ++iCell)
+   for (int iCell = 1; iCell <= (int)g_AIPathDB.m_nCells; ++iCell)
    {
       ++pAdjunct;
       ++pCell;
@@ -1902,7 +1902,7 @@ static void PropagateFloorTypes()
    if (config_is_defined("PathFindGenSpew")) {
       pCell = g_AIPathDB.m_Cells;
 
-      for (int iCell = 1; iCell <= g_AIPathDB.m_nCells; ++iCell) {
+      for (int iCell = 1; iCell <= (int)g_AIPathDB.m_nCells; ++iCell) {
          ++pCell;
 
          mprintf("Cell %d: Stair %s Ramp %s\n",
@@ -1918,9 +1918,9 @@ static void PropagateFloorTypes()
 
 // No lighting has value 0.  While most cells will be from 0 to 1, the
 // range is open-ended.
-static double g_LightThresholds[kAIPathCellNumLightLevels]
+static float g_LightThresholds[kAIPathCellNumLightLevels]
 = {
-   0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5
+   0, .1f, .2f, .3f, .4f, .5f, .6f, .7f, .8f, .9f, 1.0f, 1.1f, 1.2f, 1.3f, 1.4f, 1.5f
 };
 
 ////////////////////////
@@ -1938,7 +1938,7 @@ inline void ComputeCellLightLevels()
    Assert_(DummyObject != OBJ_NULL);
    EndObjectCreate(DummyObject);
 
-   for (int iCellIndex = 1; iCellIndex <= g_AIPathDB.m_nCells; ++iCellIndex) {
+   for (int iCellIndex = 1; iCellIndex <= (int)g_AIPathDB.m_nCells; ++iCellIndex) {
       Center = g_AIPathDB.GetCenter(iCellIndex);
       Center.z += LIGHT_HEIGHT;
 
@@ -2323,7 +2323,7 @@ static void PostProcessModifiedOkBits()
 
 
 
-float g_MinimumSkewOverlap = 0.083333;
+float g_MinimumSkewOverlap = 0.083333f;
 
 struct sIsSharedEdgeResult
 {
@@ -2634,10 +2634,7 @@ static BOOL ValidateCell(tAIPathCellID cell, BOOL warn = TRUE)
 static void ValidateAllCells()
 {
    for (int i = g_AIPathDB.m_nCells; i >= 1; i--)
-   {
-      if (!ValidateCell(i))
-         ; //g_AIPathDB.DeleteCell(i);
-   }
+      ValidateCell(i);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2651,7 +2648,7 @@ float g_MinRatioConsideration = 5.0;
 
 static BOOL g_fQualityWatch;
 
-inline void GetEdgePoint(int vertex1, int vertex2, double ratio, mxs_vector * p)
+inline void GetEdgePoint(int vertex1, int vertex2, float ratio, mxs_vector * p)
 {
    p->x = ((g_AIPathDB.m_Vertices[vertex2].pt.x - g_AIPathDB.m_Vertices[vertex1].pt.x) * ratio) + g_AIPathDB.m_Vertices[vertex1].pt.x;
    p->y = ((g_AIPathDB.m_Vertices[vertex2].pt.y - g_AIPathDB.m_Vertices[vertex1].pt.y) * ratio) + g_AIPathDB.m_Vertices[vertex1].pt.y;
@@ -2717,7 +2714,7 @@ BOOL cAIPathDB::SplitCell(tAIPathCellID cell, const mxs_vector & pt1, const mxs_
    sAIPathCell2VertexLink newVertLink;
    int                    i;
 
-   #define AIPDSC_Same(v1, i) Same(v1, GetCellVertex(cell, (i)), 0.001)
+   #define AIPDSC_Same(v1, i) Same(v1, GetCellVertex(cell, (i)), 0.001f)
 
    for (i = 0; i < m_Cells[cell].vertexCount; i++)
    {
@@ -2872,7 +2869,7 @@ BOOL cAIPathDB::SplitCell(tAIPathCellID cell, const mxs_vector & pt1, const mxs_
    m_nCells++;
 
    // Finally, fixup the cell-vertex links for all higher cells
-   for (i = cell + 2; i <= m_nCells; i++)
+   for (i = cell + 2; i <= (int)m_nCells; i++)
       m_Cells[i].firstVertex += nNewVerts;
 
    g_Splits++;
@@ -2893,7 +2890,7 @@ void cAIPathDB::DeleteCell(tAIPathCellID cell)
    m_CellVertices.SetSize(m_CellVertices.Size() - m_Cells[cell].vertexCount);
    m_nCellVertices -= m_Cells[cell].vertexCount;
 
-   for (int i = cell + 1; i <= m_nCells; i++)
+   for (int i = cell + 1; i <= (int)m_nCells; i++)
       m_Cells[i].firstVertex -= m_Cells[cell].vertexCount;
 
    // Delete cell
@@ -2960,10 +2957,10 @@ BOOL cAIPathDB::AddOBBCell(sAIExternCell * pCell, tAIPathCellID cell, BOOL movab
       else
          newCell.plane = AICreateOrFindPlane(pCell->plane.normal, pCell->plane.constant);
 
-      for (i = cell; i <= m_nCells; i++)
+      for (i = cell; i <= (int)m_nCells; i++)
          m_Cells[i].firstVertex += pCell->nVertices;
 
-      for (i = 0; i < pCell->nVertices; i++)
+      for (i = 0; i < (int)pCell->nVertices; i++)
       {
          if (!AICreateOrFindPathVertex(pCell->vertices[i], &idPt))
             return FALSE;
@@ -2986,7 +2983,7 @@ BOOL cAIPathDB::AddOBBCell(sAIExternCell * pCell, tAIPathCellID cell, BOOL movab
       else
          m_Cells[m_nCells].plane = AICreateOrFindPlane(pCell->plane.normal, pCell->plane.constant);
 
-      for (i = 0; i < pCell->nVertices; i++)
+      for (i = 0; i < (int)pCell->nVertices; i++)
       {
          if (!AICreateOrFindPathVertex(pCell->vertices[i], &idPt))
             return FALSE;
@@ -3141,7 +3138,7 @@ static eQualityResult __fastcall QualitySplit(tAIPathCellID cell, int iVert1, fl
          {
             tAIPathVertexID idPt1, idPt2;
 
-            double ratio = (double)i / (double)g_NumRectSplit;
+            float ratio = (float)i / (float)g_NumRectSplit;
             cMxsVector pt1, pt2;
 
             GetEdgePoint(g_AIPathDB.m_CellVertices[g_AIPathDB.m_Cells[cell].firstVertex + 0].id,
@@ -3150,7 +3147,7 @@ static eQualityResult __fastcall QualitySplit(tAIPathCellID cell, int iVert1, fl
                          &pt1);
             GetEdgePoint(g_AIPathDB.m_CellVertices[g_AIPathDB.m_Cells[cell].firstVertex + 2].id,
                          g_AIPathDB.m_CellVertices[g_AIPathDB.m_Cells[cell].firstVertex + 3].id,
-                         1.0 - ratio,
+                         1.0f - ratio,
                          &pt2);
 
             if (!AICreateOrFindPathVertex(pt1, &idPt1) ||
@@ -3332,7 +3329,7 @@ static BOOL __fastcall DoRemoveColinearPoints(tAIPathCellID cell)
 
          if (pfle(Vec2PointSegmentSquared(edgePt2.AsVec2Ptr(),
                                           edgePt1.AsVec2Ptr(),
-                                          edgePt3.AsVec2Ptr()), 0.00001))
+                                          edgePt3.AsVec2Ptr()), 0.00001f))
          {
             colinears[nColinears] = (anchor + i) % vertexCount;
             nColinears++;
@@ -3559,7 +3556,7 @@ static void SegSpltFindCloseCells(const mxs_vector & start, const mxs_vector & e
 
 //////////////////////////////////////
 
-#define kSegSpltDist 7.0
+#define kSegSpltDist 7.0f
 
 static void AILineSplit(const mxs_vector & lineA, const mxs_vector & lineB, const cDynArray<tAIPathCellID> & cells)
 {
@@ -3715,7 +3712,7 @@ static void AddBlockingOBBs()
 
       for (j = 0; j < 4; j++)
       {
-         if (mx_is_identical(&avoidMarks[i].vertices[j], &avoidMarks[i].vertices[(j + 1) % 4], 0.1))
+         if (mx_is_identical(&avoidMarks[i].vertices[j], &avoidMarks[i].vertices[(j + 1) % 4], 0.1f))
             continue;
          AISegmentSplit(avoidMarks[i].vertices[j], avoidMarks[i].vertices[(j + 1) % 4]);
       }
@@ -3740,7 +3737,7 @@ static void MarkBlockingObbsUnpathable()
    if (avoidMarks.Size())
    {
       cMxsVector center;
-      for (i = 1; i <= g_AIPathDB.m_nCells; i++)
+      for (i = 1; i <= (int)g_AIPathDB.m_nCells; i++)
       {
          for (j = 0; j < avoidMarks.Size(); j++)
          {
@@ -3750,13 +3747,13 @@ static void MarkBlockingObbsUnpathable()
             if (g_AIPDB_MarkOnlyObj && avoidMarks[i].object != g_AIPDB_MarkOnlyObj)
                continue;
 
-            if (mx_is_identical(&avoidMarks[j].vertices[0], &avoidMarks[j].vertices[1], 0.1))
+            if (mx_is_identical(&avoidMarks[j].vertices[0], &avoidMarks[j].vertices[1], 0.1f))
                continue;
-            if (mx_is_identical(&avoidMarks[j].vertices[1], &avoidMarks[j].vertices[2], 0.1))
+            if (mx_is_identical(&avoidMarks[j].vertices[1], &avoidMarks[j].vertices[2], 0.1f))
                continue;
-            if (mx_is_identical(&avoidMarks[j].vertices[2], &avoidMarks[j].vertices[3], 0.1))
+            if (mx_is_identical(&avoidMarks[j].vertices[2], &avoidMarks[j].vertices[3], 0.1f))
                continue;
-            if (mx_is_identical(&avoidMarks[j].vertices[3], &avoidMarks[j].vertices[0], 0.1))
+            if (mx_is_identical(&avoidMarks[j].vertices[3], &avoidMarks[j].vertices[0], 0.1f))
                continue;
 
             if (InMark(ComputeCellCenter(i, &center), avoidMarks[j]))       // compute not get because database is only partially built
@@ -3853,7 +3850,7 @@ static void FixupMovingTerrainOBBs()
          if (g_AIPathDB.m_CellObjMap[j].objID == obj)
          {
             objCells.Append(g_AIPathDB.m_CellObjMap[j].cellID);
-            objWaypoints.Append((ObjID)g_AIPathDB.m_CellObjMap[j].data);
+            objWaypoints.Append((ObjID)(intptr_t)g_AIPathDB.m_CellObjMap[j].data);
          }
       }
 
@@ -3903,7 +3900,7 @@ static void FixupMovingTerrainOBBs()
 
          // For each of the soon-to-be-defunct cells, find all cells that
          // have links into them, and fix up the inward/outward links
-         for (k=0; k<g_AIPathDB.m_nCells; k++)
+         for (k=0; k<(int)g_AIPathDB.m_nCells; k++)
          {
             sAIPathCell *pRemapCell = &g_AIPathDB.m_Cells[objCells[j]];
 
@@ -4056,7 +4053,7 @@ static void MarkCellsWithDoors()
    if (doorBBoxes.Size())
    {
       cMxsVector center;
-      for (i = 1; i <= g_AIPathDB.m_nCells; i++)
+      for (i = 1; i <= (int)g_AIPathDB.m_nCells; i++)
       {
          for (j = 0; j < doorBBoxes.Size(); j++)
          {
@@ -4132,13 +4129,13 @@ unsigned AIGetPathDBSize()
 // For now, gotta take it out. (toml 03-08-00)
 //
 
-#define kNarrowDist (g_pAICreatureSizes->sizes[0].width * 1.1)
+#define kNarrowDist (g_pAICreatureSizes->sizes[0].width * 1.1f)
 #define kNarrowSamples 16
 
 BOOL TestPathWidthCenter(tAIPathCellID cell, const mxs_vector & testPt, mxs_vector testVec)
 {
    mxs_vector testPt2;
-   float      scale = kNarrowDist * 0.5;
+   float      scale = kNarrowDist * 0.5f;
    int        opens = 0;
 
    // Test one direction
@@ -4188,7 +4185,7 @@ void PostProcessNarrow()
       return;
 
    // Post-process looking for too narrow edges
-   for (cell = 1; cell <= g_AIPathDB.m_nCells; cell++)
+   for (cell = 1; cell <= (int)g_AIPathDB.m_nCells; cell++)
    {
       if (cell % 128 == 0)
       {
@@ -4210,7 +4207,7 @@ void PostProcessNarrow()
       mxs_vector         testBasis, testPtFar, testPtNear;
       mxs_vector         testVec;
       float              d;
-      float              inc = 1.0 / (float(g_EdgePropertySampleSize) - 1.0);
+      float              inc = 1.0f / (float(g_EdgePropertySampleSize) - 1.0f);
       float              pos;    // position along edge, [0..1]
 
       for (; i < iLimit; i++)
@@ -4235,12 +4232,12 @@ void PostProcessNarrow()
 
             mx_sub_vec(&testPtFar, &testBasis, &g_AIPathDB.GetCenter(pLink->dest));
             d = mx_normeq_vec(&testPtFar);
-            mx_scaleeq_vec(&testPtFar, d - 0.005);
+            mx_scaleeq_vec(&testPtFar, d - 0.005f);
             mx_addeq_vec(&testPtFar, &g_AIPathDB.GetCenter(pLink->dest));
 
             mx_sub_vec(&testPtNear, &testBasis, &g_AIPathDB.GetCenter(cell));
             d = mx_normeq_vec(&testPtNear);
-            mx_scaleeq_vec(&testPtNear, d - 0.005);
+            mx_scaleeq_vec(&testPtNear, d - 0.005f);
             mx_addeq_vec(&testPtNear, &g_AIPathDB.GetCenter(cell));
 
             if (!IsPtInCellXYPlane(testPtFar, &g_AIPathDB.m_Cells[pLink->dest]))
@@ -4340,7 +4337,7 @@ void SortLinksByDistance()
    sLinkSort               links[MAX_LINKS_FROM_CELL];
    mxs_vector              mid;
 
-   for (i = 1; i <= g_AIPathDB.m_nCells; i++)
+   for (i = 1; i <= (int)g_AIPathDB.m_nCells; i++)
    {
       pCell = g_AIPathDB.AccessCell(i);
       last  = pCell->firstCell + pCell->cellCount;
@@ -4615,7 +4612,7 @@ static void ShrinkLinks()
 #endif
 
    // index at m_nLinks is actually used, but we don't need to worry about it.
-   for (i = 1; i < g_AIPathDB.m_nLinks; i++)
+   for (i = 1; i < (int)g_AIPathDB.m_nLinks; i++)
    {
       pLink = &(g_AIPathDB.m_Links[i]);
 
@@ -4626,7 +4623,7 @@ static void ShrinkLinks()
       // Let the fun begin
       if (!pLink->okBits)
       {
-         for (j = i+1; j <= g_AIPathDB.m_nLinks; j++)
+         for (j = i+1; j <= (int)g_AIPathDB.m_nLinks; j++)
             g_AIPathDB.m_Links[j-1] = g_AIPathDB.m_Links[j];
          g_AIPathDB.m_nLinks--;
 
@@ -4755,7 +4752,7 @@ BOOL AIPathFindDBBuild()
    ///////////////////////////////////////
    // Create Path Cells
 
-   for (ci = 0; ci < wr_num_cells; ci++)
+   for (ci = 0; ci < (tAIPathCellID)wr_num_cells; ci++)
    {
       firstPortalVertex = 0;
 
@@ -4846,7 +4843,7 @@ BOOL AIPathFindDBBuild()
 
    ///////////////////////////////////////
 
-   for (i = 1; i <= g_AIPathDB.m_nCells; i++)
+   for (i = 1; i <= (int)g_AIPathDB.m_nCells; i++)
       g_AIPathDB.m_Cells[i].pathFlags = 0;
 
    ///////////////////////////////////////
@@ -4870,7 +4867,7 @@ BOOL AIPathFindDBBuild()
 
    ///////////////////////////////////////
 
-   for (i = 1; i <= g_AIPathDB.m_nCells; i++)
+   for (i = 1; i <= (int)g_AIPathDB.m_nCells; i++)
       g_AIPathDB.m_Cells[i].pathFlags = 0;
 
    ///////////////////////////////////////
@@ -4961,7 +4958,7 @@ BOOL AIPathFindDBBuild()
          SetCellEdgeInfo(ci, i, PATH_EDGE_OPEN);
 
          // check to see if the AI can stand on the pt
-         pt1.z += VERTICAL_RISE_LIMIT + 0.5;
+         pt1.z += VERTICAL_RISE_LIMIT + 0.5f;
          angle.set(pt1.x, pt1.y, center.x, center.y);
          ProjectFromLocationOnZPlane(pt1, 0.25, angle, &pt1);
          PathFindMinimumRaycastAtLocation(pt1, heightSq, widthSq);
@@ -4972,7 +4969,7 @@ BOOL AIPathFindDBBuild()
          midPt.x = (pt1.x + pt2.x) / 2;
          midPt.y = (pt1.y + pt2.y) / 2;
          midPt.z = (pt1.z + pt2.z) / 2;
-         midPt.z += VERTICAL_RISE_LIMIT + 0.5;
+         midPt.z += VERTICAL_RISE_LIMIT + 0.5f;
          angle.set(midPt.x, midPt.y, center.x, center.y);
          ProjectFromLocationOnZPlane(midPt, 0.25, angle, &midPt);
          PathFindMinimumRaycastAtLocation(midPt, heightSq, widthSq);

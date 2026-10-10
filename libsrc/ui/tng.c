@@ -15,7 +15,7 @@
 Point tngZeroPt = {0,0};		// everybody needs a zero point sometime
 
 TNGStyle stdTNGStyle = {
-	RES_sysFont6,NULL, {6,6}, 0x24,
+	RES_sysFont6, 0, {6,6}, 0x24,
    0x1d, 0x1d, 0,
    0x20,0x28,0x28,0x20};
 
@@ -129,7 +129,7 @@ void TNGDrawBitmapRef(Ref ref, Point pt)
 	cvRect.lr.y = grd_clip.bot + 1;
    gr_bitmap(&pfd->bm, pt.x, pt.y);
 
-	RefUnlock(REFID(ref));
+	RefUnlock(ref);
 }
 
 //	-----------------------------------------------------------
@@ -165,7 +165,7 @@ void TNGDrawTileMapRef(Ref ref, Point pt)
 		pt.y += pfd->bm.h;
 		}
 
-	RefUnlock(REFID(ref));
+	RefUnlock(ref);
 }
 
 errtype TNGDrawText(Id id, char *text, int x, int y)

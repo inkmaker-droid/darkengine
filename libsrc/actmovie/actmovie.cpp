@@ -6,7 +6,7 @@
 //
 
 #ifdef _WIN32
-#include <windows.h>
+#include <win32_platform.h>
 #endif
 #include <lg.h>
 
@@ -45,7 +45,6 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#pragma off(unreferenced)
 EXTERN
 tResult LGAPI _MoviePlayerCreate(REFIID, void ** ppMoviePlayer, IUnknown * pOuterUnknown, REFCLSID, unsigned flags)
     {
@@ -54,7 +53,6 @@ tResult LGAPI _MoviePlayerCreate(REFIID, void ** ppMoviePlayer, IUnknown * pOute
     // refclsid parameter is not CLSID_ActiveMoviePlayer
     return (new cActiveMoviePlayer1(pOuterUnknown, flags) != 0) ? NOERROR : E_FAIL;
     }
-#pragma on(unreferenced)
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -139,7 +137,7 @@ bool FindSinglePin(IFilter *pFilter, IPin **pPin)
    IEnumPins *pEnum;
    ULONG cFetched;
    IPin *pPins[MAX_PINS];
-   int i;
+   ULONG i;
 
    *pPin = NULL;
    if (SUCCEEDED(pFilter->EnumPins(&pEnum)))
@@ -348,7 +346,9 @@ BOOL cActiveMoviePlayer1::SubstituteLGRenderer()
        }
 
        if (!pRendFilter)
+       {
           DebugMsg("Warning: can't find default renderer in graph");
+       }
 
        pLGFilter = FindNamedFilterFromRegistry(LGFilterName);
        if (!pLGFilter)
@@ -536,8 +536,6 @@ STDMETHODIMP_(BOOL) cActiveMoviePlayer1::Play(int flags)
     }
     
     BOOL retVal = TRUE;
-    MSG     msg;
-
     m_flags = flags;
 
     m_ErrorSignal.Reset();
@@ -616,12 +614,9 @@ STDMETHODIMP_(BOOL) cActiveMoviePlayer1::Play(int flags)
                            bool results;
                            ushort keycode;
                            kb_cook(keyEvent, &keycode, &results);
-                           char kc = (keycode >> 16) & 0xFE;
-                           for (int n = 0; n < strlen(m_TermKeys); ++n )
-                           {
-                              if ( kc == m_TermKeys[n] )
-                                 fQuit = TRUE;
-                           }
+                           char kc = (char)(keycode & 0xFF);
+                           if (strchr(m_TermKeys, kc))
+                              fQuit = TRUE;
                         }
                         else if (keyEvent.code != KBC_NONE)
                         {
@@ -874,7 +869,6 @@ void cActiveMovieDraw::SetPrimarySurface(IDirectDrawSurface *pPrimarySurface)
    m_pPrimarySurface = pPrimarySurface;
 }
 
-#pragma off(unreferenced)
 static HRESULT WINAPI cActiveMovieDraw::SetPrimarySurfaceCallback(LPDIRECTDRAWSURFACE pDDSurface,
                                          LPDDSURFACEDESC pDDSurfaceDesc,
                                          LPVOID pContext)
@@ -893,7 +887,6 @@ static HRESULT WINAPI cActiveMovieDraw::SetPrimarySurfaceCallback(LPDIRECTDRAWSU
    }
    return DDENUMRET_CANCEL;
 }
-#pragma on(unreferenced)
 #endif
 
 void cActiveMovieDraw::SetupBitmapFromMediaSample(grs_bitmap *pBitmap, IMediaSample *pMediaSample)
@@ -910,14 +903,12 @@ void cActiveMovieDraw::SetupBitmapFromMediaSample(grs_bitmap *pBitmap, IMediaSam
                   (int)pVideoInfo->bmiHeader.biHeight);
 }
 
-#pragma off(unreferenced)
 // This is called with an IMediaSample interface on the image to be drawn.
 STDMETHODIMP_(BOOL) cActiveMovieDraw::DrawImage(IMediaSample *pMediaSample)
 {
    BEGIN_DEBUG_MSG("cActiveMovieDraw::DrawImage");
 
    AutoAppIPtr(DisplayDevice);
-   grs_bitmap bm;
    uchar flags;
 
    if (IDisplayDevice_Lock(pDisplayDevice) == E_FAIL)
@@ -934,8 +925,6 @@ STDMETHODIMP_(BOOL) cActiveMovieDraw::DrawImage(IMediaSample *pMediaSample)
       {
          // we need to blit (and stretch)
          grs_bitmap *pBitmap;
-         void *ptr;
-
          pBitmap = ((cBitmapSample*)pMediaSample)->GetBitmap();
          Assert_(pBitmap != NULL);
          //         gr_bitmap(pBitmap, m_TargetRect.left, m_TargetRect.top);
@@ -980,7 +969,6 @@ STDMETHODIMP_(BOOL) cActiveMovieDraw::DrawImage(IMediaSample *pMediaSample)
    return TRUE;
    END_DEBUG;
 }
-#pragma on(unreferenced)
 
 // This is called to set the target rectangle in the video window, it will be
 // called whenever a WM_SIZE message is retrieved from the message queue. We
@@ -1163,12 +1151,10 @@ STDMETHODIMP cActiveMovieDraw::NotifyMediaType(CMediaType *pmt)
 }
 
 // this is now not being used
-#pragma off(unreferenced)
 STDMETHODIMP cActiveMovieDraw::GetMediaType (int iPosition, CMediaType *pmt)
 {
    return VFW_S_NO_MORE_ITEMS;
 }
-#pragma on(unreferenced)
 
 STDMETHODIMP cActiveMovieDraw::GetAllocator(IMemAllocator **ppAllocator)
 {
@@ -1190,12 +1176,10 @@ STDMETHODIMP cActiveMovieDraw::GetAllocator(IMemAllocator **ppAllocator)
 }
 
 // Inform us to which allocator the output pin proposes to use
-#pragma off(unreferenced)
 STDMETHODIMP cActiveMovieDraw::NotifyAllocator(IMemAllocator *pAllocator, BOOL bReadOnly)
 {
    return S_OK;
 }
-#pragma on(unreferenced)
 
 BOOL cActiveMovieDraw::GetBitmapFromMedia(uchar *type, uint *flags, LONG *w, LONG *h, int *bitcount)
 {
@@ -1485,7 +1469,6 @@ HRESULT cActiveMovieAlloc::Alloc(void)
 
 #else
 
-#pragma off(unreferenced)
 EXTERN
 tResult LGAPI _MoviePlayerCreate(REFIID, void ** ppMoviePlayer, IUnknown * pOuterUnknown, REFCLSID)
     {
@@ -1493,6 +1476,5 @@ tResult LGAPI _MoviePlayerCreate(REFIID, void ** ppMoviePlayer, IUnknown * pOute
         ppMoviePlayer = NULL;
     return E_NOTIMPL;
     }
-#pragma on(unreferenced)
 
 #endif

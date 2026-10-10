@@ -117,9 +117,9 @@ int  dmp_pcx_dump_screen(int fp)
             // could table-ize these for speed increase
             *dst = (((col>>bshift)&0x1F) * 0xFF)/0x1F;
             dst += bytes;
-            *dst = (((col>>5)&gmask) * 0xFF)/gmask;
+            *dst = (uchar)((((col>>5)&gmask) * 0xFF)/gmask);
             dst += bytes;
-            *dst = ((col&0x1F) * 0xFF)/0x1F;
+            *dst = (uchar)(((col&0x1F) * 0xFF)/0x1F);
             src++;
          }
    

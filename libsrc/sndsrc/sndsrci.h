@@ -14,7 +14,7 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-#include <windows.h>
+#include <win32_platform.h>
 
 #include <sndsrc.h>
 #include <stdio.h>

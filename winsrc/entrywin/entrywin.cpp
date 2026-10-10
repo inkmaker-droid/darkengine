@@ -10,7 +10,7 @@
 
 #ifdef _WIN32
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <shlobj.h>
 #include <dbghelp.h>
 #include <stdio.h>

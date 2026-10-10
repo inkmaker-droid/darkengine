@@ -11,9 +11,6 @@
 // a framework-independent string class.
 //
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
 #include <stddef.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -330,7 +327,7 @@ int cAnsiStr::SpanIncluding(const char *pszCharSet, int nFirst) const
     if (nFirst >= m_nDataLength)
         return 0;
 
-    return strspn(m_pchData + nFirst, pszCharSet);
+    return static_cast<int>(strspn(m_pchData + nFirst, pszCharSet));
     }
 
 
@@ -341,7 +338,7 @@ int cAnsiStr::SpanExcluding(const char *pszCharSet, int nFirst) const
     if (nFirst >= m_nDataLength)
         return 0;
 
-    return strcspn(m_pchData + nFirst, pszCharSet);
+    return static_cast<int>(strcspn(m_pchData + nFirst, pszCharSet));
     }
 
 
@@ -359,7 +356,7 @@ int cAnsiStr::Find(char ch, int nFirst) const
 
     register char *pchData = m_pchData + nFirst;
     register char *psz = (char *) strchr(pchData, ch);
-    return psz ? psz - m_pchData : -1;
+    return psz ? static_cast<int>(psz - m_pchData) : -1;
     }
 
 
@@ -369,7 +366,7 @@ int cAnsiStr::ReverseFind(char ch) const
 
     register char *psz;
     psz = (char *) strrchr(m_pchData, ch);
-    return (psz == NULL) ? -1 : psz - m_pchData;
+    return (psz == NULL) ? -1 : static_cast<int>(psz - m_pchData);
     }
 
 
@@ -384,7 +381,7 @@ int cAnsiStr::FindOneOf(const char *pszCharSet, int nFirst) const
 
     register char *pchData = m_pchData + nFirst;
     register char *psz = (char *) strpbrk(pchData, pszCharSet);
-    return psz ? psz - pchData : -1;
+    return psz ? static_cast<int>(psz - pchData) : -1;
     }
 
 
@@ -398,7 +395,7 @@ int cAnsiStr::Find(const char *pszSub, int nFirst) const
 
     register char *pchData = m_pchData + nFirst;
     register char *psz = (char *) strstr(pchData, pszSub);
-    return psz ? psz - m_pchData : -1;
+    return psz ? static_cast<int>(psz - m_pchData) : -1;
     }
 
 
@@ -455,7 +452,7 @@ void cAnsiStr::BufDone(int nNewLength, int nNewAlloc)
     {
 
     if (nNewLength == -1)
-        nNewLength = strlen(m_pchData);          // zero terminated
+        nNewLength = static_cast<int>(strlen(m_pchData)); // zero terminated
 
     if (nNewAlloc == -1)
         nNewAlloc = (nNewLength + 1);            // we don't count the +1 for the '\0' which strlen doesn't count
@@ -579,7 +576,7 @@ FOUND:
         p1--;
         }
 
-    return m_pchData + nFirst - p1;
+    return static_cast<int>(m_pchData + nFirst - p1);
     }
 
 //
@@ -606,7 +603,7 @@ int cAnsiStr::ReverseIncluding(const char *pszCharSet, int nFirst) const
         }
 
 FOUND:
-    return m_pchData + nFirst - p1;
+    return static_cast<int>(m_pchData + nFirst - p1);
     }
 
 //
@@ -634,7 +631,7 @@ void cAnsiStr::Trim()
 
             if (pStart != m_pchData || pEnd != m_pchData + m_nDataLength)
                 {
-                m_nDataLength = strlen(pStart);
+                m_nDataLength = static_cast<int>(strlen(pStart));
                 memmove(m_pchData, pStart, m_nDataLength + 1);
                 }
             }

@@ -11,7 +11,6 @@
 #include <gadget.h>
 
 
-#pragma off(unreferenced)
 BOOL gadblist_handler(uiEvent* ev, Region* reg, void* data)
 {
    LGadButtonList* blist = (LGadButtonList*)reg;
@@ -22,7 +21,6 @@ BOOL gadblist_handler(uiEvent* ev, Region* reg, void* data)
 
    return FALSE;
 }
-#pragma on(unreferenced)
 
 
 LGadButtonList* LGadCreateButtonListDesc(LGadButtonList* list, LGadRoot* root,

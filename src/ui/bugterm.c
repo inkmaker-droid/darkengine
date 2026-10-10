@@ -70,7 +70,7 @@ FILE *FindFreeFile(char *buff,char *prefix,char *suffix)
    FILE *fp;
    int num=0;
    
-   ps = strlen(prefix);
+     ps = (int)strlen(prefix);
    strcpy(fname,prefix);
    strcat(fname,"000.");
    strcat(fname,suffix);
@@ -104,7 +104,7 @@ void WriteBugInfo(FILE *fp, char *bugtext)
    Position *player_pos;
    ObjID player;
    char curfile[128];
-   int i;
+   size_t i;
 
    // fixup bugterm to not have any illegal symbols like commas
    for (i=0; i < strlen(bugtext); i++)
@@ -155,7 +155,7 @@ static int move_cursor_into_command(char *cmd, int max_len)
    if (cmd)
    {
       char *space=strchr(cmd,' ');
-      int len=strlen(cmd);
+   int len=(int)strlen(cmd);
       if (len==0)
          return 0;
       else if ((space==NULL)&&(len<max_len))
@@ -164,7 +164,7 @@ static int move_cursor_into_command(char *cmd, int max_len)
          space=cmd+len;
       }
       while (*space==' ') space++;
-      return space-cmd;
+   return (int)(space-cmd);
    }
    return 0;
 }
@@ -198,7 +198,6 @@ void ReportBug(char *buf)
       fclose(fp);
    }
 }
-#pragma off(unreferenced)
 bool bugterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, void* data)
 {
    char* text = LGadTextBoxText(box);
@@ -277,7 +276,6 @@ bool bugterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
    }
    return update;
 }
-#pragma on(unreferenced)
 
 #define TITLE_H 15
 

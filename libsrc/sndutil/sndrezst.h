@@ -12,7 +12,7 @@
 #ifndef __SNDREZST_H__
 #define __SNDREZST_H__
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <lgsound.h>
 #include <res.h>
 #include <sndfmt.h>

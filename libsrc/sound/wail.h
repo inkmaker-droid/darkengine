@@ -32,10 +32,10 @@
 #ifndef WAIL_H
 #define WAIL_H
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <mmsystem.h>
 
-#ifdef WIN32
+#ifdef _WIN32
   #define IS_WIN32 1
 #endif
 

@@ -948,7 +948,7 @@ static void GetPhysSubModelPos(mxs_vector *pJoints, sCrPhysModOffset *pOffset, m
       mxs_vector tmp;
 
       mx_copy_vec(&tmp,&pJoints[pOffset->j1]);
-      mx_scaleeq_vec(&tmp,1.0-pOffset->frac);
+      mx_scaleeq_vec(&tmp,1.0f-pOffset->frac);
       mx_copy_vec(pPos,&pJoints[pOffset->j2]);
       mx_scaleeq_vec(pPos,pOffset->frac);
       mx_addeq_vec(pPos,&tmp);
@@ -1873,7 +1873,7 @@ static mxs_ang GetNormVecHeading(mxs_vector *vec)
 {
    mxs_ang angle;
 
-   angle=mx_rad2ang(acos(vec->x));
+   angle=mx_rad2ang(acosf(vec->x));
    if(angle>0)
    {
       if(vec->y<0) // -pi/2 < actual angle < 0
@@ -1887,7 +1887,7 @@ static mxs_ang GetHeadingAngle(mxs_matrix *m)
 {
    mxs_vector vec = m->vec[0];
    // Let's make this NOT quite zero, so normeq div0 won't occur.
-   vec.z = 0.000001; // make sure it normalizes on X/Y plane. 'diff' is not used for anything else.
+   vec.z = 0.000001f; // make sure it normalizes on X/Y plane. 'diff' is not used for anything else.
    mx_normeq_vec(&vec);
 
    return GetNormVecHeading(&vec);
@@ -2029,7 +2029,7 @@ BOOL cCreature::MoveButt(const mxs_vector *pButtPos, const mxs_angvec *pAngles, 
                }
                else
                {
-                  new_butt_pos.z = hit.vec.z + 1.0; // @TBD: lift a little here?
+                  new_butt_pos.z = hit.vec.z + 1.0f; // @TBD: lift a little here?
                }
             }
          }
@@ -2252,7 +2252,7 @@ void cCreature::FilterMotionFrameData(const mps_motion_info *mi, quat *rot, mxs_
          maxTurn=fix_mul(kMaxAngVel,(fix_from_float(time_delta_ms/1000)));
          if(delta>maxTurn) // clamp
          {
-            delta=maxTurn;
+            delta=(mxs_ang)maxTurn;
          }
 #endif
          if(negRot)
@@ -2375,7 +2375,7 @@ void cCreature::PostUpdateFilter(const ulong dt)
          mx_normeq_vec(&to_target);
 
          const float kMinXYNeckDot = 0.0;
-         const float kMaxZNeckDiff = 0.8;
+         const float kMaxZNeckDiff = 0.8f;
 
          mxs_vector xy_to_target;
          mxs_vector xy_neck;
@@ -2387,7 +2387,7 @@ void cCreature::PostUpdateFilter(const ulong dt)
          mx_normeq_vec(&xy_neck);
 
          mxs_real xy_dot = mx_dot_vec(&xy_to_target, &xy_neck);
-         mxs_real z_diff = fabs(to_target.z - neck_mat->vec[0].z);
+         mxs_real z_diff = fabsf(to_target.z - neck_mat->vec[0].z);
 
          // See if we've gone too far
          if ((xy_dot > kMinXYNeckDot) && (z_diff < kMaxZNeckDiff))
@@ -2661,7 +2661,7 @@ void cCreature::MakeNonPhysical()
 ///////////////////////////////////////////////////
 
 // shrink phys submodels
-#define kDeathShrinkage 0.7
+#define kDeathShrinkage 0.7f
 
 void cCreature::PrepareToDie()
 {
@@ -2919,7 +2919,7 @@ void cCreature::MakePhysSubModBallistic(int index, int style)
                mxs_vector shin;
 
                mx_sub_vec(&shin, &hit.vec, &knee);
-               mx_scaleeq_vec(&shin, 0.99);
+               mx_scaleeq_vec(&shin, 0.99f);
                mx_add_vec(&foot, &knee, &shin);
             }
 
@@ -3371,7 +3371,7 @@ void cCreature::GetPhysSubModPos(sCrPhysModOffset *pOffset,mxs_vector *pPos)
       mxs_vector tmp;
 
       mx_copy_vec(&tmp,&m_pJoints[pOffset->j1]);
-      mx_scaleeq_vec(&tmp,1.0-pOffset->frac);
+      mx_scaleeq_vec(&tmp,1.0f-pOffset->frac);
       mx_copy_vec(pPos,&m_pJoints[pOffset->j2]);
       mx_scaleeq_vec(pPos,pOffset->frac);
       mx_addeq_vec(pPos,&tmp);
@@ -3446,7 +3446,7 @@ static uint HackMpUpdate(multiped * mp, float time_delta_ms, ulong app_flags, Ob
 
             mx_sub_vec(&diff,&pPos->loc.vec,&mp->global_pos);
             // Let's make this NOT quite zero, so normeq div0 won't occur.
-            diff.z = 0.000001; // make sure it normalizes on X/Y plane. 'diff' is not used for anything else.
+            diff.z = 0.000001f; // make sure it normalizes on X/Y plane. 'diff' is not used for anything else.
             mx_normeq_vec(&diff);
             desFac=GetNormVecHeading(&diff);
 
@@ -3461,7 +3461,7 @@ static uint HackMpUpdate(multiped * mp, float time_delta_ms, ulong app_flags, Ob
             maxTurn=fix_mul(((cCreature *)(mp->app_ptr))->GetMaxAngVel(),(fix_from_float(time_delta_ms/1000)));
             if(delta>maxTurn) // clamp
             {
-               delta=maxTurn;
+               delta=(mxs_ang)maxTurn;
             }
             if(negRot)
                delta=-delta;
@@ -3554,7 +3554,7 @@ void cCreature::StartMotionWithParam(const int motionNum, mps_motion_param *pPar
    }
    info.callback = CreatureMotEndCallback;
    info.motion_num = motionNum;
-   info.trans_duration=MotDescBlendLength(info.motion_num);
+   info.trans_duration=(float)MotDescBlendLength(info.motion_num);
    if(flags&kMotStartFlag_ForceBlend)
    {
       if(info.trans_duration<kForceBlendLength)
@@ -3934,7 +3934,7 @@ BOOL cCreature::SubFrameUpdate(const ulong dt)
    // (since then not responsible for moving its own phys models
    if(!IsPhysical() || IsBallistic())
    {
-      flags = HackMpUpdate(&m_sMultiped, dt,NULL,m_MotorState.focus); // need this to get flags, callbacks etc
+      flags = HackMpUpdate(&m_sMultiped, (float)dt,NULL,m_MotorState.focus); // need this to get flags, callbacks etc
       if (IsBallistic())
          MoveButt(&ObjPosGet(GetObjID())->loc.vec, &ObjPosGet(GetObjID())->fac, TRUE);
    }
@@ -3942,7 +3942,7 @@ BOOL cCreature::SubFrameUpdate(const ulong dt)
    {
 
       TIMER_Start(CREAT_HackMpUpdate);
-      flags=HackMpUpdate(&m_sMultiped, dt,NULL,m_MotorState.focus);
+      flags=HackMpUpdate(&m_sMultiped, (float)dt,NULL,m_MotorState.focus);
       TIMER_MarkStop(CREAT_HackMpUpdate);
 
       mxs_vector new_pos;

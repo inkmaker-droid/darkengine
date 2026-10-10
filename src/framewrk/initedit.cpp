@@ -5,7 +5,7 @@
 
 // $Header: r:/t2repos/thief2/src/framewrk/initedit.cpp,v 1.26 2000/02/19 13:16:19 toml Exp $
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <dynfunc.h>
 
 #include <comtools.h>
@@ -16,8 +16,7 @@
 #include <appagg.h>
 #include <loopapi.h>
 #include <config.h>
-#include <d3d11present.h>
-#include <d3d11legacy.h>
+#include <render_backend.h>
 #include <stdlib.h>
 
 #include <init.h>
@@ -169,13 +168,13 @@ EXTERN void new_world(void);
 
 tResult LGAPI AppInit()
 {
-   D3D11LegacyTraceReset();
+   RenderBackendTraceReset();
 #ifndef THIEF2_GAME
    // DromEd's render canvas tracks its resizable client area. Keep the
    // presenter pixel-aligned; the game executable retains the default
    // aspect-fit scaling for its fixed-resolution menus and gameplay canvas.
-   D3D11SetScaleToWindow(FALSE);
-   D3D11SetPreserveLegacyCanvas(TRUE);
+   RenderBackendSetScaleToWindow(FALSE);
+   RenderBackendSetPreserveCanvas(TRUE);
 #endif
 
 #ifndef THIEF2_GAME
@@ -211,7 +210,7 @@ tResult LGAPI AppInit()
    if (config_get_raw(load_var,buf,sizeof(buf)))
    {
       edbFiletype loaded = dbLoad(buf,kFiletypeAll);
-      D3D11LegacyTrace("database-load var=%s file=%s result=0x%x",
+      RenderBackendTrace("database-load var=%s file=%s result=0x%x",
                        load_var,buf,loaded);
    }
    else

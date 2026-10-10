@@ -5,7 +5,7 @@
 // $Revision: 1.2 $
 //
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <lg.h>
 #include <filespec.h>
 #include <filepath.h>
@@ -28,7 +28,7 @@ long RegCreateAndSet(HKEY hKey,
     if (RegCreateKeyEx(hKey, pszSubkey, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hNewKey, &dwIgnored) == S_OK)
     {
         if (fdwType == REG_SZ)
-            cbData = strlen((const char *) pData) + 1;
+            cbData = static_cast<DWORD>(strlen((const char *)pData) + 1);
 
         if (RegSetValueEx(hNewKey, pszValueName, 0, fdwType, (const BYTE *)pData, cbData) == S_OK)
             {

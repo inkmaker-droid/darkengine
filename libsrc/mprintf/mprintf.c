@@ -21,6 +21,10 @@
 #include <mprintf.h>
 #include <coremutx.h>
 
+#ifdef _WIN32
+#include <win32_platform.h>
+#endif
+
 #define MONO_BASE    0xb0000
 #define CGA_BASE     0xb8000
 #define MONO_PAGE_SZ 0x01000
@@ -194,7 +198,7 @@ __inline int mono_get_combo(void)
 /* returns TRUE if the secondary display is monochrome. */
 bool mono_detect(void)
 {
-#ifdef WIN32
+#ifdef _WIN32
    char *pStr;
 
    // Fake this out under Windows 95, for now assume there is a monochrome
@@ -347,7 +351,7 @@ void _mono_init_page(int pageid)
    split_axis=MONO_AXIS_X; split_coord=split_win=split_lfocus-1;
    split_x=split_y=0; split_w=MONO_WID; split_h=MONO_HGT;
    memset(split_lcoor,0xff,4);
-   split_base=page_addr=(uchar *)(MONO_BASE+(pageid*MONO_PAGE_SZ));
+   split_base = page_addr = (uchar *)(uintptr_t)(MONO_BASE + (pageid * MONO_PAGE_SZ));
    split_flags=0; split_msg=def_wrap_msg;
    _inited_mpages|=(1<<pageid);
 }
@@ -507,9 +511,9 @@ int mono_setfocus(int pageid)
    if (!_mono_top()) return FALSE;
    if (_cur_mono_focus==pageid) return FALSE;
    if (pageid<MONO_NUM_PAGES)
-    { _cur_card=MONO_CARD; page_offs=(int)(page_addr-MONO_BASE); }
+    { _cur_card=MONO_CARD; page_offs=(int)(page_addr - (uchar *)(uintptr_t)MONO_BASE); }
    else
-    { _cur_card=CGA_CARD; page_offs=(int)(page_addr-CGA_BASE)>>1; }
+    { _cur_card=CGA_CARD; page_offs=(int)(page_addr - (uchar *)(uintptr_t)CGA_BASE) >> 1; }
 // printf("Trying to set to %x on card %d\n",page_offs,_cur_card);
    out_set(_cur_card,SR_AHI,(page_offs)>>8);
    out_set(_cur_card,SR_ALO,(page_offs)&0xff);
@@ -670,7 +674,7 @@ int _mscroll_msg(int *x, int *y)
       smemset(split_base+(*y)*MONO_ROW,mono_attr<<8,split_w);
    if ((split_flags&MONO_FLG_MSG)&&(split_msg!=NULL))
    {
-      int old_y=*y, chars_in_msg=strlen(split_msg);
+      int old_y=*y, chars_in_msg=(int)strlen(split_msg);
       *y=((*y)+1)%split_h;
       _mset(*x,*y);
       if ((chars_in_msg>0)&&(split_msg[chars_in_msg-1]=='\n'))
@@ -800,7 +804,7 @@ int mprint(const char *s)
          CoreThreadUnlock();
 	      return -1;
 	   }
-	ret =  _mprint(s,strlen(s));
+	ret =  _mprint(s,(int)strlen(s));
    CoreThreadUnlock();
    return ret;
 }

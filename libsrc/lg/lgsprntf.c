@@ -263,7 +263,7 @@ string_copy:
                      strncpy(buf+dest_ind,arg_str,precis);
                   else
                      strcpy(buf+dest_ind,arg_str);
-                  newchars=strlen(arg_str);
+                  newchars=(int)strlen(arg_str);
                   if(pspec && precis<newchars) newchars=precis;
                }
                break;
@@ -285,7 +285,7 @@ string_copy:
                   arg_double=va_arg(arglist,double);
 						gcvt(arg_double,8,buf+dest_ind);
                }
-               newchars=strlen(buf+dest_ind);
+               newchars=(int)strlen(buf+dest_ind);
                break;
             case 'Q':
             case 'q':

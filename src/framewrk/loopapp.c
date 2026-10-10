@@ -97,7 +97,7 @@ static sLoopClientDesc* MasterClientsList[]=
 };
 
 
-static ulong MasterFactoryID;
+static tLoopClientCookie MasterFactoryID;
 
 ////////////////////////////////////////////////////////////
 //
@@ -189,7 +189,6 @@ static void set_loopmode_noise(void)
 //
 
 
-#pragma off(unreferenced)
 STDMETHODIMP LoopAppInitFunc(IUnknown* goof)
 {
    ILoopClientFactory* factory = CreateLoopFactory(MasterClientsList);
@@ -240,14 +239,12 @@ STDMETHODIMP LoopAppInitFunc(IUnknown* goof)
 
    return kNoError;
 }
-#pragma on(unreferenced)
 
 //////////////////////////////////////////////////////////////
 // SHUTDOWN FUNC
 //
 
 
-#pragma off(unreferenced)
 STDMETHODIMP LoopAppShutdownFunc(IUnknown* goof)
 {
    ILoopManager* loopman = AppGetObj(ILoopManager);
@@ -256,21 +253,16 @@ STDMETHODIMP LoopAppShutdownFunc(IUnknown* goof)
    SafeRelease(loopman);
    return kNoError;
 }
-#pragma on(unreferenced)
 
 
-#pragma off(unreferenced)
 static STDMETHODIMP NullFunc(IUnknown* goof)
 {
    return kNoError;
 }
-#pragma on(unreferenced)
 
-#pragma off(unreferenced)
 static void STDMETHODCALLTYPE FinalReleaseFunc(IUnknown* goof)
 {
 }
-#pragma on(unreferenced)
 
 //////////////////////////////////////////////////////////////
 // LoopAppSysCreate()

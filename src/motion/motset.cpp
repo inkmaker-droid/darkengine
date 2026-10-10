@@ -281,7 +281,7 @@ int cMotionSet::GetNumFrames(int motHandle)
    if(motHandle<0 || motHandle>=mp_num_motions)
       return 0;
 
-   return ((mps_motion *)(mp_motion_list+motHandle))->info.num_frames;
+   return (int)((mps_motion *)(mp_motion_list+motHandle))->info.num_frames;
 }
 
 #define kMotDefaultBlendLength 500 // in msec
@@ -331,7 +331,7 @@ void cMotionSet::GetSlidingVelocity(int motHandle, mxs_vector *pVel)
    if(pStuff->flags&kMSF_IS_LOCO)
    {
       mx_copy_vec(pVel,&pStuff->xlat);
-      mx_scaleeq_vec(pVel,1.0/m_MotStuffList[id].duration);
+      mx_scaleeq_vec(pVel,1.0f/m_MotStuffList[id].duration);
    } else
    {
       mx_zero_vec(pVel);
@@ -446,7 +446,7 @@ void cMotionSet::HackComputeMotPhys(int runHandle, int index)
    m_HackSuspendInPlace=TRUE;
 #endif
    // compute xlat and average speed
-   mp_get_xlat_at_frame(&pStuff->xlat,runHandle,pInfo->num_frames-1);
+   mp_get_xlat_at_frame(&pStuff->xlat, runHandle, (int)pInfo->num_frames - 1);
 #ifdef E398_HACK
    m_HackSuspendInPlace=FALSE;
 #endif
@@ -468,7 +468,7 @@ void cMotionSet::SetupRunTimeData()
    mp_set_capture_callbacks(MotCompXlatCallback,MotCompRotCallback,MotRootRotCallback);
 
    m_Index2RunHandle.SetSize(size);
-   for(i=0;i<size;i++)
+   for(i = 0; i < (int)size; i++)
    {
       name=m_NameMap.NameFromID(i);
       if(SetupMotion(name,i,&rh))
@@ -491,7 +491,7 @@ void cMotionSet::DippyComputeAllMotPhys()
    int i,size,rh;
 
    size=m_Index2RunHandle.Size();
-   for(i=0;i<size;i++)
+   for(i = 0; i < (int)size; i++)
    {
       rh=m_Index2RunHandle[i];
       if(rh>=0)
@@ -511,7 +511,7 @@ BOOL cMotionSet::Load(ITagFile *pFile)
 
    ITagFile_Read(pFile,(char *)&size,sizeof(size));
    m_MotStuffList.SetSize(size);
-   for(i=0;i<size;i++)
+   for(i = 0; i < (int)size; i++)
    {
       ITagFile_Read(pFile,(char *)&stuff,sizeof(stuff));
       m_MotStuffList.SetItem(&stuff,i);
@@ -519,7 +519,7 @@ BOOL cMotionSet::Load(ITagFile *pFile)
 
    ITagFile_Read(pFile,(char *)&size,sizeof(size));
    m_cMoCapList.SetSize(size);
-   for(i=0;i<size;i++)
+   for(i = 0; i < (int)size; i++)
    {
       cMpsMotion m;
 
@@ -543,13 +543,13 @@ BOOL cMotionSet::Save(ITagFile *pFile)
    int i;
 
    ITagFile_Write(pFile,(char *)&size,sizeof(size));
-   for(i=0;i<size;i++)
+   for(i = 0; i < (int)size; i++)
    {
       ITagFile_Write(pFile,(char *)&m_MotStuffList[i],sizeof(m_MotStuffList[i]));
    }
    size=m_cMoCapList.Size(); // this should always be same size as motstufflist.
    ITagFile_Write(pFile,(char *)&size,sizeof(size));
-   for(i=0;i<size;i++)
+   for(i = 0; i < (int)size; i++)
    {
       m_cMoCapList[i].Write(pFile);
    }
@@ -774,7 +774,7 @@ static void MotCompXlatCallback(multiped *mp, mps_motion_info *mi,mps_comp_motio
          MotDmngeUnlock(mi->mot_num);
       return;
    }
-   if(cm->handle>=cTable->numEntries)
+   if(cm->handle >= (ulong)cTable->numEntries)
    {
       mx_zero_vec(data);
       if(lockedHere)
@@ -868,7 +868,7 @@ void MotCompRotCallback(mps_motion_info *mi,mps_comp_motion *cm,float frame, qua
          MotDmngeUnlock(mi->mot_num);
       return;
    }
-   if(cm->handle>=cTable->numEntries)
+   if(cm->handle >= (ulong)cTable->numEntries)
    {
       quat_identity(data);
       if(lockedHere)

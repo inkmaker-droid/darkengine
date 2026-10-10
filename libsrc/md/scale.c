@@ -16,6 +16,8 @@
 #include <r3ds.h>
 #include <md.h>
 
+#define MAX_FLOAT(a, b) ((a) > (b) ? (a) : (b))
+
 #undef rad2
 
 #ifndef SHIP
@@ -41,20 +43,20 @@ float radius_from_bbox(mxs_vector *bmin,mxs_vector *bmax)
    // greatest x
    mn2 = bmin->x*bmin->x;
    mx2 = bmax->x*bmax->x;
-   rad2 = max(mn2,mx2);
+   rad2 = MAX_FLOAT(mn2,mx2);
 
    // greatest y
    mn2 = bmin->y*bmin->y;
    mx2 = bmax->y*bmax->y;
-   rad2 += max(mn2,mx2);
+   rad2 += MAX_FLOAT(mn2,mx2);
 
    // greatest z
    mn2 = bmin->z*bmin->z;
    mx2 = bmax->z*bmax->z;
-   rad2 += max(mn2,mx2);
+   rad2 += MAX_FLOAT(mn2,mx2);
 
    // radius is dist from center to max point
-   return sqrt(rad2);
+   return sqrtf(rad2);
 }
 
 

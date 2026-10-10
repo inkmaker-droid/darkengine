@@ -8,7 +8,7 @@
 #include <wrtype.h>
 #include <portal.h>
 #include <lgd3d.h>
-#include <d3d11legacy.h>
+#include <render_backend.h>
 #include <render.h>
 #include <simstate.h>
 #include <simflags.h>
@@ -71,7 +71,7 @@ void SetZNearFar(double z_near, double z_far)
    zfar = z_far;
    lgd3d_set_znearfar(z_near, z_far);
    portal_set_znearfar(z_near, z_far);
-   starfield_set_z(z_far*0.95);
+   starfield_set_z((float)(z_far*0.95));
 }
 
 r3s_texture texture_lookup(int n);
@@ -105,7 +105,7 @@ EXTERN void set_hardware_gamma_level(float level)
    // composite-shader constant, so changing it is safe at any time.  Apply it
    // immediately so a paused/in-game options menu responds while its slider
    // is moving instead of waiting for gameplay rendering to resume.
-   if (D3D11LegacyAvailable())
+   if (RenderBackendAvailable())
    {
       do_set_gamma();
       return;
@@ -180,7 +180,7 @@ static void toggle_multitexture(void)
 
 static void set_obj_zbias(int n)
 {
-   g_obj_zbias = n * (1.0 / 65536.0);
+   g_obj_zbias = n * (1.0f / 65536.0f);
 }
 
 //zb:
@@ -312,19 +312,19 @@ r3s_texture texture_lookup(int n)
 
 static float _RGBDistSquared(mxs_vector *c, uchar *pal)
 {
-   return (double)(c->x-pal[0])*(c->x-pal[0]) +
-          (double)(c->y-pal[1])*(c->y-pal[1]) +
-          (double)(c->z-pal[2])*(c->z-pal[2]);
+   return (c->x-pal[0])*(c->x-pal[0]) +
+          (c->y-pal[1])*(c->y-pal[1]) +
+          (c->z-pal[2])*(c->z-pal[2]);
 }
 
 static float _RGBDistLinear(mxs_vector *c, uchar *pal)
 {
-   return fabs((double)(c->x-pal[0])) +
-          fabs((double)(c->y-pal[1])) +
-          fabs((double)(c->z-pal[2]));
+   return fabsf(c->x-pal[0]) +
+          fabsf(c->y-pal[1]) +
+          fabsf(c->z-pal[2]);
 }
 
-#define BuildIntensity(r,g,b) (((r)*0.3)+((g)*0.55)+((b)*0.15))
+#define BuildIntensity(r,g,b) (((r)*0.3f)+((g)*0.55f)+((b)*0.15f))
 static float _RGBDist_wIntensity(mxs_vector *c, uchar *pal)
 {
    float dist = _RGBDistSquared(c,pal);
@@ -396,9 +396,9 @@ uchar compute_color_mix(int a, int r, int g, int b, fix weight)
    {
       float fweight=fix_float(weight);
       mxs_vector c;
-      c.x = (grd_pal[a*3+0] * (1.0 - fweight) + r * fweight);
-      c.y = (grd_pal[a*3+1] * (1.0 - fweight) + g * fweight);
-      c.z = (grd_pal[a*3+2] * (1.0 - fweight) + b * fweight);
+      c.x = (grd_pal[a*3+0] * (1.0f - fweight) + r * fweight);
+      c.y = (grd_pal[a*3+1] * (1.0f - fweight) + g * fweight);
+      c.z = (grd_pal[a*3+2] * (1.0f - fweight) + b * fweight);
       return ShadClosestCol(&c,grd_pal,FALSE);
    }
 }

@@ -204,7 +204,7 @@ void ResGrowResDescTable(Id id)
 
 //  Set new max id limit
 
-      resDescMax = newAmt - 1;
+      resDescMax = (Id)(newAmt - 1);
 
 //  Grow cumulative stats table too
 
@@ -277,6 +277,6 @@ void ResShrinkResDescTable()
 
 //  Set new max id limit
 
-      resDescMax = newAmt - 1;
+      resDescMax = (Id)(newAmt - 1);
    }
 }

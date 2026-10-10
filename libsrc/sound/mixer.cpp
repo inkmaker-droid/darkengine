@@ -16,7 +16,7 @@
 
 #include <algorithm>
 
-#include <windows.h>
+#include <win32_platform.h>
 
 #include <assert.h>
 
@@ -482,7 +482,7 @@ STDMETHODIMP_(void) cSndMixer::Update()
       //
       // do a fake mixer timer callback, which updates faders
       //
-      TimerCallback( 0, 0, (DWORD) this, 0, 0 );
+      TimerCallback( 0, 0, (DWORD_PTR)this, 0, 0 );
       // TimerCallback will set timer state to working
       mTimerState = eSndTimerBroken;
    }
@@ -497,7 +497,6 @@ STDMETHODIMP_(void) cSndMixer::Update()
 //
 
 #ifdef __WATCOMC__
-#pragma off(unreferenced)
 #endif
 
 ISndSample *
@@ -510,7 +509,6 @@ StopSample( ISndMixer   *mixer,
 }
 
 #ifdef __WATCOMC__
-#pragma on(unreferenced)
 #endif
 
 /////////////////////////////////////
@@ -935,14 +933,14 @@ DistanceToMilliBels(int32 distance)
 }
 
 #ifndef PI
-#define PI 3.14159265359
+#define PI 3.14159265359f
 #endif
 
 //
 // this is the volume offset for the left ear, at the compass points N, E, S, W
 //  where N represents a source directly in front of listener, W is a source
 //  which is aligned with the left ear
-static float volOff[] = { 0.0, -1530.0, -370.0, 320.0 };
+static float volOff[] = { 0.0f, -1530.0f, -370.0f, 320.0f };
 
 ////////////////////////////////////
 //
@@ -954,7 +952,7 @@ cSndMixer::Get3DDistanceVolume( float range )
 {
    int32 dist, vol;
 
-   dist = range * m3DEnvironment.distanceFactor;
+   dist = (int32)(range * m3DEnvironment.distanceFactor);
 
    // return volume offset for range
    // note: returned values do not take into account group & sample volume
@@ -975,8 +973,8 @@ cSndMixer::Get3DDistanceFromVolume( int32 vol )
 {
    float dist;
 
-   dist = pow( 2.0, ((float)-vol) / 600.0);
-   if ( m3DEnvironment.distanceFactor != 0.0 ) {
+   dist = powf(2.0f, ((float)-vol) / 600.0f);
+   if ( m3DEnvironment.distanceFactor != 0.0f ) {
       dist /= m3DEnvironment.distanceFactor;
    }
 
@@ -1004,7 +1002,7 @@ cSndMixer::Get3DPositionVolume( sSndVector  *pSrcPos )
 
    // return volume offset for range
    // note: returned values do not take into account group & sample volume
-   vol = DistanceToMilliBels( range );
+   vol = DistanceToMilliBels((int32)range);
    TLOG1( "Mix::Get3DPositionVolume volume %d", vol );
 
    return vol;
@@ -1050,36 +1048,36 @@ cSndMixer::Get3DPositionPanVolume( sSndVector  *pSrcPos,
       sinHeading = (-sinHeading);
    }
 
-   heading = atan2( sinHeading, cosHeading ) / PI;
+   heading = atan2f(sinHeading, cosHeading) / PI;
    //mprintf("heading %g sin %g cos %g\n", heading, sinHeading, cosHeading);
    // compute volume offset at left & right ear based on heading
    // get value by linear interpolating from table of volume offsets
    //   for source at the 4 compass points
-   if ( heading >= 0.0 ) {
-      if ( heading < 0.5 ) {
-         a = heading / 0.5;
-         leftVolume = (a * volOff[1]) + ((1.0 - a) * volOff[0]);
-         rightVolume = (a * volOff[3]) + ((1.0 - a) * volOff[0]);
+   if ( heading >= 0.0f ) {
+      if ( heading < 0.5f ) {
+         a = heading / 0.5f;
+         leftVolume = (int32)((a * volOff[1]) + ((1.0f - a) * volOff[0]));
+         rightVolume = (int32)((a * volOff[3]) + ((1.0f - a) * volOff[0]));
       } else {
-         a = (heading / 0.5) - 1.0;
-         leftVolume = (a * volOff[2]) + ((1.0 - a) * volOff[1]);
-         rightVolume = (a * volOff[2]) + ((1.0 - a) * volOff[3]);
+         a = (heading / 0.5f) - 1.0f;
+         leftVolume = (int32)((a * volOff[2]) + ((1.0f - a) * volOff[1]));
+         rightVolume = (int32)((a * volOff[2]) + ((1.0f - a) * volOff[3]));
       }
    } else {
       heading = (-heading);
-      if ( heading < 0.5 ) {
-         a = heading / 0.5;
-         leftVolume = (a * volOff[3]) + ((1.0 - a) * volOff[0]);
-         rightVolume = (a * volOff[1]) + ((1.0 - a) * volOff[0]);
+      if ( heading < 0.5f ) {
+         a = heading / 0.5f;
+         leftVolume = (int32)((a * volOff[3]) + ((1.0f - a) * volOff[0]));
+         rightVolume = (int32)((a * volOff[1]) + ((1.0f - a) * volOff[0]));
       } else {
-         a = (heading / 0.5) - 1.0;
-         leftVolume = (a * volOff[2]) + ((1.0 - a) * volOff[3]);
-         rightVolume = (a * volOff[2]) + ((1.0 - a) * volOff[1]);
+         a = (heading / 0.5f) - 1.0f;
+         leftVolume = (int32)((a * volOff[2]) + ((1.0f - a) * volOff[3]));
+         rightVolume = (int32)((a * volOff[2]) + ((1.0f - a) * volOff[1]));
       }
    }
 
    // add in volume offset for range
-   *pVol = DistanceToMilliBels( range );
+   *pVol = DistanceToMilliBels((int32)range);
 
    // TBD: calculate left & right volumes
    if ( leftVolume > rightVolume ) {
@@ -1116,7 +1114,6 @@ cSndMixer::Set3DDeferMode( BOOL  deferOn )
  *
  */
 
-#pragma off(unreferenced)
 //
 // mixer timer callback, which updates faders
 //
@@ -1204,7 +1201,6 @@ cSndMixer::TimerCallback( UINT nTimerID,
 }
 
 
-#pragma on(unreferenced)
 
 //
 // check if timer needs to be started or stopped

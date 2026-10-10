@@ -30,7 +30,7 @@
 
 // for the windows controls
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <win32_platform.h>
 #include <commdlg.h>
 #include <commctrl.h>
 
@@ -209,7 +209,6 @@ int linkedit_find_selected(HWND hWnd, int start)
 // can't attach a LinkEditor* to the dialog
 static sLinkAndData dlg_add_link;
 
-#pragma off(unreferenced)
 // add link dialog DlgProc
 BOOL CALLBACK AddLinkDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -279,7 +278,6 @@ BOOL CALLBACK AddLinkDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 
    return FALSE;
 }
-#pragma on(unreferenced)
 
 // puts up the dialog to add a link and does it
 void linkedit_add_link(LinkEditor* ed, HWND hWnd)

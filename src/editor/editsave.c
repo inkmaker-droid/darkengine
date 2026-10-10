@@ -512,9 +512,9 @@ static BOOL _loadBrushHeader(ITagFile *file)
       {
          sMissionRenderParams parms;
          parms = *GetMissionRenderParams();
-         parms.ambient_light.x = theHdr.ambient/256.0;
-         parms.ambient_light.y = theHdr.ambient/256.0;
-         parms.ambient_light.z = theHdr.ambient/256.0;
+         parms.ambient_light.x = theHdr.ambient/256.0f;
+         parms.ambient_light.y = theHdr.ambient/256.0f;
+         parms.ambient_light.z = theHdr.ambient/256.0f;
          SetMissionRenderParams(&parms);
       }
 
@@ -642,8 +642,6 @@ BOOL editor_LoadCow(ITagFile *file)
    rv |= brushes_loaded;
    rv |= _loadBrushHeader(file);
    rv |= _loadFlowTextureIndices(file);
-   if (!g_EditorBrushDataPresent)
-      Status("Source brush data missing; wireframe views use a non-editable compiled-geometry fallback.");
    if (!rv)
       Warning(("Some component of the COW file loaded incorrectly"));
    return rv;

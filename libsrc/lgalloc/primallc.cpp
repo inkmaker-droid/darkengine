@@ -45,7 +45,7 @@ cPrimaryMalloc::~cPrimaryMalloc()
 
 ///////////////////////////////////////
 
-ulong LGAPI cPrimaryMalloc::DefPageFunc(ulong needed, sAllocLimits * pLimits)
+size_t LGAPI cPrimaryMalloc::DefPageFunc(size_t needed, sAllocLimits * pLimits)
 {
     return 0;
 }
@@ -111,16 +111,16 @@ STDMETHODIMP_(void *) cPrimaryMalloc::Realloc(void * pOld, SIZE_T newClientSize)
     AllocThreadLock();
 
     void *    pNew;
-    const int oldClientSize = m_pNext->GetSize(pOld);
+    const SIZE_T oldClientSize = m_pNext->GetSize(pOld);
     BOOL      fMoreToPage = FALSE;
-    const int difference = newClientSize - oldClientSize;
+    const SIZE_T growth = newClientSize > oldClientSize ? newClientSize - oldClientSize : 0;
 
     do
     {
-        if (difference > 0 && m_pfnPage && totalAlloc > allocCap)
+        if (growth && m_pfnPage && totalAlloc > allocCap)
         {
             AllocThreadUnlock();
-            fMoreToPage = ((*m_pfnPage)(difference, this) != 0);
+            fMoreToPage = ((*m_pfnPage)(growth, this) != 0);
             AllocThreadLock();
         }
 
@@ -130,7 +130,11 @@ STDMETHODIMP_(void *) cPrimaryMalloc::Realloc(void * pOld, SIZE_T newClientSize)
 
     if (pNew)
     {
-        totalAlloc += m_pNext->GetSize(pNew) - oldClientSize;
+        const SIZE_T newSize = m_pNext->GetSize(pNew);
+        if (newSize >= oldClientSize)
+            totalAlloc += newSize - oldClientSize;
+        else
+            totalAlloc -= oldClientSize - newSize;
         #ifndef SHIP
         if (totalAlloc > peakAlloc)
             peakAlloc = totalAlloc;
@@ -166,7 +170,7 @@ STDMETHODIMP_(void) cPrimaryMalloc::Free(void * p)
 
 STDMETHODIMP_(SIZE_T) cPrimaryMalloc::GetSize(void * p)
 {
-    ulong result;
+    SIZE_T result;
 
     if (!p)
         return 0;
@@ -262,16 +266,16 @@ STDMETHODIMP_(void *) cPrimaryMalloc::ReallocEx(void * pOld, SIZE_T newClientSiz
     AllocThreadLock();
 
     void *    pNew;
-    const int oldClientSize = m_pNext->GetSize(pOld);
+    const SIZE_T oldClientSize = m_pNext->GetSize(pOld);
     BOOL      fMoreToPage = FALSE;
-    const int difference = newClientSize - oldClientSize;
+    const SIZE_T growth = newClientSize > oldClientSize ? newClientSize - oldClientSize : 0;
 
     do
     {
-        if (difference > 0 && m_pfnPage && totalAlloc > allocCap)
+        if (growth && m_pfnPage && totalAlloc > allocCap)
         {
             AllocThreadUnlock();
-            fMoreToPage = ((*m_pfnPage)(difference, this) != 0);
+            fMoreToPage = ((*m_pfnPage)(growth, this) != 0);
             AllocThreadLock();
         }
 
@@ -281,7 +285,11 @@ STDMETHODIMP_(void *) cPrimaryMalloc::ReallocEx(void * pOld, SIZE_T newClientSiz
 
     if (pNew)
     {
-        totalAlloc += m_pNext->GetSize(pNew) - oldClientSize;
+        const SIZE_T newSize = m_pNext->GetSize(pNew);
+        if (newSize >= oldClientSize)
+            totalAlloc += newSize - oldClientSize;
+        else
+            totalAlloc -= oldClientSize - newSize;
         #ifndef SHIP
         if (totalAlloc > peakAlloc)
             peakAlloc = totalAlloc;

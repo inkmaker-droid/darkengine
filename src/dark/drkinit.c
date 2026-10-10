@@ -76,7 +76,7 @@ static const sLoopClientDesc* Factories[]=
    NULL
 };
 
-static ulong FactoryID;
+static tLoopClientCookie FactoryID;
 
 #define NUM_ELEMS(x) (sizeof(x)/sizeof((x)[0]))
 
@@ -96,7 +96,6 @@ static sLoopModeDesc* Modes[] =
 
 
 
-#pragma off(unreferenced)
 static STDMETHODIMP _InitFunc(IUnknown* goof)
 {
    int i;
@@ -125,13 +124,11 @@ static STDMETHODIMP _InitFunc(IUnknown* goof)
 
    return kNoError;
 }
-#pragma on(unreferenced)
 
 //////////////////////////////////////////////////////////////
 // SHUTDOWN FUNC
 //
 
-#pragma off(unreferenced)
 static STDMETHODIMP _ShutdownFunc(IUnknown* goof)
 {
    ILoopManager* pLoopManager = AppGetObj(ILoopManager);
@@ -140,7 +137,6 @@ static STDMETHODIMP _ShutdownFunc(IUnknown* goof)
    SafeRelease(pLoopManager);
    return kNoError;
 }
-#pragma on(unreferenced)
 
 ////////////////////////////////////////////////////////////
 // CONSTRAINTS
@@ -159,18 +155,14 @@ static sRelativeConstraint _Constraints[] =
 // Nothing needs to change, unless you want to add postconnect stuff
 ////////////////////////////////////////////////////////////
 
-#pragma off(unreferenced)
 static STDMETHODIMP NullFunc(IUnknown* goof)
 {
    return kNoError;
 }
-#pragma on(unreferenced)
 
-#pragma off(unreferenced)
 static void STDMETHODCALLTYPE FinalReleaseFunc(IUnknown* goof)
 {
 }
-#pragma on(unreferenced)
 
 //////////////////////////////////////////////////////////////
 // SysCreate()

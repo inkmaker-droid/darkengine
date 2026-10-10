@@ -27,7 +27,8 @@
 int dmp_find_free_file(char *buff,char *prefix,char *suffix)
 {
    char fname[_MAX_PATH];
-   int fp, ps;
+   int fp;
+   size_t ps;
    int num=0;
    
    ps = strlen(prefix);

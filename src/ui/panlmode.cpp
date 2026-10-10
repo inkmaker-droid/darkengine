@@ -256,7 +256,7 @@ static ILoopClient* LGAPI PanelClientFactoryFunc(sLoopClientDesc * pDesc, tLoopC
    return new cPanelLoopClient((IPanelMode*)data);    
 }
 
-static ulong panel_factory_id = -1; 
+static tLoopClientCookie panel_factory_id = (tLoopClientCookie)-1;
 
 static void create_panel_factory()
 {

@@ -433,9 +433,9 @@ void vm_fit_cameras_to_region(mxs_vector *start, mxs_vector *end)
    mx_scale_addeq_vec(&center, end, 0.5);
 
    mx_sub_vec(&length, start, end);
-   length.x = fabs(length.x);
-   length.y = fabs(length.y);
-   length.z = fabs(length.z);
+   length.x = fabsf(length.x);
+   length.y = fabsf(length.y);
+   length.z = fabsf(length.z);
 
    for (i=0; i < MAX_CAMERAS; ++i)
       if (!camera[i].camera_3d && camera[i].synch)
@@ -464,7 +464,7 @@ void vm_fit_cameras_to_region(mxs_vector *start, mxs_vector *end)
          // is there to give a bit of a boundary; maybe it's effectively
          // giving some boundary in x, and doing aspect ratio in y.
          if (vmGetSizeRatio(camera_to_region_mapping[i],&xsc,&ysc))
-            camera[i].scale=mmax(length.el[x]/xsc,length.el[y]*5/3/ysc)*1.2;
+            camera[i].scale=mmax(length.el[x]/xsc,length.el[y]*5/3/ysc)*1.2f;
       }
 }
 
@@ -698,12 +698,10 @@ int vm_get_camera_axis(int c, int *x, int *y)
    return bogus_axis[camera[c].axis];
 }
 
-#pragma off(unreferenced)
 void vm_end_3d(int c)
 {
    r3_end_frame();
 }
-#pragma on(unreferenced)
 
   // map point in camera c's (x,y) coordinates
   // to an output location, returning which axis
@@ -720,7 +718,7 @@ int vm_map_screen_to_world(int c, mxs_vector *dest, int x, int y)
 
    if (camera[c].camera_3d) return -1;
 
-   sx = x / (float) xsz - 0.5;
+   sx = x / (float) xsz - 0.5f;
    sy = (y - ysz/2) / (float) xsz;
 
    rc = real_camera(c);
@@ -1200,11 +1198,13 @@ static void _vm_render_compiled_geometry(int c)
 
 static void _vm_rend_compiled_geometry_label(int c)
 {
-   char message[128];
-   char *view_name=camera[c].camera_3d ? "3d View" : axis_names[camera[c].axis];
+   char message[]="Compiled terrain view; editable source brushes unavailable";
 
-   sprintf(message,"%s - FALLBACK: COMPILED TERRAIN (BRUSH DATA MISSING; VIEW ONLY)",
-           view_name);
+   // One notice in the selected pane is enough. The other panes show the
+   // same compiled world and retain their normal view labels.
+   if (c != vm_cur_camera)
+      return;
+
    guiStyleSetupFont(NULL,StyleFontNormal);
    gr_set_fcolor(guiScreenColor(COMPILED_GEOMETRY_LABEL_COLOR));
    gr_string(message,1,1);
@@ -1264,7 +1264,7 @@ static void _vm_restore_camera_bitmap(int c)
        gr_bitmap(camera_saves[c],0,0);
 }
 
-extern void cam_render_scene(Position *pos, double zoom);
+extern void cam_render_scene(Position *pos, float zoom);
 static int vm_lgd3d_frame;
 
 static BOOL update_links = TRUE;
@@ -1394,7 +1394,7 @@ void vm_render_camera(int c)
                   set_mm_sort(!g_zbuffer);
                   g_MeshRenderFlags |= MMF_INDEXED;
                }
-               cam_render_scene(&pos, camera[c].zoom);
+               cam_render_scene(&pos, (float)camera[c].zoom);
                if (g_lgd3d)
                {
                   if (hardware_grid)
@@ -1437,7 +1437,7 @@ void vm_render_camera(int c)
          if (show_raycasts)
             render_failures();   // ????????
 
-         if (compiled_fallback && (mode & RM_WIREFRAME_BRUSHES))
+         if (compiled_fallback && c == vm_cur_camera)
             _vm_rend_compiled_geometry_label(c);
          else if (_vm_name_corner!=-1)
             _vm_rend_message_corner(CORNER_RIGHT|CORNER_BOTTOM,"3d View");
@@ -1457,7 +1457,7 @@ void vm_render_camera(int c)
                _vm_render_compiled_geometry(c);
          }
 
-         if (compiled_fallback && (mode & RM_WIREFRAME_BRUSHES))
+         if (compiled_fallback && c == vm_cur_camera)
             _vm_rend_compiled_geometry_label(c);
          else
             _vm_rend_message_corner(_vm_name_corner,axis_names[camera[c].axis]);

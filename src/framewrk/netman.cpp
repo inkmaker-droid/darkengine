@@ -90,7 +90,7 @@ const char *DEFAULT_AVATAR_NAME = "Default Avatar";
 //
 
 // Enumation of the types of raw network messages.
-typedef enum eNetMessageEnum {
+enum eNetMessageEnum {
    // Sent to new players from existing players:
    kNetMsg_Hi,
    // Sent during synch, when we're ready to announce ourself:
@@ -191,7 +191,7 @@ public:
    // inventory.
    void InterpretMsg(ObjID fromPlayer)
    {
-      ObjID obj = GetParam(0);
+      ObjID obj = (ObjID)GetParam(0);
       AutoAppIPtr(ObjectNetworking);
       AssertMsg3(fromPlayer == pObjectNetworking->ObjHostPlayer(obj),
                  "Player %d contains object %d, but I think %d owns it!",
@@ -1031,7 +1031,7 @@ public:
       int max = pHisto->slots.Size() - 1;
 
       // First, calculate the histogram's width:
-      int maxFrames = 0;
+      ulong maxFrames = 0;
       for (slot = 1;
            slot <= max;
            slot++)
@@ -1238,7 +1238,7 @@ public:
    void DumpSpecificHistogram(sHistogram *pHisto)
    {
       // Find max slot hit count, so we can scale accordingly
-      int max_count = 0;
+      ulong max_count = 0;
       int i, j, k;
 
       for (i=1; i<pHisto->slots.Size(); i++)
@@ -1274,7 +1274,7 @@ public:
          while (strlen(buffer) < 8) strcat(buffer, " ");
          mprint(buffer);
 
-         for (j = 0; j < (pHisto->slots[i].count * HISTO_SCALED_WIDTH) / max_count && j<HISTO_SCALED_WIDTH; j++)
+         for (j = 0; j < (int)((pHisto->slots[i].count * HISTO_SCALED_WIDTH) / max_count) && j<HISTO_SCALED_WIDTH; j++)
             mprintf("*");
          mprintf("\n");
       }
@@ -1308,7 +1308,7 @@ public:
             // Build sort mapping and accum other
             for (j=0; j<pSlot->info.Size(); j++)
             {
-               float pct = ((float)pSlot->info[j].bytes / (float)total_bytes) * 100.0;
+               float pct = ((float)pSlot->info[j].bytes / (float)total_bytes) * 100.0f;
 
                if (pct > OTHER_CUTOFF_PCT)
                {
@@ -1331,7 +1331,7 @@ public:
             int parts_shown=0;
             for (j=0; j<sortMap.Size(); j++)
             {
-               float pct = ((float)pSlot->info[sortMap[j]].bytes / (float)total_bytes) * 100.0;
+               float pct = ((float)pSlot->info[sortMap[j]].bytes / (float)total_bytes) * 100.0f;
 
                if (parts_shown++<HIST_NUM_TO_SHOW)
                {
@@ -1373,7 +1373,7 @@ public:
    // draw dumb loser old style histograms
    void DrawHist(void)
    {
-      float v_scale=((float)HIST_HEIGHT)/(m_HistBins[m_HistFullestBin]+1.0);
+      float v_scale=((float)HIST_HEIGHT)/(m_HistBins[m_HistFullestBin]+1.0f);
       mono_clear();
       for (int j=0; j<HIST_HEIGHT; j++)
       {
@@ -1411,7 +1411,7 @@ public:
 
    void UpdateRealHist(tSimTime now)
    {
-      ulong bandwidth=((m_SecSendTotal+m_SecRecvTotal) / ((now - m_LastSecond) / 1000.0));
+      ulong bandwidth=(ulong)((m_SecSendTotal+m_SecRecvTotal) / ((now - m_LastSecond) / 1000.0f));
       int bin=bandwidth/HIST_BIN_BYTES;
       if (bin<0) bin=0; else if (bin>=HIST_BINS) bin=HIST_BINS-1;
       m_HistBins[bin]++;
@@ -1426,7 +1426,7 @@ public:
       if (now > (m_LastSecond + 1000))
       {  // Normalize the bandwidth for the past second or so, and
          // divide by 100, to get the number for the histogram
-         ulong normBandwidth = (m_SecSendTotal / ((now - m_LastSecond) / 1000.0));
+         ulong normBandwidth = (ulong)(m_SecSendTotal / ((now - m_LastSecond) / 1000.0f));
 
          if (m_bHistActive)
             UpdateRealHist(now);
@@ -1555,15 +1555,15 @@ public:
    void BandwidthStats(float *timeSpan, ulong *sendBW, ulong *receiveBW, const char **culprit)
    {
       int dt=(m_StatList[m_ListPos].time - m_StatList[(m_ListPos+1) % STAT_LIST_LENGTH].time);
-      *timeSpan = dt/1000.0;
+      *timeSpan = dt/1000.0f;
       if (*timeSpan>0)
       {
-         *sendBW = m_SumSent / *timeSpan;
-         *receiveBW = m_SumReceived / *timeSpan;
+         *sendBW = (ulong)(m_SumSent / *timeSpan);
+         *receiveBW = (ulong)(m_SumReceived / *timeSpan);
       }
       else
          *sendBW = *receiveBW = 0;
-      if ((m_Bandwidth != 0) && (*sendBW > m_Bandwidth))
+      if ((m_Bandwidth != 0) && (*sendBW > (ulong)m_Bandwidth))
          Warning(("NETSTATS: Overwhelming the bandwidth -- %d/%d!\n", *sendBW, m_Bandwidth));
 
       // burn through and pick current "best" culprit
@@ -1603,7 +1603,7 @@ public:
    // max bytes sent/recv in the queue (hack for now)
    void MaxStats(ulong *bytesSent, ulong *bytesReceived)
    {
-      int max_s=0, max_r=0;
+      ulong max_s=0, max_r=0;
       for (int i=0; i<STAT_LIST_LENGTH; i++)
       {
          if (m_StatList[i].sent>max_s)
@@ -1858,7 +1858,7 @@ private:
       mprintf(" %s --", info->moduleName.text);
 
       // Now, the raw message contents:
-      int i;
+      ulong i;
       uchar *pRawMsg = ((uchar *) msg) + 1;
       for (i = 1; i < msgSize; i++, pRawMsg++) 
       {
@@ -1946,8 +1946,8 @@ private:
       Assert_(m_MyPlayerNum < 255);
       sNetMsg_CreatePlayer msg = {gm_NetManagerHandlerID, 
                                   kNetMsg_CreatePlayer,
-                                  abstractPlayer,
-                                  PlayerObject(),
+                                  (NetObjID)abstractPlayer,
+                                  (NetObjID)PlayerObject(),
                                   gm_bAmSessionHost,
                                   { pos->loc.vec.x, 
                                     pos->loc.vec.y, 
@@ -2752,7 +2752,7 @@ protected:
                   DPMSG_CREATEPLAYERORGROUP *createMsg
                      = (DPMSG_CREATEPLAYERORGROUP *)msg;
                   if (m_bGameStarted ||
-                      (m_NumPlayers >= m_MaxPlayers))
+                      (m_NumPlayers >= (ulong)m_MaxPlayers))
                   {
                      // It's too late to add any more players. Send a "Hi"
                      // with a player number of 0, which is the signal that
@@ -2760,7 +2760,7 @@ protected:
                      char failReason;
                      if (m_bGameStarted)
                         failReason = kNetRejectStarted;
-                     else if (m_NumPlayers >= m_MaxPlayers)
+                     else if (m_NumPlayers >= (ulong)m_MaxPlayers)
                         failReason = kNetRejectTooMany;
                      else
                         failReason = kNetRejectMisc;
@@ -2788,7 +2788,7 @@ protected:
                         // yourPlayerNum field.
                         sNetMsg_Hi msg = { gm_NetManagerHandlerID, 
                                            kNetMsg_Hi,
-                                           m_NumPlayers };
+                                           (char)m_NumPlayers };
                         msg.hostVersion = AppVersion()->num;
                         // @HACK: this is pretty horrid, but we can't
                         // allow Hi messages to fall on the floor...
@@ -2812,7 +2812,7 @@ protected:
                {
                   DPMSG_DESTROYPLAYERORGROUP *destroyMsg=(DPMSG_DESTROYPLAYERORGROUP *)msg;
                   NetSpew(("DPSYS_DESTROYPLAYERORGROUP\n"));
-                  ObjID corpse = (ObjID) destroyMsg->lpLocalData;
+   ObjID corpse = (ObjID)(intptr_t)destroyMsg->lpLocalData;
                   KillDPlayer(destroyMsg->dpId, corpse);
                   m_PlayerBundles.KillPlayer(destroyMsg->dpId);
                   m_PlayerBundlesNG.KillPlayer(destroyMsg->dpId);
@@ -2958,7 +2958,7 @@ protected:
             cBundledMessage *pBundledMsg = pNode->item;
 
             // The size of this message:
-            ushort size = pBundledMsg->m_Size;
+            ushort size = (ushort)pBundledMsg->m_Size;
             AssertMsg(size == pBundledMsg->m_Size,
                       "Message larger than a ushort can handle!!!");
             *((ushort *) cursor) = size;
@@ -3230,9 +3230,9 @@ protected:
             IAvatar *pAvatar = new cAvatar(file);
             ulong playerNum = pAvatar->PlayerNum();
             int oldSize = m_WaitingAvatars.Size();
-            if ((playerNum + 1) > oldSize) {
+            if ((playerNum + 1) > (ulong)oldSize) {
                m_WaitingAvatars.SetSize(playerNum + 1);
-               int j;
+               ulong j;
                for (j = oldSize; j <= playerNum; j++) {
                   // Make sure the slots are initialized properly
                   m_WaitingAvatars[j] = NULL;
@@ -4188,14 +4188,14 @@ public:
          {
             // This is a very early loopback, or a non-networkable
             // object:
-            result.host = MyPlayerNum();
+            result.host = (tNetPlayerNum)MyPlayerNum();
             result.obj = obj;
          } else {
             ObjID hostObj = gm_ObjNet->ObjHostPlayer(obj);
             AssertMsg1((hostObj != OBJ_NULL), 
                        "Object %d has no host player, but isn't local!",
                        obj);
-            result.host = ObjToPlayerNum(hostObj);
+            result.host = (tNetPlayerNum)ObjToPlayerNum(hostObj);
          
             AssertMsg((result.host != 0),
                       "Object host player unknown to networking");
@@ -4210,7 +4210,7 @@ public:
                // assume that everyone else still has that on file to
                // deproxify from. This *should* only happen for objects
                // that are in transition like this.
-               result.host = MyPlayerNum();
+               result.host = (tNetPlayerNum)MyPlayerNum();
                result.obj = obj;
 #ifdef PLAYTEST
                if (config_is_defined("net_proxy_spew")) {
@@ -4711,7 +4711,7 @@ public:
             ClearFlush();
             return FALSE;
          }
-         while (m_round[prevRound].playersFlushed < m_NumPlayers) {
+         while (m_round[prevRound].playersFlushed < (int)m_NumPlayers) {
             PollNetwork();
             SendBundles();
             if (callback) {

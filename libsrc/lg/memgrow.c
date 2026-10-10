@@ -53,7 +53,7 @@ int MemGrowHeap(int wantK)
 	for (i = 15; i >= 0; i--)
 		{
 		if (wantK & (1 << i))
-			ptrs[i] = malloc(1 << (i + 10));
+			ptrs[i] = malloc((size_t)1 << (i + 10));
 		else
 			ptrs[i] = NULL;
 		}

@@ -68,9 +68,9 @@ static bool default_setpal_func(StylePalette palette)
       return FALSE;
    if (REFID(palette) == 0) // must be a resid
    {
-      PallInfo* pal = ResLock(palette);
+      PallInfo* pal = ResLock((Id)palette);
       gr_set_pal(pal->index,pal->numcols,pal->rgb);
-      ResUnlock(palette);
+      ResUnlock((Id)palette);
    }
    else
    {

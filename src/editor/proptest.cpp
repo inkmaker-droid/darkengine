@@ -68,7 +68,7 @@ extern "C"
 static ObjID parse_obj_arg(char* arg)
 {
    // Remove trailing whitespace;
-   int len = strlen(arg); 
+   int len = (int)strlen(arg);
    for (char* s = arg + len - 1; s > arg && isspace(*s); s--)
       *s = '\0';
    ObjID focus = EditGetObjNamed(arg);
@@ -629,7 +629,7 @@ static void test_briefcase_load(void)
 static void copy_props_to(char* arg)
 {
    // Remove trailing whitespace;
-   int len = strlen(arg); 
+   int len = (int)strlen(arg);
    for (char* s = arg + len - 1; s > arg && isspace(*s); s--)
       *s = '\0';
  

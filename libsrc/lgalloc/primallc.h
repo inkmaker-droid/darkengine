@@ -58,7 +58,7 @@ public:
 private:
 
     tAllocatorPageFunc m_pfnPage;
-    static ulong LGAPI DefPageFunc(ulong needed, sAllocLimits * pLimits);
+    static size_t LGAPI DefPageFunc(size_t needed, sAllocLimits * pLimits);
 };
 
 ///////////////////////////////////////

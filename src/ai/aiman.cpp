@@ -446,7 +446,7 @@ STDMETHODIMP_(IAI *) cAIManager::GetNext(tAIIter * pIter)
       return NULL;
    }
 
-   *pIter = (tAIIter)i;
+   *pIter = (tAIIter)(uintptr_t)i;
    m_AIs[i]->AddRef();
    return m_AIs[i];
 }
@@ -1190,7 +1190,7 @@ void cAIManager::ScheduledNormalFrame()
          TIMER_Stop(AI_AIMAN_ONF_RunAIs);
          TIMER_Start(AI_AIMAN_ONF_Schedule);
 
-      } while (i < m_Schedule.Size() && tm_get_millisec() - m_FrameStartTime <= g_AIScheduleSettings.budget);
+      } while (i < m_Schedule.Size() && (long)(tm_get_millisec() - m_FrameStartTime) <= g_AIScheduleSettings.budget);
 
       AITraceRaw(Schedule, "\n");
 

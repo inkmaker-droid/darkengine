@@ -36,8 +36,8 @@ public:
    virtual ~cAIJointRotateAction();
 
    // Set up action parameters
-   void Set(int jointID, floatang targetAng, floatang epsilonAng = 0.01);
-   void Set(int jointID, ObjID targetObj, floatang epsilonAng = 0.01);
+   void Set(int jointID, floatang targetAng, floatang epsilonAng = 0.01f);
+   void Set(int jointID, ObjID targetObj, floatang epsilonAng = 0.01f);
 
    ObjID GetTarget(void) const {return m_targetID;}
    floatang GetTargetAng(void) const {return m_targetAng;}

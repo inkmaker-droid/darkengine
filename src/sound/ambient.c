@@ -147,7 +147,7 @@ static void ShowHeartbeatStats(void)
 // if we get kill callback
 static void _AmbSchemaKillCallback(int hSchema, ObjID schemaID, void *pData)
 {
-   int idx=(int)pData;
+   int idx=(int)(intptr_t)pData;
    if (idx==AMB_ENV_AUX_PDATA)  // if secret hacked aux thing, deal and get out
    {
       if (hSchema==hAuxSch1)
@@ -233,7 +233,7 @@ void AmbientRunFrame(mxs_vector *head_pos)  // where is the head?
 {  
    ulong sim_time=tm_get_millisec();  // should probably use sim-time, eh?
    int i, near_env_idx=AMB_ENV_INACTIVE;
-   float near_env_dist=1e20;
+   float near_env_dist=1e20f;
    float rad;
 
    for (i=0; i< ambMax(); i++)
@@ -280,7 +280,7 @@ void AmbientRunFrame(mxs_vector *head_pos)  // where is the head?
 
          mx_sub_vec(&diff,&pos->loc.vec,head_pos);
 
-#define RAD_MUL 1.05
+#define RAD_MUL 1.05f
          rad = (float)state->rad;
 
          if (((state->flags&AMBFLG_S_ENVIRON)==0)&&(_ambsnd_handle(i)!=NO_CUR_HANDLE))
@@ -314,7 +314,7 @@ void AmbientRunFrame(mxs_vector *head_pos)  // where is the head?
                      if ((state->flags&AMBFLG_S_NOSHARPCURVE)==0)
                         schemaCallData.flags |= SCH_SHARP_ATTEN;
                      schemaCallData.sourceID = ambObjID(i);  // objID
-                     schemaCallData.pData    = (void *)i;    // handle
+                     schemaCallData.pData    = (void *)(intptr_t)i; // handle
                      schemaCallData.volume   = state->rad;
                      _ambsnd_handle(i)=SchemaPlay(&state->schema_name,&schemaCallData,NULL);
                      if (_ambsnd_handle(i)==SCH_HANDLE_NULL)

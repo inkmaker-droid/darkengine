@@ -95,12 +95,11 @@ ulong portal_fog_color[3];
 float portal_fog_dist = 0;
 BOOL portal_fog_on = TRUE;
 ulong fog_r3_color;
-float fog_dist_modifier = .05;
+float fog_dist_modifier = .05f;
 extern mxs_vector portal_sunlight;
 
 
   // default callbacks
-#pragma off(unreferenced)
 static void render_object(ObjID obj, uchar *clut, ulong fragment)
 {
 }
@@ -118,7 +117,6 @@ static BOOL object_blocks(ObjID o1, ObjID o2)
 {
    return FALSE;
 }
-#pragma on(unreferenced)
 
 void (*portal_render_object)(ObjID, uchar *, ulong fragment) = render_object;
 BOOL (*portal_object_visible)(ObjID) = object_visible;
@@ -1262,7 +1260,7 @@ int select_next_region(void)
    float mn;
 
    n = -1;
-   mn = 1e20;
+      mn = 1e20f;
 
    for (i = r_sorted_count; i < r_total_count; ++i) {
       if (NUM_INCOMING(wr_cell[active_regions[i]]) > 0)
@@ -2001,13 +1999,13 @@ void portal_convert_hsb_to_rgb(int *rp, int *gp, int *bp, float hue, float satur
    }
 
    // blend with white
-   isat = 1.0 - saturation;
+   isat = 1.0f - saturation;
    r = r*saturation + isat;
    g = g*saturation + isat;
    b = b*saturation + isat;
-   *rp = r * 255;
-   *gp = g * 255;
-   *bp = b * 255;
+   *rp = (int)(r * 255);
+   *gp = (int)(g * 255);
+   *bp = (int)(b * 255);
 #else // ~DEEPC
    float r, g, b, isat, max_recip;
 
@@ -2257,7 +2255,7 @@ int portal_add_omni_light(float br, float ambient, Location *loc,
    max_dist_2 = radius * radius;
    inner_dist = inner_radius;
    if (inner_dist)
-      dist_diff_recip = 1.0 / (radius - inner_radius);
+      dist_diff_recip = 1.0f / (radius - inner_radius);
 
    lightmap_point_callback = save_lightmap_point;
 
@@ -2616,7 +2614,7 @@ void init_portal_renderer(int dark, int light)
       reciprocal_table_24[i] = fix_make(256,0) / i;
 
    for (i=0; i < 32; ++i)
-      int_table[i] = i;
+      int_table[i] = (float)i;
 
    init_portal_shading(dark, light);
    init_portal_light();
@@ -2822,12 +2820,10 @@ bool show_span_lengths, show_render_times;
 
 #else
 
- #pragma off(unreferenced)
  char *portal_scene_info(int vol)
  {
     return 0;
  }
- #pragma on(unreferenced)
 
 #endif
 

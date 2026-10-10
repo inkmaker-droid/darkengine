@@ -278,15 +278,15 @@ class cParticleGroupStore : public cHashPropertyStore<cParticleGroupOps>
 
          for (int i=0; i<3; i++)
          {
-            launch_info->loc_min.el[i] = ((float)(launch_info->start_loc_bbox[0][i])) / 65536.0;
-            launch_info->loc_max.el[i] = ((float)(launch_info->start_loc_bbox[1][i])) / 65536.0;
+            launch_info->loc_min.el[i] = ((float)(launch_info->start_loc_bbox[0][i])) / 65536.0f;
+            launch_info->loc_max.el[i] = ((float)(launch_info->start_loc_bbox[1][i])) / 65536.0f;
 
-            launch_info->vel_min.el[i] = ((float)(launch_info->start_vel_bbox[0][i])) / 65536.0;
-            launch_info->vel_max.el[i] = ((float)(launch_info->start_vel_bbox[1][i])) / 65536.0;
+            launch_info->vel_min.el[i] = ((float)(launch_info->start_vel_bbox[0][i])) / 65536.0f;
+            launch_info->vel_max.el[i] = ((float)(launch_info->start_vel_bbox[1][i])) / 65536.0f;
          }
          
-         launch_info->min_time = ((float)(launch_info->time_range[0])) / 65536.0;
-         launch_info->max_time = ((float)(launch_info->time_range[1])) / 65536.0;
+         launch_info->min_time = ((float)(launch_info->time_range[0])) / 65536.0f;
+         launch_info->max_time = ((float)(launch_info->time_range[1])) / 65536.0f;
 
          launch_info->min_radius = 0;
          launch_info->max_radius = 0;
@@ -642,9 +642,9 @@ public:
 
          // Don't allow times to be zero
          if (launch_info->min_time == 0)
-            launch_info->min_time = 0.001;
+            launch_info->min_time = 0.001f;
          if (launch_info->max_time == 0)
-            launch_info->max_time = 0.001;
+            launch_info->max_time = 0.001f;
 
          // Convert our vectors to fixed
          for (int i=0; i<3; i++)

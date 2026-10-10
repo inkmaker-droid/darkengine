@@ -90,10 +90,10 @@ private:
     sHDTraceInfo * TraceRemove(void * p);
 
     ulong m_nAllocs;
-    ulong m_nBytesAlloced;
-    ulong m_nMaxBytesAlloced;
-    ulong m_nRealBytesAlloced;
-    ulong m_nMaxRealBytesAlloced;
+    size_t m_nBytesAlloced;
+    size_t m_nMaxBytesAlloced;
+    size_t m_nRealBytesAlloced;
+    size_t m_nMaxRealBytesAlloced;
 
     //
     // monitoring source modules--each handles one filename

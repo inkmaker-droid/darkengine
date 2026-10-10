@@ -626,7 +626,7 @@ edbFiletype dbMergeLoadTagFile(ITagFile* file, edbFiletype loadtype)
       }
 
       // now use_file is valid.  Load the our piece from it
-      DispatchData msg = { kDatabaseLoad | piece, use_file};
+      DispatchData msg = { (uint)(kDatabaseLoad | piece), use_file};
       DispatchMsg(kMsgDatabase,&msg);
 
       SafeRelease(use_file);
@@ -993,7 +993,6 @@ EXTERN void new_world(void)
 // Debugging command for dispatch
 //
 
-#pragma off(unreferenced)
 void dispatch_noise(char* arg)
 {
 #ifndef SHIP
@@ -1014,7 +1013,6 @@ void dispatch_noise(char* arg)
 
 #endif
 }
-#pragma on(unreferenced)
 
 ////////////////////////////////////////
 

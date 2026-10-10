@@ -74,7 +74,7 @@ PortalPlane bg_planes[6] =
    { {-1,0,0 }, 1 }
 };
 
-#define BG_UV   (BG_DIST * 2 + 0.02)
+#define BG_UV   (BG_DIST * 2.0f + 0.02f)
 
 PortalPolygonRenderInfo background_render_list[6] =
 {
@@ -209,8 +209,8 @@ void render_background_hack_clipped(int n, r3s_phandle *vlist)
 
 static double compute_edge_len(r3s_point *e1, r3s_point *e2)
 {
-   float dx = e2->grp.sx - e1->grp.sx;
-   float dy = e2->grp.sy - e1->grp.sy;
+   float dx = (float)(e2->grp.sx - e1->grp.sx);
+   float dy = (float)(e2->grp.sy - e1->grp.sy);
    return dx*dx + dy*dy;
 }
 
@@ -232,21 +232,21 @@ static double compute_dist(r3s_point *pt, r3s_point *e1, r3s_point *e2)
    //                  dy   (py-e1y)
 
    if (e1->grp.sy < e2->grp.sy) {
-      float dx = e2->grp.sx - e1->grp.sx;
-      float dy = e2->grp.sy - e1->grp.sy;
-      float e1x = e1->grp.sx;
-      float e1y = e1->grp.sy;
-      float px = pt->grp.sx;
-      float py = pt->grp.sy;
+      float dx = (float)(e2->grp.sx - e1->grp.sx);
+      float dy = (float)(e2->grp.sy - e1->grp.sy);
+      float e1x = (float)e1->grp.sx;
+      float e1y = (float)e1->grp.sy;
+      float px = (float)pt->grp.sx;
+      float py = (float)pt->grp.sy;
 
       return  (dx*(py-e1y)-dy*(px-e1x));
    } else {
-      float dx = e1->grp.sx - e2->grp.sx;
-      float dy = e1->grp.sy - e2->grp.sy;
-      float e1x = e2->grp.sx;
-      float e1y = e2->grp.sy;
-      float px = pt->grp.sx;
-      float py = pt->grp.sy;
+      float dx = (float)(e1->grp.sx - e2->grp.sx);
+      float dy = (float)(e1->grp.sy - e2->grp.sy);
+      float e1x = (float)e2->grp.sx;
+      float e1y = (float)e2->grp.sy;
+      float px = (float)pt->grp.sx;
+      float py = (float)pt->grp.sy;
 
       return -(dx*(py-e1y)-dy*(px-e1x));
    }
@@ -278,8 +278,8 @@ static void compute_intersect(r3s_point *out, r3s_point *in1, r3s_point *in2,
 
    interp = -d0 / (d1-d0);
 
-   out->grp.sx = in1->grp.sx + interp*(in2->grp.sx - in1->grp.sx);
-   out->grp.sy = in1->grp.sy + interp*(in2->grp.sy - in1->grp.sy);
+   out->grp.sx = (fix)(in1->grp.sx + interp*(in2->grp.sx - in1->grp.sx));
+   out->grp.sy = (fix)(in1->grp.sy + interp*(in2->grp.sy - in1->grp.sy));
    if (g_lgd3d) {
       out->grp.w = in1->grp.w + (in2->grp.w - in1->grp.w) * interp;
       out->p.z = 1 / out->grp.w;
@@ -396,7 +396,7 @@ int portbg_clip_sky(int n, r3s_phandle *vlist, r3s_phandle **result)
 
       for (k=0; k < portal_clip_num; ++k) {
          vl1[k] = &portal_clip_point[k];
-         vl1[k]->grp.w = c + vl1[k]->grp.sx * xs + vl1[k]->grp.sy * ys;
+         vl1[k]->grp.w = (mxs_real)(c + vl1[k]->grp.sx * xs + vl1[k]->grp.sy * ys);
          vl1[k]->p.z = 1 / vl1[k]->grp.w;
       }
    } else {
@@ -447,7 +447,7 @@ int portbg_clip_sky(int n, r3s_phandle *vlist, r3s_phandle **result)
              // point crosses, so generate boundary point
              vl2[o] = &portal_clip_temp[t++];
              compute_intersect(vl2[o++], vl1[j], vl1[i],
-                                       point_dist[j], point_dist[i]);
+                               (float)point_dist[j], (float)point_dist[i]);
           }
       }
 

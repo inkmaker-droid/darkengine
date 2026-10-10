@@ -29,7 +29,7 @@ void set_config_cmd(char* arg)
    int n;
    char var[64],*val;
    sscanf(arg,"%s %n",var,&n);
-   if (n >= 0 && n < strlen(arg))
+   if (n >= 0 && (size_t)n < strlen(arg))
       for (val = arg + n; *val != '\0' && isspace(*val); val++)
          ;
    else

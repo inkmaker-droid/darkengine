@@ -44,11 +44,11 @@ void r3_project_block_proj(int n, r3s_point *p_list)
 
    while (cur < last) {
       r3s_point *p = (r3s_point *)cur;
-      double w;
+      mxs_real w;
 
       cur += r3d_glob.cur_stride;
 
-      w = 1.0/p->p.z; // w is 1/z;
+      w = 1.0f/p->p.z; // w is 1/z;
 
       p->grp.sx = (int)((p->p.x * w) + r3d_glob.x_off);
       p->grp.sy = (int)((p->p.y * w) + r3d_glob.y_off);
@@ -70,10 +70,10 @@ void r3_transform_block_proj(int n, r3s_point *dest, mxs_vector *src)
 
    while (cur < last) {
       r3s_point *dst = (r3s_point *)cur;
-      double w;
+      mxs_real w;
 
       mx_trans_mul_vec(&dst->p, X2TRANS(&cx.o2c), src++);
-      w = 1.0/dst->p.z; // w is 1/z;
+      w = 1.0f/dst->p.z; // w is 1/z;
       dst->grp.sx = (int)(dst->p.x * w) + r3d_glob.x_off;
       dst->grp.sy = (int)(dst->p.y * w) + r3d_glob.y_off;
       dst->grp.w = w;

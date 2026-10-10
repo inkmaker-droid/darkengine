@@ -48,7 +48,7 @@ BOOL cCOMConnectionSetBase::Search(IUnknown * p)
     // Because these lists never get very long, and because
     // insertion/removal is an uncommon event relative
     // to iteration, we simply use a linear search
-    for (index_t i = 0; i < m_Connections.Size(); i++)
+    for (int i = 0; i < m_Connections.Size(); i++)
         {
         if (m_Connections[i].pSink == p)
             return TRUE;
@@ -113,7 +113,7 @@ BOOL cCOMConnectionSetBase::Remove(DWORD cookie)
         return FALSE;
         }
     IUnknown * p = found->second;
-    for (index_t i = 0; i < m_Connections.Size(); i++)
+    for (int i = 0; i < m_Connections.Size(); i++)
         {
         if (m_Connections[i].pSink == p)
             {
@@ -147,10 +147,10 @@ IUnknown * cCOMConnectionSetBase::GetFirst(tConnSetHandle & hIndex)
 
 IUnknown * cCOMConnectionSetBase::GetNext(tConnSetHandle & hIndex)
     {
-    const index_t index = (index_t)hIndex + 1;
-    if (index < m_Connections.Size())
+    const index_t index = (index_t)(uintptr_t)hIndex + 1;
+    if (index < (index_t)m_Connections.Size())
         {
-        hIndex = (tConnSetHandle)index;
+        hIndex = (tConnSetHandle)(uintptr_t)index;
         return m_Connections[index].pSink;
         }
     return NULL;

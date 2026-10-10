@@ -9,9 +9,24 @@
 */
 
 #include <io.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <lg.h>
 #include <dev2d.h>
 #include <dump.h>
+
+int dmp_bmp_dump_file(const char *filename)
+{
+   int fd = open(filename, O_BINARY | O_WRONLY | O_CREAT | O_TRUNC,
+                 S_IREAD | S_IWRITE);
+   int result;
+
+   if (fd < 0)
+      return -1;
+   result = dmp_bmp_dump_screen(fd);
+   close(fd);
+   return result;
+}
 
 int dmp_bmp_file(char *buff,char *prefix)
 {
@@ -164,9 +179,9 @@ int  dmp_bmp_dump_screen(int fp)
             // write b,g,r
             *dst = ((ulong)(col&0x1F) * (ulong)0xFF)/(ulong)0x1F;
             dst++;
-            *dst = ((ulong)((col>>5)&gmask) * (ulong)0xFF)/gmask;
+            *dst = (uchar)(((ulong)((col>>5)&gmask) * (ulong)0xFF)/gmask);
             dst++;           
-            *dst = ((ulong)((col>>bshift)&0x1F) * (ulong)0xFF)/(ulong)0x1F;
+            *dst = (uchar)(((ulong)((col>>bshift)&0x1F) * (ulong)0xFF)/(ulong)0x1F);
             dst++;
             src++;
          }

@@ -7,6 +7,8 @@
 
 #ifdef _WIN32
 
+#include <win32_platform.h>
+
 #include <imutil.h>
 #include <lgassert.h>
 #include <lglog.h>
@@ -497,7 +499,8 @@ void AMBlit(BYTE *Src, ULONG SrcW, ULONG SrcH,
    BYTE *pSrcRowStart;  // pointer to the start of current source row
    ULONG TgtRow;        // index to current target row
    ULONG TgtRowSize;    // size of target row in bytes
-   int i, j, k;
+   ULONG i, j;
+   LONG k;
    bool finished = FALSE;  // TRUE if we're on the last source row
 
    PixelSize = bitDepth/8;
@@ -506,13 +509,13 @@ void AMBlit(BYTE *Src, ULONG SrcW, ULONG SrcH,
    {
       // start at the top of the source
       pSrc = SRC_I(SrcH-1, 0);
-      SrcRowInc = -SrcW*PixelSize;
+      SrcRowInc = -(LONG)(SrcW*PixelSize);
       pSrcLastRow = SRC_I(0, 0);
    }
    else
    {
       pSrc = SRC_I(0, 0);
-      SrcRowInc = SrcW*PixelSize;
+      SrcRowInc = (LONG)(SrcW*PixelSize);
       pSrcLastRow = SRC_I(SrcH-1, 0);
    }
    TgtInc = PixelSize;

@@ -149,7 +149,7 @@ BOOL fam_name_examine_dir(char *name, int dir)
    // this is really really horrifying
    for (j=0; j<2; j++)
    {
-      int len=strlen(_fam_dir_names[dir][j]);
+   int len=(int)strlen(_fam_dir_names[dir][j]);
       s=p-len+1;
       if (strnicmp(_fam_dir_names[dir][j],s,len)==0)
       {

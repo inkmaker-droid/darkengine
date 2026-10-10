@@ -41,7 +41,7 @@ static mxs_real quantize_point(mxs_real pt, mxs_real scale)
    // and we don't really care about consistency of
    // points right at the boundary.
 
-   return floor((pt + scale/2) / scale) * scale;
+   return floorf((pt + scale/2) / scale) * scale;
 }
 
 void gedit_vertex_snap(Grid *g, mxs_vector *dest, mxs_vector *src)

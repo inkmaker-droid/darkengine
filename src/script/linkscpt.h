@@ -30,7 +30,7 @@ public:
    linkkind(int i) :id(i) {}; 
    linkkind(const linkkind& f) :id(f.id) {}; 
 
-   operator long() const { return id; }; 
+   operator RelationID() const { return (RelationID)id; };
    operator string() const; 
 
    bool operator ==(const linkkind& f) const { return id == f.id; };

@@ -451,8 +451,8 @@ public:
       // Remap the link id
       if (SUCCEEDED(result))
       {
-         LinkID id = (LinkID)dat->value; 
-         dat->value = (void*)mpLinkMan->RemapOnLoad(id); 
+         LinkID id = (LinkID)(intptr_t)dat->value;
+         dat->value = (void*)(intptr_t)mpLinkMan->RemapOnLoad(id);
       }
       return result; 
    }
@@ -1023,7 +1023,7 @@ STDMETHODIMP cStimSensors::DatabaseNotify(tStimDatabaseMsg msg, IUnknown* )
 
 STDMETHODIMP cStimSensors::ObjectNotify(THIS_ eObjNotifyMsg msg, ObjNotifyData data)
 {
-   ObjID obj = (ObjID)data;
+   ObjID obj = (ObjID)(intptr_t)data;
    switch (NOTIFY_MSG(msg))
    {
       case kObjNotifyCreate:

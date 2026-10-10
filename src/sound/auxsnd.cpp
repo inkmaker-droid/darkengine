@@ -151,7 +151,7 @@ CreateMemSoundSource( ISndMixer        *pMixer,          // your mixer
       pFakeSplicer->pPlaylist = pPlaylistBase;
 
       pSample->RegisterEndCallback( endFakeSplicer, pFakeSplicer );
-      pSample->SetData( (long) pFakeSplicer );
+      pSample->SetData((intptr_t)pFakeSplicer);
 
       // connect the sound source to the sample
       pSndSrc->ConnectToPlayer( pSample );
@@ -331,7 +331,7 @@ CreateMemSoundSourceLooped( ISndMixer           *pMixer,          // your mixer
       pFakeSplicer->pPlaylist = pPlaylistBase;
 
       pSample->RegisterEndCallback( endFakeSplicer, pFakeSplicer );
-      pSample->SetData( (long) pFakeSplicer );
+      pSample->SetData((intptr_t)pFakeSplicer);
 
       // connect the sound source to the sample
       pSndSrc->ConnectToPlayer( pSample );
@@ -475,7 +475,7 @@ CreateNRezStreamedSoundSource( ISndMixer           *pMixer,          // your mix
    //  compressed data from the passed-in memory buffer, and will decompress
    //  directly to the DirectSoundBuffer.
    //
-   int streamBufSize = attribs.sampleRate * kAUXSND_SecondsOfBuffer * (attribs.bitsPerSample >> 3);
+   int streamBufSize = (int)(attribs.sampleRate * kAUXSND_SecondsOfBuffer * (attribs.bitsPerSample >> 3));
    *ppStreamBuffer = new char[streamBufSize];
    pSample = ISndMixer_CreateRawSample( pMixer, kSndSampleStream, *ppStreamBuffer,
                                         streamBufSize, totalSamples, &attribs );
@@ -495,7 +495,7 @@ CreateNRezStreamedSoundSource( ISndMixer           *pMixer,          // your mix
       pFakeSplicer->pPlaylist = pPlaylistBase;
 
       pSample->RegisterEndCallback( endFakeSplicer, pFakeSplicer );
-      pSample->SetData( (long) pFakeSplicer );
+      pSample->SetData((intptr_t)pFakeSplicer);
 
       // connect the sound source to the sample
       pSndSrc->ConnectToPlayer( pSample );
@@ -599,7 +599,7 @@ CreateSongSoundSource ( ISndMixer           *pMixer,
    pCurrSeg = (sSongSrcSegment*) pPlaylistBase;
 
    // Fill in the segments of the play list.
-   for (int i = 0; i < numSegments; i++)
+   for (uint32 i = 0; i < numSegments; i++)
    {
       // Add label for this section.
       pLabel                  = &(pCurrSeg->label);
@@ -667,7 +667,7 @@ CreateSongSoundSource ( ISndMixer           *pMixer,
    //  compressed data from the passed-in memory buffer, and will decompress
    //  directly to the DirectSoundBuffer.
    //
-   int streamBufSize = attribs.sampleRate * kAUXSND_SecondsOfBuffer * (attribs.bitsPerSample >> 3);
+   int streamBufSize = (int)(attribs.sampleRate * kAUXSND_SecondsOfBuffer * (attribs.bitsPerSample >> 3));
    *ppStreamBuffer = new char[streamBufSize];
    pSample = ISndMixer_CreateRawSample( pMixer, kSndSampleStream, *ppStreamBuffer,
                                         streamBufSize, totalSamples, &attribs );
@@ -687,7 +687,7 @@ CreateSongSoundSource ( ISndMixer           *pMixer,
       pFakeSplicer->pPlaylist = pPlaylistBase;
 
       pSample->RegisterEndCallback( endFakeSplicer, pFakeSplicer );
-      pSample->SetData( (long) pFakeSplicer );
+      pSample->SetData((intptr_t)pFakeSplicer);
 
       // connect the sound source to the sample
       pSndSrc->ConnectToPlayer( pSample );

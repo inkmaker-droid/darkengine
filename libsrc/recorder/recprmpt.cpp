@@ -7,7 +7,7 @@
 // This is in a seperate file to reduce depondence on windows.h (toml 10-29-96)
 
 #ifdef _WIN32
-#include <windows.h>
+#include <win32_platform.h>
 #else
 #include <stdio.h>
 #endif

@@ -153,14 +153,12 @@ static void visual_message(uiStateRecord* state, DispatchData* data)
 
 ////////////////////////////////////////
 
-#pragma off(unreferenced)
 static BOOL hotkey_handler(uiEvent* ev, Region* reg, void* data)
 {
    uiCookedKeyEvent* kev = (uiCookedKeyEvent*)ev;
    hotkey_dispatch(kev->code);
    return TRUE;
 }
-#pragma on(unreferenced)
 
 ////////////////////////////////////////
 //
@@ -253,7 +251,6 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
    return result;
 }
 
-#pragma off(unreferenced)
 static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData data)
 {
    uiStateRecord* state;
@@ -263,7 +260,6 @@ static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData
    
    return CreateSimpleLoopClient(_LoopFunc,state,pDesc);
 }
-#pragma on(unreferenced)
 
 sLoopClientDesc uiLoopClientDesc =
 {

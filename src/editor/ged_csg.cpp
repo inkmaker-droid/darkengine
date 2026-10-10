@@ -334,9 +334,9 @@ BOOL gedcsg_parse_light_brush(editBrush *us, uchar dynamic)
 #ifdef RGB_LIGHTING
    {
       rgb_vector temp;
-      temp.x = bright * r / 255.0;
-      temp.y = bright * g / 255.0;
-      temp.z = bright * b / 255.0;
+      temp.x = bright * r / 255.0f;
+      temp.y = bright * g / 255.0f;
+      temp.z = bright * b / 255.0f;
       lt_index = add_object_light(&us->pos, &temp, 0);
    }
 #else

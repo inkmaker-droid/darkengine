@@ -49,9 +49,9 @@ public:
 #endif
 
 private:
-    void * PoolAlloc(unsigned long);
-    void * AllocatorAlloc(unsigned long);
-    void   PoolFree(void *, unsigned long);
+    void * PoolAlloc(size_t);
+    void * AllocatorAlloc(size_t);
+    void   PoolFree(void *, size_t);
     void   AllocatorFree(void *);
     void * SelectAlloc(size_t);
     void   SelectFree(void *);

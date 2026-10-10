@@ -126,7 +126,6 @@
 //	For gruesome interrupt routines, let 'em have their way:
 
 #ifdef __WATCOMC__
-#pragma off(check_stack);
 #endif
 
 // RndSeed() seeds a random stream
@@ -211,7 +210,7 @@ ulong RndGauss16(RndStream *prs)
 	int i;
 
 	gauss = 0;
-	rnum = prs->curr;						// prs->curr uses only low 16 bits
+	rnum = (ushort)prs->curr;				// prs->curr uses only low 16 bits
 
 	for (i = 0; i < 6; i++)				// add 6 rnums & subtract 6
 		{

@@ -243,7 +243,7 @@ cFaceContact::cFaceContact(int cellID, int polyID)
    mx_zero_vec(&center);
    for (i=0; i<pgon->num_vertices; i++)
       mx_addeq_vec(&center, &cell->vpool[cell->vertex_list[start_vertex + i]]);
-   mx_scaleeq_vec(&center, 1.0 / pgon->num_vertices);
+   mx_scaleeq_vec(&center, 1.0f / pgon->num_vertices);
 
    // Build an edge for each vertex pair
    for (i=0; i<pgon->num_vertices; i++)
@@ -314,7 +314,7 @@ cFaceContact::cFaceContact(cPhysOBBModel *pModel, int side, BOOL endLoc)
    mx_mat_mul_vec(&pFacePoly->normal, &obb_frame, &unit);
 
    // Find point on normal
-   edge_len = fabs(mx_dot_vec(&pModel->GetEdgeLengths(), &unit)) / 2;
+   edge_len = fabsf(mx_dot_vec(&pModel->GetEdgeLengths(), &unit)) / 2;
    mx_scale_add_vec(&pt_on, &obb_loc, &pFacePoly->normal, edge_len);
 
    // Find plane constant
@@ -340,7 +340,7 @@ cFaceContact::cFaceContact(cPhysOBBModel *pModel, int side, BOOL endLoc)
       mx_mat_mul_vec(&pEdgePoly->normal, &obb_frame, &unit);
 
       // Find point on normal
-      edge_len = fabs(mx_dot_vec(&pModel->GetEdgeLengths(), &unit)) / 2;
+      edge_len = fabsf(mx_dot_vec(&pModel->GetEdgeLengths(), &unit)) / 2;
       mx_scale_add_vec(&pt_on, &obb_loc, &pEdgePoly->normal, edge_len);
 
       // Find plane constant
@@ -393,9 +393,9 @@ cFaceContact::cFaceContact(cPhysSphereModel *pModel, mxs_real radius, BOOL endLo
          mx_scaleeq_vec(&pEdgePoly->normal, -1.0);
 
       if (endLoc)
-         mx_scale_add_vec(&pt_on, &pModel->GetEndLocationVec(), &pEdgePoly->normal, radius * 0.9);
+         mx_scale_add_vec(&pt_on, &pModel->GetEndLocationVec(), &pEdgePoly->normal, radius * 0.9f);
       else
-         mx_scale_add_vec(&pt_on, &pModel->GetLocationVec(), &pEdgePoly->normal, radius * 0.9);
+         mx_scale_add_vec(&pt_on, &pModel->GetLocationVec(), &pEdgePoly->normal, radius * 0.9f);
 
       pEdgePoly->d = mx_dot_vec(&pEdgePoly->normal, &pt_on);
 
@@ -448,7 +448,7 @@ mxs_real cEdgeContact::GetDist(const mxs_vector &pt) const
    // the height, or the distance of the point from the line.  Neat-o.
    mx_cross_vec(&edge_norm, &v1c, &edge);
    
-   return sqrt(mx_mag2_vec(&edge_norm) / mx_mag2_vec(&edge));
+   return sqrtf(mx_mag2_vec(&edge_norm) / mx_mag2_vec(&edge));
 }
 
 ////////////////////////////////////////

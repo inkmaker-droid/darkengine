@@ -314,7 +314,7 @@ static int _blueloop(int restart)
 			lim = max;
 		b <= lim;
 		b++, dp++, rgbp++, bdist += bxx, bxx += txsqr) {
-		if (*dp > bdist) {
+		if (*dp > (ulong)bdist) {
 			/* Remember new here and associated data! */
 			if (b>here) {
 				here = b;
@@ -332,8 +332,8 @@ static int _blueloop(int restart)
 	for (;
 		b <= lim;
 		b++, dp++, rgbp++, bdist += bxx, bxx += txsqr) {
-		if (*dp > bdist ) {
-			*dp = bdist;
+		if (*dp > (ulong)bdist ) {
+			*dp = (ulong)bdist;
 			*rgbp = i;
 		} else {
 			thismax = b - 1;
@@ -358,7 +358,7 @@ static int _blueloop(int restart)
 		for(;
 			b >= lim;
 			b--, dp--, rgbp--, bxx -= txsqr, bdist -= bxx) {
-			if ( *dp > bdist) {
+			if ( *dp > (ulong)bdist) {
 				/* Remember here! */
 				/* No test for b against here necessary because b <
 				 * here by definition.
@@ -377,8 +377,8 @@ static int _blueloop(int restart)
 	for (;
 			b>= lim;
 			b--, dp--, rgbp--, bxx -= txsqr, bdist -= bxx) {
-		if ( *dp > bdist) {
-			*dp = bdist;
+		if ( *dp > (ulong)bdist) {
+			*dp = (ulong)bdist;
 			*rgbp = i;
 		} else {
 			thismin = b + 1;

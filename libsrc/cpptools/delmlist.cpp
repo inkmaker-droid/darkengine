@@ -133,7 +133,7 @@ unsigned long cDelimList::ValidateText(BOOL fSave, const char *pList, const char
         if (fSave)
             {
             // ...then save the path name
-            int Len = p - pFile;
+            int Len = static_cast<int>(p - pFile);
             cStr Item(Len);
             memcpy(Item.GetBufferSetLength(Len), pFile, Len);
             DebugMsg3("Extracted \"%s\" from \"%s\" using \"%s\"", Item.operator const char *(), pList, pszDelimiters);

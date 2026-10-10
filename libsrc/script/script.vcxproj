@@ -162,7 +162,7 @@
     <ClCompile Include="persist.cpp" />
     <ClCompile Include="scrobj.cpp" />
     <ClCompile Include="scrptman.cpp" />
-    <ClCompile Include="scrptmod.cpp" />
+    <ClCompile Include="..\..\winsrc\script\scrptmod.cpp" />
     <ClCompile Include="scrptmsg.cpp" />
     <ClCompile Include="smodinfo.cpp" />
   </ItemGroup>

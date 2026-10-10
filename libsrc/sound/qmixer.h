@@ -512,14 +512,14 @@ QSWaveMixActivate(
 #define QMIX_PLAY_PULSEEVENT    0x0200  // call PulseEvent((HANDLE)callback) on completion
 #define QMIX_PLAY_NOTIFYSTOP    0x0400  // do callback even when stopping or flushing sound
 
-typedef void (CALLBACK *LPQMIXDONECALLBACK)(int iChannel, LPMIXWAVE lpWave, DWORD dwUser);
+typedef void (CALLBACK *LPQMIXDONECALLBACK)(int iChannel, LPMIXWAVE lpWave, DWORD_PTR userData);
 
 typedef struct QMIXPLAYPARAMS {
     DWORD dwSize;           // this must be set
     LPMIXWAVE lpImage;      // additional preprocessed audio for high performance
     HWND hwndNotify;        // if set, WOM_OPEN and WOM_DONE notification messages sent here
     LPQMIXDONECALLBACK callback;
-    DWORD dwUser;           // user data accompanying callback
+    DWORD_PTR dwUser;       // user data accompanying callback
     LONG lStart;
     LONG lStartLoop;
     LONG lEndLoop;

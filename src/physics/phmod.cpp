@@ -296,7 +296,7 @@ cPhysModel::cPhysModel(ObjID objID, ePhysModelType type,
 
    m_referenceFrameObj = OBJ_NULL;
 
-   m_lastSquishTime = -1.0;
+   m_lastSquishTime = -1;
 
    // Allocate force list array for location controlling
    m_pForceList = new cPhysForceList[m_nSubModels];
@@ -518,7 +518,7 @@ cPhysModel::cPhysModel(PhysReadWrite func) :
    if (g_PhysVersion >= 25)
       func((void *)&m_lastSquishTime, sizeof(long), 1);
    else
-      m_lastSquishTime = -1.0;
+   m_lastSquishTime = -1;
 
    m_pForceList = new cPhysForceList[m_nSubModels];
 
@@ -1753,8 +1753,6 @@ void cPhysModel::SetEndRotationVec(tPhysSubModId subModId, const mxs_angvec &end
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#define sq(x) ((x)*(x))
-
 void cPhysModel::PreventPlayerFall()
 {
    Assert_(IsPlayer());
@@ -1765,7 +1763,7 @@ void cPhysModel::PreventPlayerFall()
    // get player mode
    ePlayerMode cur_mode=GetPlayerMode();
    float speed=GetTransSpeedScale()*SLOW_MOVE_SPEED;
-   float special_muls[2]={0.90,0.60};     // was 0.95
+   float special_muls[2]={0.90f,0.60f};     // was 0.95
    float height_check=9.0;   // was 8.0
 
 #ifndef SHIP
@@ -1779,7 +1777,7 @@ void cPhysModel::PreventPlayerFall()
       speed*=special_muls[0];
 
    if (GetFaceContacts(PLAYER_FOOT, &pFaceContactList) &&
-       (mx_mag2_vec(&GetVelocity()) < sq(speed)))
+      (mx_mag2_vec(&GetVelocity()) < speed * speed))
    {
       Location start, end, hit;
       Location targ_start, targ_end;
@@ -1791,7 +1789,7 @@ void cPhysModel::PreventPlayerFall()
                                    &GetLocation(PLAYER_FOOT));
 
       MakeLocationFromVector(&end, &start.vec);
-      end.vec.z -= 0.1;
+      end.vec.z -= 0.1f;
 
       MakeLocationFromVector(&targ_end, &targ_start.vec);
       targ_end.vec.z -= height_check;
@@ -1892,13 +1890,13 @@ void cPhysModel::SetTargetLocation(const mxs_vector &loc)
 
    mx_copy_vec(&m_pos.m_targetposition.loc.vec, &loc);
 
-   UpdateEndLocation(.1);
+   UpdateEndLocation(.1f);
 
    for (i=0; i<NumSubModels(); i++)
    {
-      UpdateTargetLocation(i, .1);
-      UpdateSpringMechanics(i, .1);
-      UpdateEndLocation(i, .1);
+      UpdateTargetLocation(i, .1f);
+      UpdateSpringMechanics(i, .1f);
+      UpdateEndLocation(i, .1f);
    }
 }
 
@@ -2159,7 +2157,7 @@ void cPhysModel::UpdateRopeClimbing(mxs_real dt)
    mx_add_vec(&loc, &pRopeModel->GetLocationVec(node), &seg);
 
    mx_scale_addeq_vec(&loc, &new_orien.vec[0], -1.0);
-   mx_scale_addeq_vec(&loc, &new_orien.vec[1], -0.1);
+   mx_scale_addeq_vec(&loc, &new_orien.vec[1], -0.1f);
 
    mx_sub_vec(&mov, &m_pos.m_targetposition.loc.vec, &m_pos.m_position.loc.vec);
    mx_addeq_vec(&loc, &mov);
@@ -2240,14 +2238,14 @@ void cPhysModel::UpdateTargetLocation(tPhysSubModId i, mxs_real dt)
             return;
          }
 
-         mx_scale_vec(&submod_offset, &kGravityDir, (mxs_real)(i) * (pRopeProp->length / 8.0));
+         mx_scale_vec(&submod_offset, &kGravityDir, (mxs_real)(i) * (pRopeProp->length / 8.0f));
 
          if (i > 0)
          {
             mxs_vector prev_pos;
 
             mx_sub_vec(&prev_pos, &GetLocationVec(i-1), &GetLocationVec(0));
-            mx_scaleeq_vec(&prev_pos, 0.6);
+            mx_scaleeq_vec(&prev_pos, 0.6f);
             prev_pos.z = 0;
             mx_addeq_vec(&submod_offset, &prev_pos);
          }
@@ -2257,7 +2255,7 @@ void cPhysModel::UpdateTargetLocation(tPhysSubModId i, mxs_real dt)
             mxs_vector next_pos;
 
             mx_sub_vec(&next_pos, &GetLocationVec(i+1), &GetLocationVec(0));
-            mx_scaleeq_vec(&next_pos, 0.2);
+            mx_scaleeq_vec(&next_pos, 0.2f);
             next_pos.z = 0;
 
             mx_addeq_vec(&submod_offset, &next_pos);
@@ -2334,13 +2332,13 @@ void cPhysModel::UpdateSpringMechanics(tPhysSubModId i, mxs_real dt)
 
       if (dt > 0.05)
       {
-         dt = 0.05;
-         tension_factor = 0.6;
-         damping_factor = 0.6;
+         dt = 0.05f;
+         tension_factor = 0.6f;
+         damping_factor = 0.6f;
       }
 
       if (dt < 0.001)
-         dt = 0.001;
+         dt = 0.001f;
 
 #if 0
       if (IsRope())
@@ -2357,12 +2355,12 @@ void cPhysModel::UpdateSpringMechanics(tPhysSubModId i, mxs_real dt)
       if (IsRope())
       {
          tension = GetSpringTension(i) * dt * 700 * tension_factor;
-         damping = 0.8;
+         damping = 0.8f;
       }
       else
       {
          tension = GetSpringTension(i) / dt;
-         damping = GetSpringDamping(i) + ((1.0 - GetSpringDamping(i)) * dt);
+         damping = GetSpringDamping(i) + ((1.0f - GetSpringDamping(i)) * dt);
       }
 
 #if 0
@@ -2410,7 +2408,7 @@ void cPhysModel::UpdateSpringMechanics(tPhysSubModId i, mxs_real dt)
       {		  
          float maxmag = kSpringCapMag; //default value	  		 
          if (-1.0 * velocity.z > maxmag)		  			  
-            maxmag = -1.0 * velocity.z; //so if I'm falling down I don't					                
+            maxmag = -1.0f * velocity.z; //so if I'm falling down I don't
                                         //do a Wile E. Coyote bit.  Sigh.  I wish we knew the
 		                                  //root cause of the problem with doors and ladders that
 	                                     //this is *cough* hacking *cough* to fix.  AMSD      		  
@@ -2465,7 +2463,7 @@ void cPhysModel::UpdateMedium()
 
          // @HACK: offset the player eyes by eye amount
          if (submod_media_trans[i] == PLAYER_HEAD)
-            new_loc.vec.z += 0.8;
+            new_loc.vec.z += 0.8f;
 
          if (CellFromLoc(&new_loc) != CELL_INVALID)
          {

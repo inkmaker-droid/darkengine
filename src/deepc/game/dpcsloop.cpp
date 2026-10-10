@@ -172,7 +172,6 @@ isEndingGameMode(
     return g_endingGameMode;
 }
 
-#pragma off(unreferenced)
 static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMessageData hdata)
 {
     // useful stuff for most clients
@@ -367,7 +366,6 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
 // Loop client factory function.
 //
 
-#pragma off(unreferenced)
 static ILoopClient* LGAPI _CreateClient(const sLoopClientDesc* desc, tLoopClientData data)
 {
     StateRecord* state;
@@ -377,7 +375,6 @@ static ILoopClient* LGAPI _CreateClient(const sLoopClientDesc* desc, tLoopClient
 
     return CreateSimpleLoopClient(_LoopFunc,state,desc);
 }
-#pragma on(unreferenced)
 
 ///////////////
 // DESCRIPTOR

@@ -37,7 +37,7 @@ static float mouse_rel_y;
 
 #define HEADRATE  (mouse_head_speed)
 #define DEAD_ZONE (mouse_head_dead_zone)
-#define KBD_TILT_TOP_CLAMP 50.0
+#define KBD_TILT_TOP_CLAMP 50.0f
 #define KBD_TILT_BOTTOM_CLAMP (-1 * KBD_TILT_TOP_CLAMP)
 
 static float keyboard_turn;
@@ -101,7 +101,7 @@ int headmoveComputeKeyboardTilt(int ms)
     return 0;
   
   // compute desired turn rate
-  desired = KBD_TILT_RATE * -keyboard_tilt;
+  desired = (int)(KBD_TILT_RATE * -keyboard_tilt);
 
   if (desired == keyboard_tilt_cur_vel) 
     {
@@ -139,7 +139,7 @@ int headmoveComputeKeyboardTilt(int ms)
   keyboard_tilt_cur_vel = final;
   
   scale = PlayerCamera()->zoom;
-  return tilt/scale;
+  return (int)(tilt / scale);
 
 }
 
@@ -153,7 +153,7 @@ int headmoveComputeKeyboardTurn(int ms)
       return 0;
 
    // compute desired turn rate
-   desired = KBD_TURN_RATE * -keyboard_turn;
+   desired = (int)(KBD_TURN_RATE * -keyboard_turn);
 
    if (desired == keyboard_cur_vel) {
       final = keyboard_cur_vel;
@@ -184,7 +184,7 @@ int headmoveComputeKeyboardTurn(int ms)
    keyboard_cur_vel = final;
 
    scale = PlayerCamera()->zoom;
-   return turn / scale;
+   return (int)(turn / scale);
 }
 
 // simple "look around w/the mouse" code
@@ -221,8 +221,8 @@ bool headmoveLookAround(Camera *cam, int ms)
       ret = FALSE;                   // "dead zone"
    } else {
       // calc. the new offset --- TODO: make this screen size independant????
-      ang.tz -= (HEADRATE*mouse_rel_x*ms)/(100*3*centerx);   // since ms/100 is unit based scale
-      ang.ty += (HEADRATE*mouse_rel_y*ms)/(100*2*centery);   //   of these sort of motions
+      ang.tz = (mxs_ang)(ang.tz - (HEADRATE * mouse_rel_x * ms) / (100 * 3 * centerx));
+      ang.ty = (mxs_ang)(ang.ty + (HEADRATE * mouse_rel_y * ms) / (100 * 2 * centery));
       ret = TRUE;
    }
 
@@ -247,7 +247,7 @@ static mxs_ang smoothAngElem(mxs_ang dst, mxs_ang src, float diff_frac)
 
    if (delta_ang>=0x8000)  math_ang=(int)delta_ang-0x10000;
    else                    math_ang=delta_ang;
-   dst += (fix)(math_ang*diff_frac);
+   dst = (mxs_ang)(dst + (fix)(math_ang * diff_frac));
    return dst;
 }
 

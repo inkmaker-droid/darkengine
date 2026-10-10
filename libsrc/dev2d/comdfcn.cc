@@ -8,7 +8,7 @@
 // This file contains all of the COM-based device functions that can be
 // accessed from the device function table.
 //------------------------------------------------------------------------------
-#ifdef WIN32
+#ifdef _WIN32
 
 #include <string.h>
 
@@ -183,7 +183,6 @@ int   com_set_width(int w)
    return w;
 }
 
-#pragma off(unreferenced)
 void  com_set_focus(int x, int y)
 {
    AssertMsg(g_pDev2dDisplayDevice != NULL, "Cannot manipulate frame buffer without an IDisplayDevice");
@@ -204,7 +203,6 @@ void  com_set_focus(int x, int y)
 
    }
 }
-#pragma on(unreferenced)
 
 //------------------------------------------------------------------------------
 // Get the focus. We're spoofing this to only allow pageflipping, not

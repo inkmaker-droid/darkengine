@@ -18,5 +18,5 @@ void cDefResMem::ResFree(void* pData)
 
 unsigned long cDefResMem::GetSize(void* pData)
 {
-	return MSize(pData);
+	return static_cast<unsigned long>(MSize(pData));
 }

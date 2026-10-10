@@ -7,7 +7,7 @@
 // (c) Copyright 1993 - 1996 Tom Leonard. All Rights Reserved. Unlimited license granted to Looking Glass Technologies Inc.
 
 #ifdef _WIN32
-#include <windows.h>
+#include <win32_platform.h>
 #endif
 
 #include <stdlib.h>
@@ -1025,7 +1025,7 @@ static BOOL __stdcall PatternMatch(const char *pString, const char *pPattern)
                             return FALSE;
 
                         case '-':
-                            k |= lc <= scc & scc <= (cc = pPattern[1]);
+                            k |= (lc <= scc) & (scc <= (cc = pPattern[1]));
 
                         default:
                             if (scc == (lc = cc))

@@ -5,13 +5,11 @@
 #include <tmapd.h>
 #include <dbg.h>
 
-#pragma off(unreferenced)
 int gr_scale_warn(grs_bitmap *bm, int x, int y, int w, int h)
 {
    Warning(("This bitmap type/fill type combination is unsupported.\n"));
    return CLIP_ALL;
 }
-#pragma on(unreferenced)
 
 void scale_ushell(int x, int y, int w, int h, g2s_poly_params *p)
 {

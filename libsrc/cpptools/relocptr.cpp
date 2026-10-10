@@ -95,7 +95,7 @@ void cRelocationSetBase::SetBaseAddress(const void *newBaseAddr)
     // actual address and the spoofed address. Storing it as a difference
     // simplifies the calculation further down.
 
-    const int ptrDifference = (uint8 *) newBaseAddr - m_pBaseAddr;
+    const ptrdiff_t ptrDifference = (const uint8 *)newBaseAddr - m_pBaseAddr;
     // We are basically subtracting the old base address from each
     // pointer in the selected block and adding the new base address here.
 

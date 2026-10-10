@@ -3,7 +3,7 @@
 //  Pat McElhatton  August 26 '96
 //
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <lg.h>
 #include <res.h>
 #include <mprintf.h>

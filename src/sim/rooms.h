@@ -146,7 +146,7 @@ inline int cRooms::GetNumRooms(void) const
 
 inline cRoom *cRooms::GetRoom(int roomNum) const
 {
-   AssertMsg2(roomNum < m_RoomList.Size(), "Attempt to get room 0 of 0", roomNum, m_RoomList.Size());
+   AssertMsg2(roomNum >= 0 && roomNum < m_RoomList.Size(), "Attempt to get room 0 of 0", roomNum, m_RoomList.Size());
 
    return m_RoomList[roomNum];
 }
@@ -171,7 +171,7 @@ inline int cRooms::GetNumPortals(void) const
 
 inline cRoomPortal *cRooms::GetPortal(int portalID) const
 {
-   AssertMsg2(portalID < m_RoomPortalList.Size(), "Attempt to get portal 0 of 0\n", portalID, m_RoomPortalList.Size());
+   AssertMsg2(portalID >= 0 && portalID < m_RoomPortalList.Size(), "Attempt to get portal 0 of 0\n", portalID, m_RoomPortalList.Size());
    return m_RoomPortalList[portalID];
 }
 

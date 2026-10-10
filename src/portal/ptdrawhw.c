@@ -129,8 +129,8 @@ void portal_setup_star_hack(int tex_id)
 
 void portal_set_znearfar(double z_near, double z_far)
 {
-   portal_w_min = 1.0/z_far;
-   portal_z_max = z_far;
+   portal_w_min = (float)(1.0/z_far);
+   portal_z_max = (float)z_far;
 }
 
 
@@ -146,8 +146,8 @@ static void ptlgd3d_calc_uv(int n, r3s_phandle *vlist, scale_info *info)
 
       double u = g2pt_tmap_data[0]+g2pt_tmap_data[3]*sx + g2pt_tmap_data[6]*sy;
       double v = g2pt_tmap_data[1]+g2pt_tmap_data[4]*sx + g2pt_tmap_data[7]*sy;
-      vlist[i]->grp.u = (u*ic/65536) * info->scale_u + info->u0;
-      vlist[i]->grp.v = (v*ic/65536) * info->scale_v + info->v0;
+      vlist[i]->grp.u = (mxs_real)((u*ic/65536) * info->scale_u + info->u0);
+      vlist[i]->grp.v = (mxs_real)((v*ic/65536) * info->scale_v + info->v0);
       vlist[i]->grp.i = 1.0;
       // if background hack, fixup w values to match texture not skypoly
    }
@@ -157,10 +157,10 @@ static void ptlgd3d_recalc_uv_vlist(int n, r3s_phandle *vlist, scale_info *info)
 {
    int i;
    for (i=0; i < n; ++i) {
-      vlist[i]->grp.u += info->u0;
-      vlist[i]->grp.v += info->v0;
-      vlist[i]->grp.u *= info->scale_u;
-      vlist[i]->grp.v *= info->scale_v;
+      vlist[i]->grp.u = (mxs_real)(vlist[i]->grp.u + info->u0);
+      vlist[i]->grp.v = (mxs_real)(vlist[i]->grp.v + info->v0);
+      vlist[i]->grp.u = (mxs_real)(vlist[i]->grp.u * info->scale_u);
+      vlist[i]->grp.v = (mxs_real)(vlist[i]->grp.v * info->scale_v);
    }
 }
 
@@ -168,10 +168,10 @@ static void ptlgd3d_recalc_uv(int n, LGD3D_tex_coord *uvs, scale_info *info)
 {
    int i;
    for (i=0; i < n; ++i) {
-      uvs[i].u += info->u0;
-      uvs[i].v += info->v0;
-      uvs[i].u *= info->scale_u;
-      uvs[i].v *= info->scale_v;
+      uvs[i].u = (float)(uvs[i].u + info->u0);
+      uvs[i].v = (float)(uvs[i].v + info->v0);
+      uvs[i].u = (float)(uvs[i].u * info->scale_u);
+      uvs[i].v = (float)(uvs[i].v * info->scale_v);
    }
 }
 
@@ -277,7 +277,7 @@ void portal_setup_water_hack(int num_textures, r3s_texture *tex_list, float *alp
          flags = pt_default_water_texture_flags;
       }
 
-      alpha = 0xf * alpha_list[i];
+      alpha = (short)(0xf * alpha_list[i]);
       alpha <<= 12;
       if (flags & BMF_TRANS) {
          argb = alpha + ((rgb_list[3*i]>>4)<<8) + ((rgb_list[3*i+1]>>4)<<4) + (rgb_list[3*i+2]>>4);
@@ -334,8 +334,8 @@ static void queue_water_poly(r3s_texture tex, int n, r3s_phandle *vlist)
    dest->grp.u *= hw_water_tex_scale;
    dest->grp.v *= hw_water_tex_scale;
 
-   u_offset = floor(dest->grp.u);
-   v_offset = floor(dest->grp.v);
+   u_offset = floorf(dest->grp.u);
+   v_offset = floorf(dest->grp.v);
 
    dest->grp.u -= u_offset;
    dest->grp.v -= v_offset;
@@ -364,8 +364,8 @@ static void render_water_poly(r3s_texture tex, int n, r3s_phandle *vlist)
    vlist[0]->grp.u *= hw_water_tex_scale;
    vlist[0]->grp.v *= hw_water_tex_scale;
 
-   u_offset = floor(vlist[0]->grp.u);
-   v_offset = floor(vlist[0]->grp.v);
+   u_offset = floorf(vlist[0]->grp.u);
+   v_offset = floorf(vlist[0]->grp.v);
 
    vlist[0]->grp.u -= u_offset;
    vlist[0]->grp.v -= v_offset;
@@ -488,8 +488,8 @@ void draw_surface_lgd3d(PortalPolygonCore *poly, PortalPolygonRenderInfo *render
       anchor = &(cur_pool[r_vertex_list[voff + render->texture_anchor]]);
       uv = mx_dot_vec(p_uvec, p_vvec);
 
-      u_base = render->u_base * u_scale / (16.0*256.0); // u translation
-      v_base = render->v_base * v_scale / (16.0*256.0); // v translation
+      u_base = render->u_base * u_scale / (16.0f*256.0f); // u translation
+      v_base = render->v_base * v_scale / (16.0f*256.0f); // v translation
 
       u2 = mx_mag2_vec(p_uvec);
       v2 = mx_mag2_vec(p_vvec);
@@ -512,7 +512,7 @@ void draw_surface_lgd3d(PortalPolygonCore *poly, PortalPolygonRenderInfo *render
       } else {
          mxs_real uvu, uvv, denom;
 
-         denom = 1.0/(u2*v2 - (uv*uv));
+         denom = 1.0f/(u2*v2 - (uv*uv));
 
          u2 *= v_scale * denom;
          v2 *= u_scale * denom;
@@ -630,8 +630,8 @@ void draw_surface_lgd3d(PortalPolygonCore *poly, PortalPolygonRenderInfo *render
          g2pt_calc_uvw_deltas(&pt, &u_vec, &v_vec);
       } else {
          mxs_real usc, vsc;
-         usc = ((float) render->u_base) * 1.0 / (16.0*256.0); // u translation
-         vsc = ((float) render->v_base) * 1.0 / (16.0*256.0); // v translation
+         usc = ((float) render->u_base) * 1.0f / (16.0f*256.0f); // u translation
+         vsc = ((float) render->v_base) * 1.0f / (16.0f*256.0f); // v translation
 
          get_cached_vector(&u_vec, &render->tex_u);
          get_cached_vector(&v_vec, &render->tex_v);
@@ -828,8 +828,8 @@ void draw_surface_multitexture(PortalPolygonCore *poly, PortalPolygonRenderInfo 
       anchor = &(cur_pool[r_vertex_list[voff + render->texture_anchor]]);
       uv = mx_dot_vec(p_uvec, p_vvec);
 
-      u_base = render->u_base * u_scale / (16.0*256.0); // u translation
-      v_base = render->v_base * v_scale / (16.0*256.0); // v translation
+      u_base = render->u_base * u_scale / (16.0f*256.0f); // u translation
+      v_base = render->v_base * v_scale / (16.0f*256.0f); // v translation
 
       u2 = mx_mag2_vec(p_uvec);
       v2 = mx_mag2_vec(p_vvec);
@@ -852,7 +852,7 @@ void draw_surface_multitexture(PortalPolygonCore *poly, PortalPolygonRenderInfo 
       } else {
          mxs_real uvu, uvv, denom;
 
-         denom = 1.0/(u2*v2 - (uv*uv));
+         denom = 1.0f/(u2*v2 - (uv*uv));
 
          u2 *= v_scale * denom;
          v2 *= u_scale * denom;
@@ -969,8 +969,8 @@ void draw_surface_multitexture(PortalPolygonCore *poly, PortalPolygonRenderInfo 
          g2pt_calc_uvw_deltas(&pt, &u_vec, &v_vec);
       } else {
          mxs_real usc, vsc;
-         usc = ((float) render->u_base) * 1.0 / (16.0*256.0); // u translation
-         vsc = ((float) render->v_base) * 1.0 / (16.0*256.0); // v translation
+         usc = ((float) render->u_base) * 1.0f / (16.0f*256.0f); // u translation
+         vsc = ((float) render->v_base) * 1.0f / (16.0f*256.0f); // v translation
 
          get_cached_vector(&u_vec, &render->tex_u);
          get_cached_vector(&v_vec, &render->tex_v);
@@ -1122,8 +1122,8 @@ void draw_surface_texture_only(PortalPolygonCore *poly, PortalPolygonRenderInfo 
       anchor = &(cur_pool[r_vertex_list[voff + render->texture_anchor]]);
       uv = mx_dot_vec(p_uvec, p_vvec);
 
-      u_base = render->u_base * u_scale / (16.0*256.0); // u translation
-      v_base = render->v_base * v_scale / (16.0*256.0); // v translation
+      u_base = render->u_base * u_scale / (16.0f*256.0f); // u translation
+      v_base = render->v_base * v_scale / (16.0f*256.0f); // v translation
 
       u2 = mx_mag2_vec(p_uvec);
       v2 = mx_mag2_vec(p_vvec);
@@ -1146,7 +1146,7 @@ void draw_surface_texture_only(PortalPolygonCore *poly, PortalPolygonRenderInfo 
       } else {
          mxs_real uvu, uvv, denom;
 
-         denom = 1.0/(u2*v2 - (uv*uv));
+         denom = 1.0f/(u2*v2 - (uv*uv));
 
          u2 *= v_scale * denom;
          v2 *= u_scale * denom;
@@ -1254,8 +1254,8 @@ void draw_surface_texture_only(PortalPolygonCore *poly, PortalPolygonRenderInfo 
          g2pt_calc_uvw_deltas(&pt, &u_vec, &v_vec);
       } else {
          mxs_real usc, vsc;
-         usc = ((float) render->u_base) * 1.0 / (16.0*256.0); // u translation
-         vsc = ((float) render->v_base) * 1.0 / (16.0*256.0); // v translation
+         usc = ((float) render->u_base) * 1.0f / (16.0f*256.0f); // u translation
+         vsc = ((float) render->v_base) * 1.0f / (16.0f*256.0f); // v translation
 
          get_cached_vector(&u_vec, &render->tex_u);
          get_cached_vector(&v_vec, &render->tex_v);
@@ -1376,8 +1376,8 @@ void draw_surface_lightmap_only(PortalPolygonCore *poly, PortalPolygonRenderInfo
 
       v_scale = two_to_n(2-hw.lm->hlog);
 
-      u_base = u_scale * (render->u_base/(16.0*256.0) + (hw.lm_u0 - lt->base_u)/4.0); // u translation
-      v_base = v_scale * (render->v_base/(16.0*256.0) + (hw.lm_v0 - lt->base_v)/4.0); // v translation
+      u_base = u_scale * (render->u_base/(16.0f*256.0f) + (hw.lm_u0 - lt->base_u)/4.0f); // u translation
+      v_base = v_scale * (render->v_base/(16.0f*256.0f) + (hw.lm_v0 - lt->base_v)/4.0f); // v translation
 
       u2 = mx_mag2_vec(p_uvec);
       v2 = mx_mag2_vec(p_vvec);
@@ -1400,7 +1400,7 @@ void draw_surface_lightmap_only(PortalPolygonCore *poly, PortalPolygonRenderInfo
       } else {
          mxs_real uvu, uvv, denom;
 
-         denom = 1.0/(u2*v2 - (uv*uv));
+         denom = 1.0f/(u2*v2 - (uv*uv));
 
          u2 *= v_scale * denom;
          v2 *= u_scale * denom;

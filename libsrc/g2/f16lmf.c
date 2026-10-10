@@ -4,7 +4,7 @@
 
 #define MAKE_INDEX(bmtType, fillType, bmfType) ((bmfType) + BMF_TYPES * ((fillType) + FILL_TYPES * (bmtType)))
 
-void (*flat16_ulmap_setup_func[BMT_TYPES * FILL_TYPES * BMF_TYPES])() =
+tmap_setup_func *flat16_ulmap_setup_func[BMT_TYPES * FILL_TYPES * BMF_TYPES] =
 { 0 };
 
 void init_flat16_ulmap_setup_func(void)

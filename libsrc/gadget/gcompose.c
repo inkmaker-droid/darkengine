@@ -160,9 +160,9 @@ static void default_gui_setpal(GUIcompose* c)
       return;
    if (REFID(c->pal) == 0) // must be a resid
    {
-      PallInfo* pal = ResLock(c->pal);
+      PallInfo* pal = ResLock((Id)c->pal);
       gr_set_pal(pal->index,pal->numcols,pal->rgb);
-      ResUnlock(c->pal);
+      ResUnlock((Id)c->pal);
    }
    else
    {

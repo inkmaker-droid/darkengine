@@ -33,7 +33,7 @@ ObjID highlit_obj=OBJ_NULL;
 ///////////////////////////////////////
 // multiple light system/setup
 
-float objlight_highlight_level=0.35;
+float objlight_highlight_level=0.35f;
 
 // XXX should only be used in debug
 BOOL g_bAllObjsUnlit=FALSE;
@@ -46,7 +46,7 @@ mls_multi_light light_this[32];
 #define FIRST_LIGHT (SUNLIGHT_INDEX + 1)// reserve one index for sunlight
 
 // how many feet away sunlight is considered to be for object lighting
-#define SUNLIGHT_DISTANCE 125.0
+#define SUNLIGHT_DISTANCE 125.0f
 
 
 void reset_object_lighting(void)
@@ -380,7 +380,7 @@ void setup_object_lighting(ObjID o, mxs_vector *newlight, float bright)
       for (i = 0; i < 3; ++i) {
          mld_multi_rgb_ambient.el[i] += extra_light->m_fValue;
          if ((mld_multi_rgb_ambient.el[i] + mld_multi_hilight) > 1.0)
-            mld_multi_rgb_ambient.el[i] = 1.0 - mld_multi_hilight;
+            mld_multi_rgb_ambient.el[i] = 1.0f - mld_multi_hilight;
          if (!extra_light->m_bAdditive)
             mld_multi_ambient_only = TRUE;
       }

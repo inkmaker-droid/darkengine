@@ -259,6 +259,6 @@ IMPLEMENT_SCRIPT_SERVICE_IMPL(cPhysSrv, Physics);
 
 IMPLEMENT_SCRMSG_PERSISTENT(sPhysMsg)
 {
-   PersistenceHeader(sPhysMsg, kPhysMsgVer);
+   PersistenceHeader(sScrMsg, kPhysMsgVer);
    return TRUE;
 }

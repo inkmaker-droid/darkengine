@@ -18,7 +18,7 @@
  * time logging system
  * This assumes that there are only 2 execution levels, main & interrupt
  */
-#include <windows.h>
+#include <win32_platform.h>
 #include <stdio.h>
 #include <stdlib.h>
 //#include <unix.h>

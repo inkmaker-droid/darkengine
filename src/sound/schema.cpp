@@ -57,8 +57,6 @@
 // Must be last header
 #include <dbmem.h>
 
-#define min(x,y) ((x)<(y)?(x):(y))
-
 #ifdef OLD_WAY
 // this will be bad if the schema doesn't exist or have a name...
 inline const char* OBJ_NAME(ObjID obj)
@@ -577,7 +575,7 @@ static void SchemaSampleEndCallOut(int hSound, void *data)
    pSchemaPlay = playingSchemas.GetFirst();
    while (pSchemaPlay != NULL)
    {
-      if (pSchemaPlay->schemaID == (ObjID)data)
+   if (pSchemaPlay->schemaID == (ObjID)(intptr_t)data)
       {
          // try to find play sample structure corresponding to sound handle
          pSample = SchemaPlaySampleFind(pSchemaPlay->pSamples, hSound);
@@ -629,7 +627,7 @@ static void SchemaSampleLoopCallOut(int hSound, void *data)
                                hSound, OBJ_NAME((ObjID)data)));
 
    pSchemaPlay = playingSchemas.GetFirst();
-   ObjID Schema = (ObjID) data;
+   ObjID Schema = (ObjID)(intptr_t)data;
    while (pSchemaPlay != NULL)
    {
       if (pSchemaPlay->schemaID == Schema)
@@ -779,7 +777,7 @@ void SchemaParamsSetup(ObjID schemaID, sfx_parm *parm)
 
    parm->flag = 0;
    parm->group = 0;
-   parm->user_data = (void*)schemaID;
+   parm->user_data = (void *)(intptr_t)schemaID;
    parm->radius = 0;
    parm->num_loops = SFX_LOOP_INFINITE;
    parm->end_callback = &SchemaSampleEndCallback;
@@ -880,7 +878,7 @@ static int SchemaSamplePlay(ObjID schemaID, int sampleNum,
       else if (pSchemaPlay->flags&SCH_ADD_VOLUME)
          parm.gain += pSchemaPlay->volume;
       else if (pSchemaPlay->flags&SCH_SCALE_VOLUME)
-         parm.gain = ((float)parm.gain * (float)pSchemaPlay->volume) / 100.0;
+      parm.gain = (int)(((float)parm.gain * (float)pSchemaPlay->volume) / 100.0f);
       else if (pSchemaPlay->flags&SCH_RADIUS_VOLUME)
          parm.radius = pSchemaPlay->volume;
 

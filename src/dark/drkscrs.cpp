@@ -94,7 +94,7 @@ DECLARE_SCRIPT_SERVICE_IMPL(cDarkGameSrv,DarkGame)
    {
        char comval[255];
        sprintf(comval,"echo $%s",name);
-       return (atof (g_pInputBinder->ProcessCmd (comval)));
+   return strtof(g_pInputBinder->ProcessCmd(comval), NULL);
    }
 
    STDMETHOD_(BOOL, GetAutomapLocationVisited)(int page, int location)

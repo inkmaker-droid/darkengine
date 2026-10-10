@@ -188,7 +188,7 @@ void cResMan::MungePaths(const char* pPathName, const char* pExpRelPath, char** 
 	*ppName = nullptr;
 	*pOldSlash = '\0';
 
-	auto nNameSize = strlen(pPathName);
+	int nNameSize = static_cast<int>(strlen(pPathName));
 
 	int i;
 	for (i = nNameSize - 1; i >= 0 && pPathName[i] != '\\' && pPathName[i] != '/'; --i)

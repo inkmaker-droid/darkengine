@@ -156,7 +156,8 @@ unsigned int PkExplodeReader(char* buf, unsigned int* size, void* param)
 
 	if (pInfo->pSource >= pInfo->pSourceLimit)
 	{
-		auto targetReadSize = pInfo->skip ? pInfo->skip : pInfo->pDestLimit - pInfo->pDest;
+		auto targetReadSize = pInfo->skip ? pInfo->skip :
+			static_cast<long>(pInfo->pDestLimit - pInfo->pDest);
 		if (targetReadSize < 1)
 			targetReadSize = 1;
 		else if (targetReadSize > 0x10000)
@@ -172,9 +173,9 @@ unsigned int PkExplodeReader(char* buf, unsigned int* size, void* param)
 	auto length = std::min(pInfo->pSourceLimit - pInfo->pSource, static_cast<ptrdiff_t>(*size));
 	memcpy(buf, pInfo->pSource, length);
 	pInfo->pSource += length;
-	*size = length;
+	*size = static_cast<unsigned>(length);
 
-	return length;
+	return static_cast<unsigned>(length);
 }
 
 ///////////////////////////////////////
@@ -200,7 +201,7 @@ void PkExplodeWriter(char* buf, unsigned int* size, void* param)
 	}
 
 	if (actualSize + pInfo->pDest > pInfo->pDestLimit)
-		actualSize = pInfo->pDestLimit - pInfo->pDest;
+		actualSize = static_cast<unsigned>(pInfo->pDestLimit - pInfo->pDest);
 
 	memcpy(pInfo->pDest, buf, actualSize);
 	pInfo->pDest += actualSize;
@@ -238,7 +239,7 @@ int PkExplodeStreamToMem(IStoreStream* pSourceStream, void* pDest, int skip, int
 		return 0;
 	}
 
-	return explodeInfo.pDest - static_cast<char*>(pDest);
+	return static_cast<int>(explodeInfo.pDest - static_cast<char*>(pDest));
 }
 
 ///////////////////////////////////////
@@ -363,7 +364,7 @@ BOOL cZipStream::SetPos(long nPos)
 	if (!m_nOpenCount)
 		return FALSE;
 
-	if (nPos >= m_pInfo->m_nUncompressedSize)
+	if (nPos < 0 || static_cast<uint32>(nPos) >= m_pInfo->m_nUncompressedSize)
 		return FALSE;
 
 	m_nLastPos = nPos;
@@ -394,7 +395,7 @@ long cZipStream::ReadAbs(long nStartPos, long nEndPos, char* pBuf)
 
 long cZipStream::GetSize()
 {
-	return m_pInfo->m_nUncompressedSize;
+	return static_cast<long>(m_pInfo->m_nUncompressedSize);
 }
 
 ///////////////////////////////////////
@@ -407,12 +408,12 @@ long cZipStream::Read(long nNumBytes, char* pBuf)
 	if (nNumBytes < 1)
 		return -1;
 
-	auto nBytesLeft = m_pInfo->m_nUncompressedSize - m_nLastPos;
+	auto nBytesLeft = static_cast<long>(m_pInfo->m_nUncompressedSize) - m_nLastPos;
 	if (nBytesLeft <= 0)
 		return -1;
 
 	if (nNumBytes > nBytesLeft)
-		nNumBytes = m_pInfo->m_nUncompressedSize - m_nLastPos;
+		nNumBytes = static_cast<long>(m_pInfo->m_nUncompressedSize) - m_nLastPos;
 
 	if (m_pInfo->m_nCompressionMethod)
 	{
@@ -445,7 +446,8 @@ short cZipStream::Getc()
 {
 	if (m_pInfo->m_nCompressionMethod)
 	{
-		if (m_pData && m_nOpenCount && m_nLastPos < m_pInfo->m_nUncompressedSize)
+		if (m_pData && m_nOpenCount && m_nLastPos >= 0 &&
+			static_cast<uint32>(m_nLastPos) < m_pInfo->m_nUncompressedSize)
 			return static_cast<unsigned char>(m_pData[m_nLastPos++]);
 		else
 			return -1;
@@ -476,14 +478,14 @@ void cZipStream::ReadBlocks(void* pBuf, long nSize, tStoreStreamBlockCallback ca
 		memmove(pBuf, p, nRead);
 		p += nRead;
 
-		nSize = callback(pBuf, nRead, nBlockIx, pCallbackData);
+		nSize = callback(pBuf, static_cast<long>(nRead), nBlockIx, pCallbackData);
 		if (nSize < 1)
 			break;
 
 		++nBlockIx;
 	}
 
-	m_nLastPos = p - m_pData;
+	m_nLastPos = static_cast<long>(p - m_pData);
 }
 
 ///////////////////////////////////////

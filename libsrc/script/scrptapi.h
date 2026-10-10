@@ -114,7 +114,7 @@ enum eScrTimedMsgKind
 typedef enum eScrTimedMsgKind eScrTimedMsgKind;
 
 // Timer handle
-DECLARE_HANDLE(tScrTimer);
+typedef uintptr_t tScrTimer;
 
 // Timer callback
 typedef void (*tScrMsgCallback)(const sScrMsg *, const sMultiParm *, void *);

@@ -7,7 +7,7 @@
 
 #ifdef _WIN32
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <stdlib.h>
 #include <malloc.h>
 #include <stdalloc.h>

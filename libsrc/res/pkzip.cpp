@@ -6,7 +6,7 @@
 
 #ifdef _WIN32
 
-#include <windows.h>
+#include <win32_platform.h>
 
 #include <string.h>
 #include <io.h>
@@ -70,7 +70,7 @@ unsigned int __cdecl PkImplodeRead(char *buf, unsigned int *size, void *param)
 
     sPkImplodeInfo * const pImplodeInfo = (sPkImplodeInfo *) param;
 
-    const unsigned readLimit = pImplodeInfo->pSourceLimit - pImplodeInfo->pSource;
+    const unsigned readLimit = static_cast<unsigned>(pImplodeInfo->pSourceLimit - pImplodeInfo->pSource);
     if (readLimit)
     {
         const unsigned readSize = (readLimit > *size) ? *size : readLimit;
@@ -139,7 +139,7 @@ long PkImplodeMemToMem(const void * pSource, long sizeSource,
                                  &type,
                                  &dictSize);
 
-    unsigned compressedSize = implodeInfo.pDest - (BYTE *) pDest;
+    unsigned compressedSize = static_cast<unsigned>(implodeInfo.pDest - (BYTE *) pDest);
     if (((double)(sizeSource - compressedSize)/(double)sizeSource) >= kMinCompression)
     {
         if (!implodeInfo.fFailedSafe && result == 0 && implodeInfo.pDest < implodeInfo.pDestLimit)
@@ -189,7 +189,7 @@ unsigned int __cdecl PkExplodeRead(char *buf, unsigned int *size, void *param)
         unsigned targetReadSize, actualReadSize;
 
         targetReadSize = (pExplodeInfo->skip) ? pExplodeInfo->skip :
-                                                pExplodeInfo->pDestLimit - pExplodeInfo->pDest;
+                                                static_cast<unsigned>(pExplodeInfo->pDestLimit - pExplodeInfo->pDest);
 
         if (targetReadSize > kReadBufSize)
             targetReadSize = kReadBufSize;
@@ -202,7 +202,7 @@ unsigned int __cdecl PkExplodeRead(char *buf, unsigned int *size, void *param)
         pExplodeInfo->pSourceLimit    = pExplodeInfo->pSource + actualReadSize;
     }
 
-    const unsigned readLimit = pExplodeInfo->pSourceLimit - pExplodeInfo->pSource;
+    const unsigned readLimit = static_cast<unsigned>(pExplodeInfo->pSourceLimit - pExplodeInfo->pSource);
     if (readLimit)
     {
         const unsigned readSize = (readLimit > *size) ? *size : readLimit;
@@ -243,7 +243,7 @@ void __cdecl PkExplodeWrite(char *buf, unsigned int *size, void *param)
 
     // If we're writing past the desired amount, set write to the limit
     if ((pExplodeInfo->pDest + actualSize) > pExplodeInfo->pDestLimit)
-        actualSize = pExplodeInfo->pDestLimit - pExplodeInfo->pDest;
+        actualSize = static_cast<unsigned>(pExplodeInfo->pDestLimit - pExplodeInfo->pDest);
 
     memcpy(pExplodeInfo->pDest, buf, actualSize);
     pExplodeInfo->pDest += actualSize;
@@ -287,7 +287,7 @@ long PkExplodeFileToMem(int fdSource, void * pDest,
          (result == CMP_ABORT && explodeInfo.fComplete)) &&
         explodeInfo.pDest <= explodeInfo.pDestLimit)
     {
-        return (explodeInfo.pDest - (BYTE *) pDest);
+        return static_cast<long>(explodeInfo.pDest - (BYTE *) pDest);
     }
 
     CriticalMsg1("Expansion failed (%d)!", result);

@@ -69,7 +69,6 @@ static void register_res_types()
 
 void InitAppData();
 
-#pragma off(unreferenced)
 static STDMETHODIMP InitFunc(IUnknown* goof)
 {
    char path[256]; 
@@ -148,14 +147,12 @@ static STDMETHODIMP InitFunc(IUnknown* goof)
 
    return kNoError;
 }
-#pragma on(unreferenced)
 
 //////////////////////////////////////////////////////////////
 // SHUTDOWN FUNC
 //
 
 
-#pragma off(unreferenced)
 STDMETHODIMP ShutdownFunc(IUnknown* goof)
 {
    SafeRelease(gContextPath);
@@ -173,21 +170,16 @@ STDMETHODIMP ShutdownFunc(IUnknown* goof)
 
    return kNoError;
 }
-#pragma on(unreferenced)
 
 
-#pragma off(unreferenced)
 static STDMETHODIMP NullFunc(IUnknown* goof)
 {
    return kNoError;
 }
-#pragma on(unreferenced)
 
-#pragma off(unreferenced)
 static void STDMETHODCALLTYPE FinalReleaseFunc(IUnknown* goof)
 {
 }
-#pragma on(unreferenced)
 
 //////////////////////////////////////////////////////////////
 // ResSysSysCreate()

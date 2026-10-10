@@ -14,6 +14,7 @@
 #ifndef __MTYPE__
 #define __MTYPE__
 
+#include <win32_platform.h>
 #include <strmif.h>
 
 /* Helper class that derived pin objects can use to compare media

@@ -11,7 +11,6 @@ template <typename T>
 struct aatree
 {
 public:
-#pragma push(2)
 	struct aa_node
 	{
 		char* name;
@@ -23,7 +22,6 @@ public:
 		short level;
 		int visited;
 	};
-#pragma pop()
 
 	aatree();
 	aatree(const aatree&) = delete;

@@ -279,7 +279,7 @@ static porthw_strip *alloc_strip(porthw_texture *texture, int h)
    strip = &strip_list[strip_index];
    strip->next_strip = texture->strip_index;
    strip->h = h;
-   strip->w = texture->bm->w;
+   strip->w = (char)texture->bm->w;
    strip->elem_index = -1;
    strip->v0 = texture->bm->h - texture->h;
    texture->strip_index = strip_index;
@@ -567,7 +567,7 @@ void porthw_get_cached_lightmap(hw_render_info *hw,
    } else {
       porthw_elem *elem = &elem_list[render->cached_surface];
       hw->lm = texture_list[elem->texture_index].bm;
-      hw->lm_u0 = elem->u0 + 0.5;
-      hw->lm_v0 = elem->v0 + 0.5;
+      hw->lm_u0 = elem->u0 + 0.5f;
+      hw->lm_v0 = elem->v0 + 0.5f;
    }
 }

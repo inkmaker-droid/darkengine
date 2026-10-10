@@ -48,7 +48,6 @@
 #define CHAR_SOFTSP  2
 #endif
 
-#pragma off(unreferenced)
 void textgadg_draw_call(void* data, LGadBox* box)
 {
    short w,h;
@@ -162,7 +161,6 @@ void textgadg_draw_call(void* data, LGadBox* box)
    uiShowMouse(&hide);
 
 }
-#pragma on(unreferenced)
 
 //--------------------------------------
 // Keyboard handler
@@ -369,7 +367,6 @@ static short special_keys[] =
 };
 
 
-#pragma off(unreferenced)
 BOOL textgadg_process_keybd(uiCookedKeyEvent* ev, Region* reg, TextGadg* gadg)
 {
    bool retval = FALSE, update = FALSE, send_signal = FALSE;
@@ -431,7 +428,6 @@ BOOL textgadg_process_keybd(uiCookedKeyEvent* ev, Region* reg, TextGadg* gadg)
 #endif 
    return retval;
 }
-#pragma on(unreferenced)
 
 
 
@@ -498,7 +494,7 @@ errtype TextGadgInit(Region* parent, TextGadg* g, Rect* r, int z, char* buf, int
    g->flags = flags;
    g->text.buf = buf;
    g->text.len = buflen;
-   tmp=strlen(buf);
+   tmp=(int)strlen(buf);
    g->cursor = g->last_char = tmp;
    g->rep_count = 1;
    g->speckeys = special_keys;
@@ -513,7 +509,7 @@ errtype TextGadgDestroy(TextGadg* g)
 
 errtype TextGadgUpdate(TextGadg* gadg)
 {
-   gadg->last_char = strlen(gadg->text.buf);
+   gadg->last_char = (int)strlen(gadg->text.buf);
    if (gadg->cursor > gadg->last_char)
       gadg->cursor = gadg->last_char;
    return OK;

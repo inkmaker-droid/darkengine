@@ -644,7 +644,7 @@ BOOL cNetMsg::MarshalArguments(va_list pArgs, ObjID *objPlayer, uint *size)
    AssertMsg1((ptr < (gm_pMsgBuffer + MAX_MESSAGE_SIZE)),
               "Net Message %s is too long!",
               m_pDesc->msgName);
-   *size = (ptr - gm_pMsgBuffer);
+   *size = (uint)(ptr - gm_pMsgBuffer);
 
    return TRUE;
 }
@@ -859,7 +859,7 @@ BOOL cNetMsg::UnmarshalParams(uchar *ptr, ObjID fromPlayer, ObjID *pForwardTo)
 #ifdef CHECK_ARCHETYPES
             ObjID sentArch = *((NetObjID *) ptr);
             ptr += sizeof(NetObjID);
-            CheckArchetypes(GID, m_ppParams[i], sentArch);
+            CheckArchetypes(GID, (ObjID)m_ppParams[i], sentArch);
 #endif
             if (obj != OBJ_NULL &&
                 !gm_pObjSys->Exists(obj) &&
@@ -1582,28 +1582,28 @@ void cNetMsg::ReceiveSpew(ObjID fromPlayer)
          }
          case kNMPT_SenderObjID:
          {
-            mprintf("Proxy Object [%s]", ObjEditName(GetParam(i)));
+            mprintf("Proxy Object [%s]", ObjEditName((ObjID)GetParam(i)));
             break;
          }
          case kNMPT_ReceiverObjID:
          {
-            mprintf("My Object [%s]", ObjEditName(GetParam(i)));
+            mprintf("My Object [%s]", ObjEditName((ObjID)GetParam(i)));
             break;
          }
          case kNMPT_AbstractObjID:
          case kNMPT_ObjID:
          {
-            mprintf("Object [%s]", ObjEditName(GetParam(i)));
+            mprintf("Object [%s]", ObjEditName((ObjID)GetParam(i)));
             break;
          }
          case kNMPT_GlobalObjID:
          {
-            mprintf("Global Object [%s]", ObjEditName(GetParam(i)));
+            mprintf("Global Object [%s]", ObjEditName((ObjID)GetParam(i)));
             break;
          }
          case kNMPT_Float:
          {
-            uint fi = GetParam(i);
+            uint fi = (uint)GetParam(i);
             mprintf("%g", *((float *) &fi));
             break;
          }

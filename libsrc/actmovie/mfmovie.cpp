@@ -1,4 +1,4 @@
-#include <windows.h>
+#include <win32_platform.h>
 #include <mfapi.h>
 #include <mfidl.h>
 #include <mferror.h>
@@ -16,7 +16,7 @@
 
 #include "mfmovie.h"
 #include "mfaudio.h"
-#include <d3d11legacy.h>
+#include <render_backend.h>
 
 // Implemented by the application's screen manager.  Keeping the declaration
 // here avoids making the reusable movie library depend on src/render headers.
@@ -809,7 +809,7 @@ BOOL ModernMoviePlaySynchronous(const char *legacyPath, int volume)
     // control background, or the desktop during that delay is never useful.
     ScrnBlacken();
 
-    D3D11LegacyTrace("movie requested=%s", legacyPath);
+    RenderBackendTrace("movie requested=%s", legacyPath);
 
     // Prefer a modern sibling when one is installed.  MFPlay owns the native
     // MP4/H.264 clock, decoder, and EVR presentation without copying frames
@@ -822,19 +822,19 @@ BOOL ModernMoviePlaySynchronous(const char *legacyPath, int volume)
         // MFPlay and a combined audio/video MF session both inherit the broken
         // audio-renderer clock on affected systems and visibly run at ~1 fps.
         played = PlayMediaFoundationMovie(moviePath, volume);
-        D3D11LegacyTrace("movie backend=media-session played=%d", played);
+        RenderBackendTrace("movie backend=media-session played=%d", played);
         if (!played)
         {
             movieHost = CreateMovieHostWindow(pWinApp->GetMainWnd());
             if (!movieHost)
                 return FALSE;
             played = PlayMFPlayMovie(moviePath, movieHost, volume);
-            D3D11LegacyTrace("movie backend=mfplay played=%d", played);
+            RenderBackendTrace("movie backend=mfplay played=%d", played);
         }
         if (!played)
         {
             played = PlayDirectShowMovie(moviePath, movieHost, volume);
-            D3D11LegacyTrace("movie backend=directshow-mp4 played=%d", played);
+            RenderBackendTrace("movie backend=directshow-mp4 played=%d", played);
         }
         if (movieHost)
             DestroyWindow(movieHost);
@@ -850,7 +850,7 @@ BOOL ModernMoviePlaySynchronous(const char *legacyPath, int volume)
     if (!movieHost)
         return FALSE;
     played = PlayDirectShowMovie(moviePath, movieHost, volume);
-    D3D11LegacyTrace("movie backend=directshow-legacy played=%d", played);
+    RenderBackendTrace("movie backend=directshow-legacy played=%d", played);
     DestroyWindow(movieHost);
     InvalidateRect(pWinApp->GetMainWnd(), NULL, FALSE);
     return played;

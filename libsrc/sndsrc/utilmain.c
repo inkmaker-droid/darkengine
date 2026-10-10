@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <lg.h>
 #include <mprintf.h>
 #include <stdio.h>

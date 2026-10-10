@@ -72,19 +72,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(ProjectDir);$(SolutionDir)inc;$(SolutionDir)h;$(SolutionDir)libsrc\actmovie;$(SolutionDir)libsrc\appcore;$(SolutionDir)libsrc\compapis;$(SolutionDir)libsrc\comtools;$(SolutionDir)libsrc\config;$(SolutionDir)libsrc\cpptools;$(SolutionDir)libsrc\darkloop;$(SolutionDir)libsrc\dev2d;$(SolutionDir)libsrc\dispdev;$(SolutionDir)libsrc\dstruct;$(SolutionDir)libsrc\dump;$(SolutionDir)libsrc\fix;$(SolutionDir)libsrc\font;$(SolutionDir)libsrc\g2;$(SolutionDir)libsrc\gadget;$(SolutionDir)libsrc\gameshel;$(SolutionDir)libsrc\gfile;$(SolutionDir)libsrc\inputbnd;$(SolutionDir)libsrc\lg;$(SolutionDir)libsrc\lgalloc;$(SolutionDir)libsrc\lgd3d;$(SolutionDir)libsrc\matrix;$(SolutionDir)libsrc\md;$(SolutionDir)libsrc\mm;$(SolutionDir)libsrc\mp;$(SolutionDir)libsrc\mprintf;$(SolutionDir)libsrc\namedres;$(SolutionDir)libsrc\net;$(SolutionDir)libsrc\object\property;$(SolutionDir)libsrc\portold;$(SolutionDir)libsrc\prof;$(SolutionDir)libsrc\r3d;$(SolutionDir)libsrc\random;$(SolutionDir)libsrc\recorder;$(SolutionDir)libsrc\ref;$(SolutionDir)libsrc\res;$(SolutionDir)libsrc\res2;$(SolutionDir)libsrc\rnd;$(SolutionDir)libsrc\script;$(SolutionDir)libsrc\sdesc;$(SolutionDir)libsrc\skel;$(SolutionDir)libsrc\sndsrc;$(SolutionDir)libsrc\sndutil;$(SolutionDir)libsrc\sound;$(SolutionDir)libsrc\star;$(SolutionDir)libsrc\tagfile;$(SolutionDir)libsrc\templgen;$(SolutionDir)libsrc\timer;$(SolutionDir)libsrc\ui;$(SolutionDir)libsrc\vec2;$(SolutionDir)winsrc\input;$(SolutionDir)winsrc\wintools;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(DarkLibraryOutputDir);$(SolutionDir)3rdparty\dx7sdk\lib;$(SolutionDir)3rdparty\zlib\lib;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <LibraryPath>$(DarkLibraryOutputDir);$(SolutionDir)3rdparty\zlib\lib;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(ProjectDir);$(SolutionDir)inc;$(SolutionDir)h;$(SolutionDir)libsrc\actmovie;$(SolutionDir)libsrc\appcore;$(SolutionDir)libsrc\compapis;$(SolutionDir)libsrc\comtools;$(SolutionDir)libsrc\config;$(SolutionDir)libsrc\cpptools;$(SolutionDir)libsrc\darkloop;$(SolutionDir)libsrc\dev2d;$(SolutionDir)libsrc\dispdev;$(SolutionDir)libsrc\dstruct;$(SolutionDir)libsrc\dump;$(SolutionDir)libsrc\fix;$(SolutionDir)libsrc\font;$(SolutionDir)libsrc\g2;$(SolutionDir)libsrc\gadget;$(SolutionDir)libsrc\gameshel;$(SolutionDir)libsrc\gfile;$(SolutionDir)libsrc\inputbnd;$(SolutionDir)libsrc\lg;$(SolutionDir)libsrc\lgalloc;$(SolutionDir)libsrc\lgd3d;$(SolutionDir)libsrc\matrix;$(SolutionDir)libsrc\md;$(SolutionDir)libsrc\mm;$(SolutionDir)libsrc\mp;$(SolutionDir)libsrc\mprintf;$(SolutionDir)libsrc\namedres;$(SolutionDir)libsrc\net;$(SolutionDir)libsrc\object\property;$(SolutionDir)libsrc\portold;$(SolutionDir)libsrc\prof;$(SolutionDir)libsrc\r3d;$(SolutionDir)libsrc\random;$(SolutionDir)libsrc\recorder;$(SolutionDir)libsrc\ref;$(SolutionDir)libsrc\res;$(SolutionDir)libsrc\res2;$(SolutionDir)libsrc\rnd;$(SolutionDir)libsrc\script;$(SolutionDir)libsrc\sdesc;$(SolutionDir)libsrc\skel;$(SolutionDir)libsrc\sndsrc;$(SolutionDir)libsrc\sndutil;$(SolutionDir)libsrc\sound;$(SolutionDir)libsrc\star;$(SolutionDir)libsrc\tagfile;$(SolutionDir)libsrc\templgen;$(SolutionDir)libsrc\timer;$(SolutionDir)libsrc\ui;$(SolutionDir)libsrc\vec2;$(SolutionDir)winsrc\input;$(SolutionDir)winsrc\wintools;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(DarkLibraryOutputDir);$(SolutionDir)3rdparty\dx7sdk\lib;$(SolutionDir)3rdparty\zlib\lib;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <LibraryPath>$(DarkLibraryOutputDir);$(SolutionDir)3rdparty\zlib\lib;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(ProjectDir);$(SolutionDir)inc;$(SolutionDir)h;$(SolutionDir)libsrc\actmovie;$(SolutionDir)libsrc\appcore;$(SolutionDir)libsrc\compapis;$(SolutionDir)libsrc\comtools;$(SolutionDir)libsrc\config;$(SolutionDir)libsrc\cpptools;$(SolutionDir)libsrc\darkloop;$(SolutionDir)libsrc\dev2d;$(SolutionDir)libsrc\dispdev;$(SolutionDir)libsrc\dstruct;$(SolutionDir)libsrc\dump;$(SolutionDir)libsrc\fix;$(SolutionDir)libsrc\font;$(SolutionDir)libsrc\g2;$(SolutionDir)libsrc\gadget;$(SolutionDir)libsrc\gameshel;$(SolutionDir)libsrc\gfile;$(SolutionDir)libsrc\inputbnd;$(SolutionDir)libsrc\lg;$(SolutionDir)libsrc\lgalloc;$(SolutionDir)libsrc\lgd3d;$(SolutionDir)libsrc\matrix;$(SolutionDir)libsrc\md;$(SolutionDir)libsrc\mm;$(SolutionDir)libsrc\mp;$(SolutionDir)libsrc\mprintf;$(SolutionDir)libsrc\namedres;$(SolutionDir)libsrc\net;$(SolutionDir)libsrc\object\property;$(SolutionDir)libsrc\portold;$(SolutionDir)libsrc\prof;$(SolutionDir)libsrc\r3d;$(SolutionDir)libsrc\random;$(SolutionDir)libsrc\recorder;$(SolutionDir)libsrc\ref;$(SolutionDir)libsrc\res;$(SolutionDir)libsrc\res2;$(SolutionDir)libsrc\rnd;$(SolutionDir)libsrc\script;$(SolutionDir)libsrc\sdesc;$(SolutionDir)libsrc\skel;$(SolutionDir)libsrc\sndsrc;$(SolutionDir)libsrc\sndutil;$(SolutionDir)libsrc\sound;$(SolutionDir)libsrc\star;$(SolutionDir)libsrc\tagfile;$(SolutionDir)libsrc\templgen;$(SolutionDir)libsrc\timer;$(SolutionDir)libsrc\ui;$(SolutionDir)libsrc\vec2;$(SolutionDir)winsrc\input;$(SolutionDir)winsrc\wintools;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(DarkLibraryOutputDir);$(SolutionDir)3rdparty\dx7sdk\lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <LibraryPath>$(DarkLibraryOutputDir);$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(ProjectDir);$(SolutionDir)inc;$(SolutionDir)h;$(SolutionDir)libsrc\actmovie;$(SolutionDir)libsrc\appcore;$(SolutionDir)libsrc\compapis;$(SolutionDir)libsrc\comtools;$(SolutionDir)libsrc\config;$(SolutionDir)libsrc\cpptools;$(SolutionDir)libsrc\darkloop;$(SolutionDir)libsrc\dev2d;$(SolutionDir)libsrc\dispdev;$(SolutionDir)libsrc\dstruct;$(SolutionDir)libsrc\dump;$(SolutionDir)libsrc\fix;$(SolutionDir)libsrc\font;$(SolutionDir)libsrc\g2;$(SolutionDir)libsrc\gadget;$(SolutionDir)libsrc\gameshel;$(SolutionDir)libsrc\gfile;$(SolutionDir)libsrc\inputbnd;$(SolutionDir)libsrc\lg;$(SolutionDir)libsrc\lgalloc;$(SolutionDir)libsrc\lgd3d;$(SolutionDir)libsrc\matrix;$(SolutionDir)libsrc\md;$(SolutionDir)libsrc\mm;$(SolutionDir)libsrc\mp;$(SolutionDir)libsrc\mprintf;$(SolutionDir)libsrc\namedres;$(SolutionDir)libsrc\net;$(SolutionDir)libsrc\object\property;$(SolutionDir)libsrc\portold;$(SolutionDir)libsrc\prof;$(SolutionDir)libsrc\r3d;$(SolutionDir)libsrc\random;$(SolutionDir)libsrc\recorder;$(SolutionDir)libsrc\ref;$(SolutionDir)libsrc\res;$(SolutionDir)libsrc\res2;$(SolutionDir)libsrc\rnd;$(SolutionDir)libsrc\script;$(SolutionDir)libsrc\sdesc;$(SolutionDir)libsrc\skel;$(SolutionDir)libsrc\sndsrc;$(SolutionDir)libsrc\sndutil;$(SolutionDir)libsrc\sound;$(SolutionDir)libsrc\star;$(SolutionDir)libsrc\tagfile;$(SolutionDir)libsrc\templgen;$(SolutionDir)libsrc\timer;$(SolutionDir)libsrc\ui;$(SolutionDir)libsrc\vec2;$(SolutionDir)winsrc\input;$(SolutionDir)winsrc\wintools;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(DarkLibraryOutputDir);$(SolutionDir)3rdparty\dx7sdk\lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <LibraryPath>$(DarkLibraryOutputDir);$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -92,7 +92,7 @@
       <ForcedIncludeFiles>types.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;DEBUG;DBG_ON;WARN_ON;SPEW_ON;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;REPORT;STRICT=1;EDITOR;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;DONT_CHECK_CD;PROPERTY_BLAME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;DEBUG;DBG_ON;WARN_ON;SPEW_ON;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;REPORT;STRICT=1;EDITOR;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;PROPERTY_BLAME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StructMemberAlignment>1Byte</StructMemberAlignment>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ConformanceMode>false</ConformanceMode>
@@ -100,7 +100,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;arq.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;odbc32.lib;odbccp32.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;arq.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -111,7 +111,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;REPORT;STRICT=1;EDITOR;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;DONT_CHECK_CD;PROPERTY_BLAME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;REPORT;STRICT=1;EDITOR;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;PROPERTY_BLAME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StructMemberAlignment>1Byte</StructMemberAlignment>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ConformanceMode>false</ConformanceMode>
@@ -122,7 +122,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>arq.lib;dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;odbc32.lib;odbccp32.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>arq.lib;dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -132,7 +132,7 @@
       <ForcedIncludeFiles>types.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;DEBUG;DBG_ON;WARN_ON;SPEW_ON;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;REPORT;STRICT=1;EDITOR;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;DONT_CHECK_CD;PROPERTY_BLAME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;DEBUG;DBG_ON;WARN_ON;SPEW_ON;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;REPORT;STRICT=1;EDITOR;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;PROPERTY_BLAME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StructMemberAlignment>1Byte</StructMemberAlignment>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ConformanceMode>false</ConformanceMode>
@@ -140,7 +140,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;arq.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;odbc32.lib;odbccp32.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;arq.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -151,7 +151,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;REPORT;STRICT=1;EDITOR;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;DONT_CHECK_CD;PROPERTY_BLAME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;REPORT;STRICT=1;EDITOR;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;PROPERTY_BLAME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StructMemberAlignment>1Byte</StructMemberAlignment>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ConformanceMode>false</ConformanceMode>
@@ -162,7 +162,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>arq.lib;dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;odbc32.lib;odbccp32.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>arq.lib;dsound.lib;dxguid.lib;actmovie.lib;entrywin.lib;r3d.lib;star.lib;skel.lib;mp.lib;md.lib;dump.lib;vec2.lib;prof.lib;gfile.lib;darkloop.lib;lgd3d.lib;mm.lib;script.lib;sndsrc.lib;ref.lib;sdesc.lib;inputbnd.lib;input.lib;namedres.lib;net.lib;random.lib;tagfile.lib;mprintf.lib;lg.lib;lgalloc.lib;matrix.lib;fix.lib;dstruct.lib;cpptools.lib;comtools.lib;templgen.lib;compapis.lib;appcore.lib;config.lib;res.lib;gameshel.lib;timer.lib;rnd.lib;recorder.lib;dev2d.lib;g2.lib;font.lib;dispdev.lib;sound.lib;sndutil.lib;ui.lib;gadget.lib;winmm.lib;comctl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -433,7 +433,6 @@
     <ClInclude Include="dark\Drkbndui.h" />
     <ClInclude Include="dark\Drkbook.h" />
     <ClInclude Include="dark\Drkbreth.h" />
-    <ClInclude Include="dark\Drkchkcd.h" />
     <ClInclude Include="dark\Drkcmbat.h" />
     <ClInclude Include="dark\Drkcolor.h" />
     <ClInclude Include="dark\Drkcret.h" />
@@ -487,7 +486,6 @@
     <ClInclude Include="dark\Drkwswd.h" />
     <ClInclude Include="dark\Drkwswd_.h" />
     <ClInclude Include="dark\Drk_bind.h" />
-    <ClInclude Include="dark\Eidosafp.h" />
     <ClInclude Include="dark\Filepanl.h" />
     <ClInclude Include="dark\Gadslide.h" />
     <ClInclude Include="dark\Invtype.h" />
@@ -704,9 +702,6 @@
     <ClInclude Include="framewrk\Backup.h" />
     <ClInclude Include="framewrk\Basemode.h" />
     <ClInclude Include="Framewrk\buftagf.h" />
-    <ClInclude Include="framewrk\Cdconst.h" />
-    <ClInclude Include="framewrk\Cdguid.h" />
-    <ClInclude Include="framewrk\Cdplayer.h" />
     <ClInclude Include="framewrk\Cfgtool.h" />
     <ClInclude Include="framewrk\Chainevt.h" />
     <ClInclude Include="framewrk\Command.h" />
@@ -729,8 +724,6 @@
     <ClInclude Include="framewrk\Dspchdef.h" />
     <ClInclude Include="framewrk\Dspchiid.h" />
     <ClInclude Include="framewrk\Dwordset.h" />
-    <ClInclude Include="framewrk\Dxload.h" />
-    <ClInclude Include="framewrk\Dxwrndlg.h" />
     <ClInclude Include="framewrk\Fastflts.h" />
     <ClInclude Include="framewrk\Fcytagdb.h" />
     <ClInclude Include="framewrk\Filetool.h" />
@@ -750,7 +743,6 @@
     <ClInclude Include="framewrk\Gametabl.h" />
     <ClInclude Include="framewrk\Gametool.h" />
     <ClInclude Include="framewrk\Gen_bind.h" />
-    <ClInclude Include="framewrk\Hchkthrd.h" />
     <ClInclude Include="framewrk\Idispatc.h" />
     <ClInclude Include="framewrk\Idispat_.h" />
     <ClInclude Include="framewrk\Imgsrc.h" />
@@ -1233,7 +1225,6 @@
     <ClInclude Include="script\Atkscrpt.h" />
     <ClInclude Include="script\Bodscrpt.h" />
     <ClInclude Include="Script\Camscrs.h" />
-    <ClInclude Include="script\Cdscript.h" />
     <ClInclude Include="script\Contscpt.h" />
     <ClInclude Include="script\Contscrm.h" />
     <ClInclude Include="script\Contscrs.h" />
@@ -1651,7 +1642,6 @@
     <ClCompile Include="dark\Drkamap.cpp" />
     <ClCompile Include="dark\Drkbook.cpp" />
     <ClCompile Include="dark\Drkbreth.cpp" />
-    <ClCompile Include="dark\Drkchkcd.cpp" />
     <ClCompile Include="dark\Drkcmbat.cpp" />
     <ClCompile Include="dark\Drkcolor.cpp" />
     <ClCompile Include="dark\Drkcret.cpp" />
@@ -1700,7 +1690,6 @@
     <ClCompile Include="dark\Drkwswd.cpp" />
     <ClCompile Include="dark\Drkwswd_.c" />
     <ClCompile Include="dark\Drk_bind.cpp" />
-    <ClCompile Include="dark\Eidosafp.c" />
     <ClCompile Include="dark\Filepanl.cpp" />
     <ClCompile Include="dark\Gadslide.cpp" />
     <ClCompile Include="dark\Lootprop.cpp" />
@@ -1764,7 +1753,7 @@
     <ClCompile Include="editor\Editsave.c" />
     <ClCompile Include="editor\Edmedmo.c" />
     <ClCompile Include="editor\Famedit.cpp" />
-    <ClCompile Include="editor\Filemenu.cpp" />
+    <ClCompile Include="..\winsrc\editor\Filemenu.cpp" />
     <ClCompile Include="editor\Flowpnp.cpp" />
     <ClCompile Include="editor\Fvaredit.cpp" />
     <ClCompile Include="editor\Gedit.c" />
@@ -1898,7 +1887,6 @@
     <ClCompile Include="framewrk\Backup.cpp" />
     <ClCompile Include="framewrk\Basemode.c" />
     <ClCompile Include="Framewrk\buftagf.cpp" />
-    <ClCompile Include="framewrk\Cdplayer.cpp" />
     <ClCompile Include="framewrk\Cfgtool.c" />
     <ClCompile Include="framewrk\Chainevt.cpp" />
     <ClCompile Include="framewrk\Command.c" />
@@ -1907,7 +1895,8 @@
     <ClCompile Include="framewrk\Ctagset.cpp" />
     <ClCompile Include="framewrk\Dappsink.cpp" />
     <ClCompile Include="framewrk\Dbfile.cpp" />
-    <ClCompile Include="framewrk\Diskfree.c" />
+    <ClCompile Include="..\winsrc\framewrk\diskfree.c" />
+    <ClCompile Include="..\winsrc\platform\platform_services.cpp" />
     <ClCompile Include="framewrk\Dispatch.cpp" />
     <ClCompile Include="framewrk\Dlgloop.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -1916,8 +1905,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="framewrk\Dlgmode.c" />
-    <ClCompile Include="framewrk\Dxload.cpp" />
-    <ClCompile Include="framewrk\Dxwrndlg.cpp" />
     <ClCompile Include="framewrk\Fcytagdb.cpp" />
     <ClCompile Include="framewrk\Filetool.c" />
     <ClCompile Include="framewrk\Filevar.cpp" />
@@ -1936,7 +1923,6 @@
     <ClCompile Include="framewrk\Gamestr.cpp" />
     <ClCompile Include="framewrk\Gametool.cpp" />
     <ClCompile Include="framewrk\Gen_bind.cpp" />
-    <ClCompile Include="framewrk\Hchkthrd.cpp" />
     <ClCompile Include="framewrk\Hybtable.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -2388,7 +2374,6 @@
     <ClCompile Include="script\Atkscrpt.cpp" />
     <ClCompile Include="script\Bodscrpt.cpp" />
     <ClCompile Include="Script\Camscrpt.cpp" />
-    <ClCompile Include="script\Cdscript.cpp" />
     <ClCompile Include="script\Contscrs.cpp" />
     <ClCompile Include="script\Datascrs.cpp" />
     <ClCompile Include="script\Dmgscrpt.cpp" />
@@ -2515,7 +2500,7 @@
     <ClCompile Include="ui\Bugterm.c" />
     <ClCompile Include="ui\Buttpanl.cpp" />
     <ClCompile Include="ui\Cmdterm.c" />
-    <ClCompile Include="ui\Ged_win.c" />
+    <ClCompile Include="..\winsrc\ui\ged_win.c" />
     <ClCompile Include="ui\Joypoll.cpp" />
     <ClCompile Include="..\winsrc\input\gamepad_xinput.cpp" />
     <ClCompile Include="ui\Movie.cpp" />
@@ -2526,9 +2511,9 @@
     <ClCompile Include="ui\Uiapp.cpp" />
     <ClCompile Include="ui\Uigame.cpp" />
     <ClCompile Include="ui\Uiloop.cpp" />
-    <ClCompile Include="ui\Winui.c" />
+    <ClCompile Include="..\winsrc\ui\winui.c" />
     <ClCompile Include="Version.c" />
-    <ClCompile Include="win32\Inclex.c">
+    <ClCompile Include="generated\Inclex.c">
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">YY_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
@@ -2538,13 +2523,7 @@
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TurnOffAllWarnings</WarningLevel>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">YY_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="Win32\Linklex.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="win32\Mschlex.c">
+    <ClCompile Include="generated\Mschlex.c">
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\deepc\motion;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">YY_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -2557,7 +2536,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\deepc\motion;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">YY_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="win32\Schlex.c">
+    <ClCompile Include="generated\Schlex.c">
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">YY_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
@@ -2567,7 +2546,7 @@
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TurnOffAllWarnings</WarningLevel>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">YY_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="win32\Songlex.c">
+    <ClCompile Include="generated\Songlex.c">
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">YY_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
@@ -2605,13 +2584,13 @@
   <ItemDefinitionGroup Condition="'$(BuildThief2)'=='true' And '$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <!-- The runner validates installed retail data before engine startup. -->
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;DEBUG;DBG_ON;WARN_ON;SPEW_ON;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;STRICT=1;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;THIEF2_GAME;DONT_CHECK_CD;PROPERTY_BLAME;DIRECTINPUT_VERSION=0x0700</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;DEBUG;DBG_ON;WARN_ON;SPEW_ON;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;STRICT=1;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;THIEF2_GAME;PROPERTY_BLAME;DIRECTINPUT_VERSION=0x0700</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(BuildThief2)'=='true' And '$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <!-- The runner validates installed retail data before engine startup. -->
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;STRICT=1;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;THIEF2_GAME;DONT_CHECK_CD;PROPERTY_BLAME;DIRECTINPUT_VERSION=0x0700</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;STRICT=1;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;THIEF2_GAME;PROPERTY_BLAME;DIRECTINPUT_VERSION=0x0700</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateMapFile>true</GenerateMapFile>
@@ -2621,13 +2600,13 @@
   <ItemDefinitionGroup Condition="'$(BuildThief2)'=='true' And '$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <!-- Keep the game/editor split identical across architectures. -->
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;DEBUG;DBG_ON;WARN_ON;SPEW_ON;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;STRICT=1;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;THIEF2_GAME;DONT_CHECK_CD;PROPERTY_BLAME;DIRECTINPUT_VERSION=0x0700</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;DEBUG;DBG_ON;WARN_ON;SPEW_ON;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;STRICT=1;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;THIEF2_GAME;PROPERTY_BLAME;DIRECTINPUT_VERSION=0x0700</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(BuildThief2)'=='true' And '$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <!-- Keep the game/editor split identical across architectures. -->
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;STRICT=1;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;THIEF2_GAME;DONT_CHECK_CD;PROPERTY_BLAME;DIRECTINPUT_VERSION=0x0700</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;RGB_LIGHTING;BIG_LIGHTMAPS;SOFTWARE_RGB;SCHEMA_LOADING;__MSVC;STRICT=1;PLAYTEST;NEW_NETWORK_ENABLED;THIEF;THIEF2_GAME;PROPERTY_BLAME;DIRECTINPUT_VERSION=0x0700</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateMapFile>true</GenerateMapFile>

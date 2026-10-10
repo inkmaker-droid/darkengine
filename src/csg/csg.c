@@ -48,7 +48,7 @@
 #include <dbmem.h>   // must be last header! 
 
 
-float REAL_EPSILON = 0.0001;
+float REAL_EPSILON = 0.0001f;
 
 // storage for the world rep?  What's this doing here?
 PortalCell *wr_cell[MAX_REGIONS];
@@ -903,7 +903,7 @@ void find_matched_plane(BspPlane *p)
    } else {
       // if the constant d is within epsilon of an integer, we should
       // probably snap it...
-      BspPlane *q = &all_planes[i], old = *p;
+      BspPlane *q = &all_planes[i];
       if (p->a*q->a + p->b*q->b + p->c*q->c > 0)
          *p = *q;
       else {
@@ -941,7 +941,7 @@ extern void find_matched_normal(BspPlane *p)
 {
    int i = find_normal(p);
    if (i >= 0) {
-      BspPlane *q = &all_planes[i], old = *p;
+      BspPlane *q = &all_planes[i];
       if (p->a*q->a + p->b*q->b + p->c*q->c > 0) {
          p->a = q->a;
          p->b = q->b;
@@ -1038,7 +1038,7 @@ extern void recompute_node(BspNode *b);
 void portalize_csg_internal_database(void)
 {
    sAllocLimits alloc_limits;
-   ulong old_alloc_cap;
+   size_t old_alloc_cap;
    
    AllocGetLimits(&alloc_limits);
    old_alloc_cap = alloc_limits.allocCap;

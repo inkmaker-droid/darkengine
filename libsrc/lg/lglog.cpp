@@ -9,7 +9,7 @@
 //
 
 #ifdef _WIN32
-#include <windows.h>
+#include <win32_platform.h>
 #endif
 #include <lg.h>
 
@@ -783,15 +783,15 @@ static sStrULongEquivalence aVirtualKeys[] =
         { 0,                  0 }
     };
 
-static const char * InterpretWParam(unsigned uMessage, unsigned wParam)
+static const char * InterpretWParam(unsigned uMessage, WPARAM wParam)
     {
     // Do any special interpretation
     static char szBuf[64];
 
-    if (uMessage >= WM_KEYFIRST && uMessage <= WM_KEYLAST && SearchEquivalenceTable(aVirtualKeys, wParam, szBuf))
+    if (uMessage >= WM_KEYFIRST && uMessage <= WM_KEYLAST && SearchEquivalenceTable(aVirtualKeys, (unsigned long)wParam, szBuf))
         return szBuf;
 
-    snprintf(szBuf, sizeof(szBuf) - 1, "0x%x", wParam);
+    snprintf(szBuf, sizeof(szBuf) - 1, "0x%zx", (size_t)wParam);
     return szBuf;
     }
 
@@ -799,24 +799,25 @@ static const char * InterpretWParam(unsigned uMessage, unsigned wParam)
 
 #define GetPackedVal(num, high, low) (((num << (31 - high)) >> (31 - high)) >> low)
 
-static const char * InterpretLParam(unsigned uMessage, unsigned long lParam)
+static const char * InterpretLParam(unsigned uMessage, LPARAM lParam)
     {
     static char szBuf[64];
     if (uMessage >= WM_KEYFIRST && uMessage <= WM_KEYLAST)
         {
+        unsigned long packed = (unsigned long)(uintptr_t)lParam;
         snprintf(szBuf, sizeof(szBuf) - 1,
-                 "0x%x (tr %d, prev %d, cx %d, ext %d, scan %d, repeat %d)",
-                 lParam,
-                 GetPackedVal(lParam, 31, 31),
-                 GetPackedVal(lParam, 30, 30),
-                 GetPackedVal(lParam, 29, 29),
-                 GetPackedVal(lParam, 24, 24),
-                 GetPackedVal(lParam, 23, 16),
-                 GetPackedVal(lParam, 15, 0));
+                 "0x%lx (tr %lu, prev %lu, cx %lu, ext %lu, scan %lu, repeat %lu)",
+                 packed,
+                 GetPackedVal(packed, 31, 31),
+                 GetPackedVal(packed, 30, 30),
+                 GetPackedVal(packed, 29, 29),
+                 GetPackedVal(packed, 24, 24),
+                 GetPackedVal(packed, 23, 16),
+                 GetPackedVal(packed, 15, 0));
         return szBuf;
         }
 
-    snprintf(szBuf, sizeof(szBuf) - 1, "0x%x", lParam);
+    snprintf(szBuf, sizeof(szBuf) - 1, "0x%zx", (size_t)lParam);
     return szBuf;
     }
 

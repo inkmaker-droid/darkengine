@@ -29,7 +29,7 @@
 
 // for windows common controls
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <win32_platform.h>
 #include <commctrl.h>
 
 #include <comtools.h>

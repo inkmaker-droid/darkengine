@@ -173,7 +173,6 @@ static void destroy_obj_brushes(void)
    SafeRelease(pObjSys); 
 }
 
-#pragma off(unreferenced)
 static void obj_message(ObjID obj, eObjNotifyMsg msg, void* data)
 {
 
@@ -185,7 +184,6 @@ static void obj_message(ObjID obj, eObjNotifyMsg msg, void* data)
          break;
    }
 }
-#pragma on(unreferenced)
 
 static tObjListenerHandle listenerHandle; 
 
@@ -248,7 +246,6 @@ void RestoreBrushSelection(void)
 //
 
 
-#pragma off(unreferenced)
 static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMessageData hdata)
 {
    // useful stuff for most clients
@@ -328,7 +325,6 @@ F_DECLARE_INTERFACE(IPropertyManager);
 // Loop client factory function. 
 //
 
-#pragma off(unreferenced)
 static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData data)
 {
    StateRecord* state;
@@ -338,7 +334,6 @@ static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData
    
    return CreateSimpleLoopClient(_LoopFunc,state,pDesc);
 }
-#pragma on(unreferenced)
 
 ///////////////
 // DESCRIPTOR
@@ -349,7 +344,7 @@ sLoopClientDesc BrushListLoopClientDesc =
    &MY_GUID,                              // GUID
    "Brush List",                          // NAME        
    kPriorityNormal,                       // PRIORITY          
-   kMsgEnd
+   (ulong)kMsgEnd
    | kMsgEndFrame
    | kMsgDatabase 
    | kMsgsAppOuter

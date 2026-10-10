@@ -40,7 +40,7 @@ STDMETHODIMP cStringDataOps::Read(sDatum* pdat, IDataOpsFile* file, int version)
 STDMETHODIMP cStringDataOps::Write(sDatum val, IDataOpsFile* file) 
 {
    cStr& str = *(cStr*)val.value; 
-   ulong size = strlen(str) + 1; 
+   ulong size = (ulong)strlen(str) + 1;
    file->Write(&size,sizeof(size));
 
    const char* buf = str; 

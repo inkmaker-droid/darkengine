@@ -493,7 +493,7 @@ STDMETHODIMP_(BOOL) cQuestData::Save(QuestMoveFunc moveFunc, eQuestDataType type
    {
       if ((pNode->m_type == type) || ((pNode->m_type == kQuestDataUnknown) && (type == kQuestDataMission)))
       {
-         len = strlen(pNode->m_pName)+1;
+      len = (int)strlen(pNode->m_pName)+1;
          moveFunc((void*)&len, sizeof(int), 1);
          moveFunc((void*)(const char*)pNode->m_pName, sizeof(char), len);
          moveFunc((void*)&(pNode->m_value), sizeof(int), 1);

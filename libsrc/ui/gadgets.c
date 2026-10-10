@@ -457,7 +457,7 @@ BOOL gadget_tng_mouse_handler(uiEvent *e, Region *r, void *state)
    g = GD_GADG(r);
    rel.x = mickey->pos.x - r->abs_x;
    rel.y = mickey->pos.y - r->abs_y;
-   return(g->tng_data->mousebutt(g->tng_data, mickey->action, rel));
+   return(g->tng_data->mousebutt(g->tng_data, (uchar)mickey->action, rel));
 }
 
 BOOL gadget_tng_mouse_move_handler(uiEvent *e, Region *r, void *state)
@@ -499,7 +499,7 @@ errtype gadget_create_setup(Gadget **pg, Gadget *parent, GadgetClass cl, Rect *d
    if ((RectWidth(dim) < 1) || (RectHeight(dim) < 1))
    {
       Spew(DSRC_UI_Bounds, ("Nonpositive dimension of created gadget!\n"));
-      return(NULL);
+      return ERR_NOEFFECT;
    }
 
    // Do those yummy mallocs

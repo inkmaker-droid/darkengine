@@ -16,7 +16,7 @@
 // Does this wrap and stuff right?
 mxs_ang mxd_rad2ang(double rad)
 {
-   return rad*MX_ANG_PI/MX_REAL_PI;
+   return (mxs_ang)(rad*MX_ANG_PI/MX_REAL_PI);
 }
 
 // Always returns positive rads
@@ -28,7 +28,7 @@ double mxd_ang2rad(mxs_ang ang)
 // convert to and from degs
 mxs_ang mxd_deg2ang(double deg)
 {
-   return  deg*MX_ANG_PI/180.0;
+   return (mxs_ang)(deg*MX_ANG_PI/180.0);
 }
 
 double mxd_ang2deg(double ang)

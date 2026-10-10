@@ -143,10 +143,21 @@ static BOOL tmgr_get_utilization(float *utilization)
 
 const char *bad_bm_string = "Bitmap data out of synch.";
 
+static int bitmap_texture_id(const grs_bitmap *bm)
+{
+   return (int)(uintptr_t)bm->bits;
+}
+
+static uchar *texture_id_bits(int id)
+{
+   return (uchar *)(uintptr_t)(uint)id;
+}
+
 #define is_valid(bm) \
    ((bm != NULL) && \
-    ((uint )bm->bits < (uint )max_textures) && \
-    (bm == texinfo[(uint )bm->bits].bitmap))
+    (bitmap_texture_id(bm) >= 0) && \
+    (bitmap_texture_id(bm) < max_textures) && \
+    (bm == texinfo[bitmap_texture_id(bm)].bitmap))
 
 #define validate_bm(bm) AssertMsg(is_valid(bm), bad_bm_string)
 
@@ -155,7 +166,7 @@ static void tmgr_restore_bits(grs_bitmap *bm)
    if ((bm == NULL)||((bm->flags&BMF_LOADED)==0))
       return;
    validate_bm(bm);
-   bm->bits = texinfo[(uint )bm->bits].bits;
+   bm->bits = texinfo[bitmap_texture_id(bm)].bits;
 }
 
 // eliminate bitmap pointer from list, mark
@@ -167,7 +178,7 @@ static void do_unload(grs_bitmap *bm)
 
    validate_bm(bm);
 
-   i = (int )bm->bits;
+   i = bitmap_texture_id(bm);
    info = &texinfo[i];
 
    bm->flags &= ~BMF_LOADED;
@@ -238,7 +249,7 @@ static int do_load(tdrv_texture_info *info)
    tmgr_info->bitmap = bm;
    tmgr_info->cookie = info->cookie;
    tmgr_info->size = info->size;
-   bm->bits = (uchar *)info->id;
+   bm->bits = texture_id_bits(info->id);
    bm->flags |= BMF_LOADED;
 
    return TMGR_SUCCESS;
@@ -273,7 +284,7 @@ static void do_set_texture(r3s_texture bm)
 
    validate_bm(bm);
 
-   i = (int )bm->bits;
+   i = bitmap_texture_id(bm);
    info = &texinfo[i];
 
    if (info->frame != cur_frame) {
@@ -283,16 +294,21 @@ static void do_set_texture(r3s_texture bm)
    g_driver->set_texture_id(i);
 }
 
-#define TMGR_INVALID_TEXTURE_SIZE ((tmap_chain *)-1)
+#define TMGR_INVALID_TEXTURE_SIZE (-1)
 #define MAX_SIZE 9
-static tmap_chain *alpha_size_table[MAX_SIZE*MAX_SIZE];
-static tmap_chain *norm8_size_table[MAX_SIZE*MAX_SIZE];
-static tmap_chain *norm16_size_table[MAX_SIZE*MAX_SIZE];
+typedef struct tmap_size_entry {
+   int size;
+   tmap_chain *chain;
+} tmap_size_entry;
+
+static tmap_size_entry alpha_size_table[MAX_SIZE*MAX_SIZE];
+static tmap_size_entry norm8_size_table[MAX_SIZE*MAX_SIZE];
+static tmap_size_entry norm16_size_table[MAX_SIZE*MAX_SIZE];
 
 static tmap_chain *calc_size(tdrv_texture_info *info)
 {
    int i,j,w,h;
-   tmap_chain **size_table;
+   tmap_size_entry *size_table;
    tmap_chain *chain;
    grs_bitmap *bm = info->bm;
 
@@ -318,7 +334,7 @@ static tmap_chain *calc_size(tdrv_texture_info *info)
       bm->flags|=BMF_HACK;
    }
 
-   else while ((chain = size_table[i*MAX_SIZE+j])==NULL)
+   else while ((chain = size_table[i*MAX_SIZE+j].chain)==NULL)
    {
       if (i<j) {
          i++, info->scale_w++;
@@ -341,7 +357,7 @@ static tmap_chain *calc_size(tdrv_texture_info *info)
 }
 
 
-static void init_size_table(tmap_chain **size_table, int type)
+static void init_size_table(tmap_size_entry *size_table, int type)
 {
    int i, j;
    int w, h;
@@ -359,11 +375,12 @@ static void init_size_table(tmap_chain **size_table, int type)
          g_driver->cook_info(&info);
          if (g_driver->load_texture(&info) == TDRV_FAILURE)
          { // can't load this size texture
-            size_table[i + j] = TMGR_INVALID_TEXTURE_SIZE;
+            size_table[i + j].size = TMGR_INVALID_TEXTURE_SIZE;
          } else {
-            size_table[i + j] = (tmap_chain *)info.size;
+            size_table[i + j].size = info.size;
             g_driver->release_texture(info.id);
          }
+         size_table[i + j].chain = NULL;
          gr_free(info.bm);
       }
    }
@@ -372,42 +389,42 @@ static void init_size_table(tmap_chain **size_table, int type)
 #define MAX_TMAP_SIZES 3*MAX_SIZE*MAX_SIZE
 
 // here we're just trying to figure out how many distinct texture sizes there are...
-static int get_num_sizes(tmap_chain **size_list, int num_sizes, tmap_chain **size_table)
+static int get_num_sizes(int *size_list, int num_sizes, tmap_size_entry *size_table)
 {
    int i,j;
    for (i=0; i<MAX_SIZE*MAX_SIZE; i++) {
-      if (size_table[i]==TMGR_INVALID_TEXTURE_SIZE)
+      if (size_table[i].size==TMGR_INVALID_TEXTURE_SIZE)
          continue;
 
       for (j=0; j<num_sizes; j++) {
-         if (size_list[j]==size_table[i])
+         if (size_list[j]==size_table[i].size)
             break;
       }
       if (j==num_sizes)
-         size_list[num_sizes++] = size_table[i];
+         size_list[num_sizes++] = size_table[i].size;
    }
    return num_sizes;
 }
 
 // here we actually munge the size table to have real (tmap_chain *)'s
-static int munge_table(int num_sizes, tmap_chain **size_table)
+static int munge_table(int num_sizes, tmap_size_entry *size_table)
 {
    int i,j;
    for (i=0; i<MAX_SIZE*MAX_SIZE; i++) {
-      if (size_table[i]==TMGR_INVALID_TEXTURE_SIZE) {
-         size_table[i] = NULL;
+      if (size_table[i].size==TMGR_INVALID_TEXTURE_SIZE) {
+         size_table[i].chain = NULL;
          continue;
       }
       for (j=0; j<num_sizes; j++) {
-         if (chain_list[j].size==(int )size_table[i])
+         if (chain_list[j].size==size_table[i].size)
             break;
       }
       if (j==num_sizes) {
          chain_list[num_sizes].head = -1;
-         chain_list[num_sizes].size = (int )size_table[i];
+         chain_list[num_sizes].size = size_table[i].size;
          num_sizes++;
       }
-      size_table[i] = &chain_list[j];
+      size_table[i].chain = &chain_list[j];
    }
    return num_sizes;
 }
@@ -416,9 +433,9 @@ static int munge_table(int num_sizes, tmap_chain **size_table)
 static void munge_size_tables(void)
 {
    int num_sizes;
-   tmap_chain **size_list;
+   int *size_list;
 
-   size_list = (tmap_chain **)Malloc(MAX_TMAP_SIZES*sizeof(tmap_chain *));
+   size_list = (int *)Malloc(MAX_TMAP_SIZES*sizeof(int));
    num_sizes = get_num_sizes(size_list, 0, alpha_size_table);
    num_sizes = get_num_sizes(size_list, num_sizes, norm8_size_table);
    num_sizes = get_num_sizes(size_list, num_sizes, norm16_size_table);
@@ -555,7 +572,7 @@ static void tmgr_reload_texture(r3s_texture bm)
 
    validate_bm(bm);
    info.bm = bm;
-   info.id = (int )bm->bits;
+   info.id = bitmap_texture_id(bm);
 
    calc_size(&info);
    g_driver->cook_info(&info);
@@ -633,7 +650,7 @@ static void tmgr_set_texture(r3s_texture bm)
    }
    if (bm->flags & BMF_LOADED) {
       validate_bm(bm);
-      if (texture_clut == texinfo[(int )bm->bits].clut) {
+      if (texture_clut == texinfo[bitmap_texture_id(bm)].clut) {
          do_set_texture(bm);
          put_mono('.');
          return;

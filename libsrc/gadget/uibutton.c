@@ -38,7 +38,6 @@
 
 // ======================================
 // BUTTON GADGET EXPOSE FUNC
-#pragma off(unreferenced)
 void buttongadg_draw_func(void* data, LGadBox* box)
 {
    ButtonGadg* g = (ButtonGadg*)box;
@@ -68,7 +67,6 @@ static bool buttongadg_expose_func(Region* reg, Rect* rect)
 // mask to check if any buttons are down
 #define ACTION_DOWN_MASK ~(UI_MOUSE_RTIMEOUT|UI_MOUSE_LTIMEOUT|UI_MOUSE_CTIMEOUT)
 
-#pragma off(unreferenced)
 bool buttongadg_process_mouse(ButtonGadg* bg, Rect* rect, uiMouseEvent* ev)
 {
    int i;
@@ -221,7 +219,6 @@ bool buttongadg_process_mouse(ButtonGadg* bg, Rect* rect, uiMouseEvent* ev)
 //-------------------------------------------------
 // the mouse handler
 
-#pragma off(unreferenced)
 BOOL buttongadg_mouse_handler(uiEvent* ev, Region* reg, void* data)
 {
    ButtonGadg* bg = (ButtonGadg*)reg;
@@ -334,7 +331,7 @@ int find_next_button(ButtonList* list, Point dir)
 {
    int button = list->key_button;
    int best = button;
-   uint bestweight = 0xFFFFFFFF;
+   int bestweight = 0x7FFFFFFF;
    int i;
    Rect *us = &list->rvec[button];
    Point mid = MakePoint((us->ul.x + us->lr.x)/2,
@@ -485,7 +482,6 @@ BOOL buttonlist_keyboard_handler(uiEvent* _ev, Region* reg, void* data)
    return retval;
 }
 
-#pragma off(unreferenced)
 bool buttonlist_mask_func(LGadBox* reg, Rect* r, void* data)
 {
    ButtonList* list = (ButtonList*)reg;
@@ -495,7 +491,6 @@ bool buttonlist_mask_func(LGadBox* reg, Rect* r, void* data)
          return TRUE;
    return FALSE;
 }
-#pragma on(unreferenced)
 
 static void send_to_button(ButtonList* list, uiMouseEvent* ev)
 {

@@ -154,7 +154,7 @@ HRESULT DarkSaveGame(const char* descstr, ITagFile* file)
    char buf[4096]; 
    while (!feof(cp))
    {
-      int len = fread(buf,1,sizeof(buf),cp); 
+      int len = (int)fread(buf,1,sizeof(buf),cp);
       if (file->Write(buf,len) != len)
          return kDarkSaveCheckpoint; 
    }

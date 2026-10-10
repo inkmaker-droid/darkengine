@@ -361,13 +361,16 @@ void config_write_line(int fd, const char* var, char* val, char* com)
    strcpy(buf+strlen(var)+1,val);
    if (com != NULL)
    {
-      int s = strlen(buf);
+      size_t s = strlen(buf);
       buf[s] = COMMENT_CHAR;
       strcpy(buf+s+1,com);
    }
    strcat(buf,"\n");
-   if (write(fd,buf,strlen(buf))!=strlen(buf))
+   {
+      unsigned len = (unsigned)strlen(buf);
+      if (write(fd,buf,len) != (int)len)
       config_write_iter_success=FALSE;
+   }
 }
 
 typedef struct _config_iter_struct
@@ -516,7 +519,7 @@ errtype config_write_file(const char* in,writefunc writable)
          else
          {
             strcat(rbuf,"\n");
-            write(ofd,rbuf,strlen(rbuf));
+            write(ofd,rbuf,(unsigned)strlen(rbuf));
          }
       }
       close(ifd);
@@ -582,7 +585,7 @@ errtype config_set_single_value(const char* varname, int type, config_valtype va
             strcpy(s,(char*)value);
             break;
          case CONFIG_INT_TYPE:
-            itoa((int)value,s,10);
+            itoa((int)(intptr_t)value,s,10);
             break;
          case CONFIG_FLOAT_TYPE:
             gcvt(*(float *)(&value),10,s);
@@ -624,7 +627,7 @@ bool config_get_value(const char* varname, int type, void* fillvec, int* cnt)
             ((int*)fillvec)[*cnt] = atoi(s);
             break;
          case CONFIG_FLOAT_TYPE:
-            ((float*)fillvec)[*cnt] = atof(s);
+            ((float*)fillvec)[*cnt] = (float)atof(s);
             break;
       }
       *v = tmp;
@@ -770,7 +773,6 @@ errtype config_unset(const char* varname)
 }
 
 
-#pragma disable_message(202)
 bool config_shutdown_iter(config_elem* e, void* data)
 {
 #ifndef NO_DUMMIES
@@ -780,7 +782,6 @@ bool config_shutdown_iter(config_elem* e, void* data)
 //   free(e->val);
    return FALSE;
 }
-#pragma enable_message(202)
 
 errtype config_shutdown(void)
 {
@@ -807,7 +808,6 @@ void config_set_writable_table(config_write_spec* tbl)
 
 
 
-#pragma off(unreferenced)
 bool config_default_writable(char* filename, char* var)
 {
    config_write_spec* spec = cfg_write_table;
@@ -828,7 +828,6 @@ bool config_default_writable(char* filename, char* var)
    if (strcmp(buf,SWITCH_PREFIX)==0) return FALSE;
    return config_default_writability;
 }
-#pragma on(unreferenced)
 
 
 
@@ -925,7 +924,7 @@ void config_add_to_or_extract_from_recording( void )
 //////////////////////////////////////////////////
 
 bool config_spew_on = TRUE;
-static char* _spewsrc = NULL;
+static const char* _spewsrc = NULL;
 
 bool CfgSpewTest(const char* var)
 {

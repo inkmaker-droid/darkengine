@@ -430,11 +430,11 @@ void cObjectivesBase::RedrawDisplay()
                   break;
                case 'c': have_cr=FALSE; break;
                case 'b':
-                  sprintf(buf,"%s",FetchUIString(panel_name,val?"true":"false"));
+                  sprintf(buf,"%s",(const char *)FetchUIString(panel_name,val?"true":"false"));
                   no_sprint=TRUE;
                   break;
                case 'q':
-                  sprintf(buf,"%s",FetchUIString(panel_name,val?"some":"none"));
+                  sprintf(buf,"%s",(const char *)FetchUIString(panel_name,val?"some":"none"));
                   no_sprint=TRUE;
                   break;
                case 't':
@@ -444,11 +444,11 @@ void cObjectivesBase::RedrawDisplay()
                      int h=m/60;
                      buf[0]='\0';
                      if (h)
-                        sprintf(buf+strlen(buf),"%d %s ",h,FetchUIString(panel_name,h!=1?"hours":"hour"));
+                        sprintf(buf+strlen(buf),"%d %s ",h,(const char *)FetchUIString(panel_name,h!=1?"hours":"hour"));
                      if (m)
-                        sprintf(buf+strlen(buf),"%d %s ",m%60,FetchUIString(panel_name,m!=1?"minutes":"minute"));
+                        sprintf(buf+strlen(buf),"%d %s ",m%60,(const char *)FetchUIString(panel_name,m!=1?"minutes":"minute"));
                      if (s)
-                        sprintf(buf+strlen(buf),"%d %s",s%60,FetchUIString(panel_name,s!=1?"seconds":"second"));
+                        sprintf(buf+strlen(buf),"%d %s",s%60,(const char *)FetchUIString(panel_name,s!=1?"seconds":"second"));
                      no_sprint=TRUE;
                   }
                   break;
@@ -1089,7 +1089,7 @@ protected:
    
    static long move_func(void* buf, size_t sz, size_t n)
    {
-      return gpLoading->mpMissionFile->Read((char*)buf,sz*n); 
+   return gpLoading->mpMissionFile->Read((char*)buf,(int)(sz*n));
    }
 
    void ReadMission(void)

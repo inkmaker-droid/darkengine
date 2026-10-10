@@ -10,7 +10,7 @@
 #include <objtype.h>
 #include <editprop.h>
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <win32_platform.h>
 
 struct PropertyListEditorDesc
 {

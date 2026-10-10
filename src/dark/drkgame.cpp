@@ -285,14 +285,12 @@ static bool game_key_parse(int keycode)
    return FALSE;
 }
 
-#pragma off(unreferenced)
 static BOOL key_handler_func(uiEvent* ev, Region* r, void* data)
 {
    uiCookedKeyEvent* kev = (uiCookedKeyEvent*)ev;
    return game_key_parse(kev->code);
 }
 
-#pragma on(unreferenced)
 
 static int key_handler_id;
 
@@ -1086,10 +1084,10 @@ void dark_init_game(void)
    // set the memory allocation cap
    sAllocLimits allocLimits;
    AllocGetLimits(&allocLimits);
-   long memoryCap = (allocLimits.allocCap > DEFAULT_MEMORY_CAP) ? allocLimits.allocCap : DEFAULT_MEMORY_CAP;         // quick kids!  lets put on our memory caps!
+   int memoryCap = (int)((allocLimits.allocCap > DEFAULT_MEMORY_CAP) ? allocLimits.allocCap : DEFAULT_MEMORY_CAP);   // quick kids!  lets put on our memory caps!
    if (config_is_defined("memory_cap"))
       config_get_int( "memory_cap", &memoryCap );
-   AllocSetAllocCap( memoryCap );
+   AllocSetAllocCap( (size_t)memoryCap );
 
    ConstrainGameScreenMode(gamescreen_cb); 
 

@@ -7,6 +7,10 @@
 // Implementation of pools
 //
 
+#ifdef _WIN32
+#include <win32_platform.h>
+#endif
+
 #include <lg.h>
 #include <pool.h>
 #include <poolimp.h>
@@ -163,7 +167,7 @@ void    cPoolAllocator::Init(size_t elemSize)
     if (m_nElementSize < sizeof(sFreePoolPart))
         m_nElementSize = sizeof(sFreePoolPart);
 
-    m_nBlockingFactor = kPageSize / RealElemSize(m_nElementSize);
+    m_nBlockingFactor = (unsigned)(kPageSize / RealElemSize(m_nElementSize));
 
     m_pNextPool = m_pPools;
     m_pPools = this;

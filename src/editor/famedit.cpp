@@ -76,9 +76,9 @@ BOOL _familyRemapBrushes(int *tex_swap, int cnt)
    {
       if (brushGetType(us)==brType_TERRAIN)
       {
-         chg|=check_swap(tex_swap,&us->tx_id,cnt);
+         chg = check_swap(tex_swap,&us->tx_id,cnt) || chg;
          for (i=0; i<us->num_faces; i++)
-            chg|=check_swap(tex_swap,&us->txs[i].tx_id,cnt);
+            chg = check_swap(tex_swap,&us->txs[i].tx_id,cnt) || chg;
       }
       us=blistIterNext(hIter);
    }
@@ -267,7 +267,7 @@ static void texture_wr_usage_count(int tmap_id, char **rep_str)
       if (histo[tmap_id])
          sprintf(buf,"Tmap %d used %d times",tmap_id,histo[tmap_id]);
       else
-         sprintf(buf,"Tmap %d not used");
+         sprintf(buf,"Tmap %d not used",tmap_id);
       Status(buf);
    }
    else

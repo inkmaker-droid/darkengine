@@ -206,7 +206,7 @@ static int ESndPlayCore(cTagSet *pTagSet, ObjID Obj1, ObjID Obj2,
       // Must check size here because set is only as big as the largest
       // numbered tag that IS required, not the largest numbered tag
       // that we could ask IF IT IS required.
-      if ((pInPointer->m_KeyType < g_pTagRequired->Size()) &&
+      if ((pInPointer->m_KeyType < (unsigned)g_pTagRequired->Size()) &&
              (g_pTagRequired->IsSet(pInPointer->m_KeyType)))
          pInPointer->m_iFlags |= kTagDBInputFlagRequired;
 
@@ -400,7 +400,7 @@ void ESndDump() {
 static void FindRequiredBits()
 {
    int i;
-   int iHighestRemappedToken = 0;
+   unsigned iHighestRemappedToken = 0;
    int iSize = g_LocalTagRequired.Size();
    for (i = 0; i < iSize; ++i) {
       if (g_LocalTagRequired[i]) {
@@ -414,7 +414,7 @@ static void FindRequiredBits()
    if (g_pTagRequired)
       delete g_pTagRequired;
 
-   g_pTagRequired  = new cPackedBoolSet(iHighestRemappedToken + 1);
+   g_pTagRequired  = new cPackedBoolSet((int)iHighestRemappedToken + 1);
 
    for (i = 0; i < iSize; ++i) {
       if (g_LocalTagRequired[i]) {

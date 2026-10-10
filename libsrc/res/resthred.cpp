@@ -6,9 +6,8 @@
 //
 
 #ifdef _WIN32
-#include <windows.h>
-#include <lg.h>
 #include <thrdtool.h>
+#include <lg.h>
 #include <resthred.h>
 
 cThreadLock g_ResThreadLock;

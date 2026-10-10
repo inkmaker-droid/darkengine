@@ -5,7 +5,7 @@
 // $Revision: 1.3 $
 //
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <lg.h>
 
 #include <comtools.h>
@@ -61,7 +61,6 @@ IMPLEMENT_UNAGGREGATABLE(cMediaSample, IMediaSample);
 
 ///////////////////////////////////////
 
-#pragma off(unreferenced)
 cMediaSample::cMediaSample(const char *pName,
                            cBaseAllocator * pAllocator,
                            HRESULT * phr,
@@ -82,7 +81,6 @@ cMediaSample::cMediaSample(const char *pName,
         *phr = VFW_E_NEED_OWNER;
         }
     }
-#pragma on(unreferenced)
 
 
 ///////////////////////////////////////
@@ -488,7 +486,6 @@ IMPLEMENT_UNAGGREGATABLE_SELF_DELETE(cBaseAllocator, IMemAllocator);
 
 ///////////////////////////////////////
 
-#pragma off(unreferenced)
 cBaseAllocator::cBaseAllocator(const char *pName, LPUNKNOWN pUnk, HRESULT * phr, BOOL bEvent)
   : m_lAllocated(0),
     m_bChanged(FALSE),
@@ -512,7 +509,6 @@ cBaseAllocator::cBaseAllocator(const char *pName, LPUNKNOWN pUnk, HRESULT * phr,
             }
         }
     }
-#pragma on(unreferenced)
 
 
 ///////////////////////////////////////
@@ -869,7 +865,7 @@ STDMETHODIMP cMemAllocator::SetProperties(ALLOCATOR_PROPERTIES * pRequest,
         }
     /* Check the alignment requested */
     if (pRequest->cbAlign == 0 ||
-        SysInfo.dwAllocationGranularity & (pRequest->cbAlign - 1) != 0)
+        (SysInfo.dwAllocationGranularity & (pRequest->cbAlign - 1)) != 0)
         {
         DbgLog((LOG_ERROR, 1, TEXT("Invalid alignment 0x%x requested - granularity = 0x%x"),
                 pRequest->cbAlign, SysInfo.dwAllocationGranularity));
@@ -1062,7 +1058,6 @@ cMemAllocator::~cMemAllocator()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#pragma off(unreferenced)
 cDDSample::cDDSample(
                TCHAR *pName,
                cBaseAllocator *pAllocator,   
@@ -1078,7 +1073,6 @@ cDDSample::cDDSample(
 {
 
 }
-#pragma on(unreferenced)
    
 LPDIRECTDRAWSURFACE cDDSample::GetDDSurface()
 {
@@ -1095,7 +1089,6 @@ LPDDSURFACEDESC cDDSample::GetDDSurfaceDesc()
    return m_pDDSurfaceDesc;
 }
 
-#pragma off(unreferenced)
 cBitmapSample::cBitmapSample(
                              const TCHAR *pName,
                              cBaseAllocator *pAllocator,   
@@ -1106,7 +1099,6 @@ cBitmapSample::cBitmapSample(
    m_pBitmap(pBitmap)
 {
 }
-#pragma on(unreferenced)
 
 grs_bitmap *cBitmapSample::GetBitmap()
 {

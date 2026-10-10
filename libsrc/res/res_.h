@@ -102,10 +102,10 @@ BOOL DoResDrop(Id id);
 #ifndef SHIP
 
 // Watcom debugger has trouble with these, so they are off by default
-__declspec(dllimport) BOOL __stdcall IsBadReadPtr(const void *lp, UINT_PTR ucb);
-__declspec(dllimport) BOOL __stdcall IsBadWritePtr(void *lp, UINT_PTR ucb);
-
 #ifdef VALIDATE_POINTERS
+#ifdef _WIN32
+#include <win32_platform.h>
+#endif
 #define ResIsBadReadPtr(p, s) IsBadReadPtr(p, s)
 #define ResIsBadWritePtr(p, s) IsBadWritePtr(p, s)
 #else

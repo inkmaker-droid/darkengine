@@ -232,7 +232,6 @@
     <ClCompile Include="g2poly.c" />
     <ClCompile Include="g2ring.c" />
     <ClCompile Include="g2rot.c" />
-    <ClCompile Include="g2tm.c" />
     <ClCompile Include="gen16il.c" />
     <ClCompile Include="gen8il.c" />
     <ClCompile Include="gencnv.c" />

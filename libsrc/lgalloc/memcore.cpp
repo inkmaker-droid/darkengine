@@ -7,10 +7,11 @@
 // @TBD (toml 07-14-97): should cram all functions in this library into the same codeseg
 
 #ifdef _WIN32
-#include <windows.h>
+#include <win32_platform.h>
 #endif
 
 #include <allocapi.h>
+#include <platform_services.h>
 
 #ifdef _WIN32
 #include <memcore.h>
@@ -339,10 +340,10 @@ void LGAPI AllocGetLimits(sAllocLimits * pLimits)
 
 ///////////////////////////////////////
 
-ulong LGAPI AllocSetAllocCap(ulong cap)
+size_t LGAPI AllocSetAllocCap(size_t cap)
 {
 #ifdef _WIN32
-   ulong old = g_MemCore.m_PrimaryMalloc.allocCap;
+   size_t old = g_MemCore.m_PrimaryMalloc.allocCap;
    g_MemCore.m_PrimaryMalloc.initAllocCap = g_MemCore.m_PrimaryMalloc.allocCap = cap;
    return old;
 #else
@@ -355,16 +356,15 @@ ulong LGAPI AllocSetAllocCap(ulong cap)
 ulong LGAPI AllocPickAllocCap()
 {
 #ifdef _WIN32
-   MEMORYSTATUS memoryStatus;
-   memoryStatus.dwLength = sizeof(memoryStatus);
-   GlobalMemoryStatus(&memoryStatus);
+   sPlatformMemoryStatus memoryStatus;
+   PlatformGetMemoryStatus(&memoryStatus);
 
    const ulong kTargetCapNum   = 1;
    const ulong kTargetCapDenom = 2;
    const ulong kMinCap         = 0x0800000;      //  8 mb
    const ulong kMaxCap         = 0x2000000;      // 32 mb
 
-         ulong targetCap       = (memoryStatus.dwTotalPhys * kTargetCapNum) / kTargetCapDenom;
+         SIZE_T targetCap      = (memoryStatus.total_physical_bytes * kTargetCapNum) / kTargetCapDenom;
          ulong iniCap;
 
    targetCap = max(kMinCap, min(kMaxCap, targetCap));
@@ -373,7 +373,7 @@ ulong LGAPI AllocPickAllocCap()
    if (iniCap)
       targetCap = iniCap;
 
-   return targetCap;
+   return (ulong)targetCap;
 #else
    return 0;
 #endif

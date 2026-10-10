@@ -277,8 +277,8 @@ static sAutomapProperty* map_player_pos()
       if (room != OBJ_NULL && gAutoMapProp->Get(room,&prop))
       {
          AutoAppIPtr(QuestData); 
-         if (prop->page >= pQuestData->Get(MIN_PAGE_QVAR) 
-             && prop->page <= pQuestData->Get(MAX_PAGE_QVAR))
+         if ((int)prop->page >= pQuestData->Get(MIN_PAGE_QVAR)
+             && (int)prop->page <= pQuestData->Get(MAX_PAGE_QVAR))
             return prop; 
 
          static sAutomapProperty oob_pos; 
@@ -599,9 +599,9 @@ OverlapsAnnotation( sAmapAnnotation    *pAnnotation,
 // make values less than 128 smaller,
 //   values greater than 128 bigger
 
-static float brightenRGB[3] = { 0.7, 0.7, 0.3 };
-static float darkenRGB[3] =   { 0.1, 0.1, 0.1 };
-static float dimRGB[3] =      { 0.2, 0.2, 0.7 };
+static float brightenRGB[3] = { 0.7f, 0.7f, 0.3f };
+static float darkenRGB[3] =   { 0.1f, 0.1f, 0.1f };
+static float dimRGB[3] =      { 0.2f, 0.2f, 0.7f };
 static int splitPoint = 100;
 
 static void
@@ -620,14 +620,14 @@ mungeColor( uchar    *pDst,
       // enhance contrast in decal where player is
       if ( ((r + g + b) / 3) >= splitPoint ) {
          // make color brighter
-         r = 255 - ((255 - r) * (1.0 - brightenRGB[0]));
-         g = 255 - ((255 - g) * (1.0 - brightenRGB[1]));
-         b = 255 - ((255 - b) * (1.0 - brightenRGB[2]));
+         r = (int)(255 - ((255 - r) * (1.0f - brightenRGB[0])));
+         g = (int)(255 - ((255 - g) * (1.0f - brightenRGB[1])));
+         b = (int)(255 - ((255 - b) * (1.0f - brightenRGB[2])));
       } else {
          // make color darker
-         r *= (1.0 - darkenRGB[0]);
-         g *= (1.0 - darkenRGB[1]);
-         b *= (1.0 - darkenRGB[2]);
+         r = (int)(r * (1.0f - darkenRGB[0]));
+         g = (int)(g * (1.0f - darkenRGB[1]));
+         b = (int)(b * (1.0f - darkenRGB[2]));
       }
 
    } else {
@@ -637,12 +637,12 @@ mungeColor( uchar    *pDst,
       //  increase the contrast of the blue component.  This color
       //  shifts the palette toward blue, to make the visited areas
       //  stand out, without losing so much contrast text is illegible
-      r = (r >= splitPoint) ? splitPoint + ( (r - splitPoint) * (1.0 - dimRGB[0]) )
-         :                    splitPoint - ( (splitPoint - r) * (1.0 - dimRGB[0]) );
-      g = (g >= splitPoint) ? splitPoint + ( (g - splitPoint) * (1.0 - dimRGB[1]) )
-         :                    splitPoint - ( (splitPoint - g) * (1.0 - dimRGB[1]) );
-      b = (b >= splitPoint) ? 255 - ((255 - b) * (1.0 - dimRGB[2]))
-         :                    b * (1.0 - dimRGB[2]);
+      r = (int)((r >= splitPoint) ? splitPoint + ( (r - splitPoint) * (1.0f - dimRGB[0]) )
+         :                           splitPoint - ( (splitPoint - r) * (1.0f - dimRGB[0]) ));
+      g = (int)((g >= splitPoint) ? splitPoint + ( (g - splitPoint) * (1.0f - dimRGB[1]) )
+         :                           splitPoint - ( (splitPoint - g) * (1.0f - dimRGB[1]) ));
+      b = (int)((b >= splitPoint) ? 255 - ((255 - b) * (1.0f - dimRGB[2]))
+         :                           b * (1.0f - dimRGB[2]));
    }
 
    *pDst++ = r;
@@ -967,7 +967,7 @@ cAutomap::MapRegionEventHandler( uiEvent  *pEvent,
                case KEY_BS:
                case KEY_DEL:
                   // delete a char
-                  len = strlen( mCurAnnotation.text );
+      len = (int)strlen( mCurAnnotation.text );
                   if ( len ) {
                      mCurAnnotation.text[ len - 1 ] = 0;
                   }
@@ -978,7 +978,7 @@ cAutomap::MapRegionEventHandler( uiEvent  *pEvent,
                   // 
                   // if key is in range, add it to end of string and redisplay
                   //
-                  len = strlen( mCurAnnotation.text );
+      len = (int)strlen( mCurAnnotation.text );
                   if ( len < (MAX_ANNOT_CHARS - 1) ) {
                      mCurAnnotation.text[ len ] = c;
                      mCurAnnotation.text[ len + 1 ] = 0;

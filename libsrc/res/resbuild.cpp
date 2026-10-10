@@ -350,7 +350,8 @@ long ResPack(int filenum)
       }
       pDirEntry++;
    }
-   prf->pedit->pdir->numEntries -= numReclaimed;
+   prf->pedit->pdir->numEntries =
+      (ushort)(prf->pedit->pdir->numEntries - numReclaimed);
 
 //  Set new current data offset
 

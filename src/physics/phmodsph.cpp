@@ -167,7 +167,7 @@ BOOL cPhysSphereModel::CheckTerrainCollision(tPhysSubModId i, mxs_real t0, mxs_r
          return FALSE;
       }
       else
-         radius = (m_radius[i] > 1.0) ? 1.0 : m_radius[i];
+         radius = (m_radius[i] > 1.0f) ? 1.0f : m_radius[i];
    }
 
    // Special-case Point models
@@ -216,7 +216,7 @@ BOOL cPhysSphereModel::CheckTerrainCollision(tPhysSubModId i, mxs_real t0, mxs_r
          mag2_total = mx_mag2_vec(&total_segment);
          mag2_inside = mx_mag2_vec(&inside_segment);
          if (fabs(mag2_total) > 0)
-            coll_time = dt * (sqrt(mag2_inside / mag2_total));
+            coll_time = dt * (sqrtf(mag2_inside / mag2_total));
          else
             coll_time = 0;
 
@@ -373,7 +373,7 @@ BOOL cPhysSphereModel::CheckTerrainCollision(tPhysSubModId i, mxs_real t0, mxs_r
 
    if (move_len > 0.0)
    {
-      mx_scaleeq_vec(&move_backup, -min(0.01, move_len));
+      mx_scaleeq_vec(&move_backup, -min(0.01f, move_len));
       mx_addeq_vec(&move_vec, &move_backup);
    }
    else
@@ -453,7 +453,7 @@ ePhysIntersectResult cPhysSphereModel::TestRotation(int subModId, const mxs_vect
 
 mxs_real cPhysSphereModel::TerrainDistance(tPhysSubModId subModId, cFaceContact *pFaceContact) const
 {
-   float radius = (IsFancyGhost() && m_radius[subModId] > 1.0) ? 1.0 : m_radius[subModId];
+   float radius = (IsFancyGhost() && m_radius[subModId] > 1.0f) ? 1.0f : m_radius[subModId];
 
    return mx_dot_vec((mxs_vector *) &GetLocationVec(subModId), (mxs_vector *) &pFaceContact->GetNormal()) +
           pFaceContact->GetPlaneConst() - radius;
@@ -461,14 +461,14 @@ mxs_real cPhysSphereModel::TerrainDistance(tPhysSubModId subModId, cFaceContact 
 
 mxs_real cPhysSphereModel::TerrainDistance(tPhysSubModId subModId, cEdgeContact *pEdgeContact) const
 {
-   float radius = (IsFancyGhost() && m_radius[subModId] > 1.0) ? 1.0 : m_radius[subModId];
+   float radius = (IsFancyGhost() && m_radius[subModId] > 1.0f) ? 1.0f : m_radius[subModId];
 
    return pEdgeContact->GetDist(GetLocationVec(subModId)) - radius;
 }
 
 mxs_real cPhysSphereModel::TerrainDistance(tPhysSubModId subModId, cVertexContact *pVertexContact) const
 {
-   float radius = (IsFancyGhost() && m_radius[subModId] > 1.0) ? 1.0 : m_radius[subModId];
+   float radius = (IsFancyGhost() && m_radius[subModId] > 1.0f) ? 1.0f : m_radius[subModId];
 
    return mx_dist_vec((mxs_vector *) &GetLocationVec(subModId), (mxs_vector *) &pVertexContact->GetPoint()) - radius;
 }

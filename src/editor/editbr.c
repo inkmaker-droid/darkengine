@@ -82,9 +82,9 @@ void brushZero(editBrush *curBrush, int primal_brush)
    curBrush->pos.el[0]=0.0;
    curBrush->pos.el[1]=0.0;
    curBrush->pos.el[2]=0.0;
-   curBrush->ang.el[0]=0.0;
-   curBrush->ang.el[1]=0.0;
-   curBrush->ang.el[2]=0.0;
+   curBrush->ang.el[0]=0;
+   curBrush->ang.el[1]=0;
+   curBrush->ang.el[2]=0;
    curBrush->sz.x=DEF_SIZE;
    curBrush->sz.y=DEF_SIZE;
    curBrush->sz.z=DEF_SIZE;

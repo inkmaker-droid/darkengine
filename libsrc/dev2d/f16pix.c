@@ -28,7 +28,6 @@ int flat16_ugpix8(int x, int y)
    return grd_ipal[(*p)];
 }
 
-#pragma off(unreferenced)
 gdgpix_func *flat16_ugpix8_expose(int x, int y)
 {
    return flat16_ugpix8;
@@ -39,7 +38,6 @@ int flat16_ugpix16(int x, int y)
    return *((ushort *)(grd_bm.bits + 2*x + y*grd_bm.row));
 }
 
-#pragma off(unreferenced)
 gdgpix_func *flat16_ugpix16_expose(int x, int y)
 {
    return flat16_ugpix16;
@@ -54,7 +52,6 @@ gdupix_func *flat16_upix16_expose(int c, int x, int y)
 {
    return (gdupix_func *)flat16_upix16_func[grd_gc.fill_type];
 }
-#pragma on(unreferenced)
 
 void flat16_upix8(int c, int x, int y)
 {

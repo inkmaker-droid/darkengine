@@ -280,7 +280,7 @@ static void common_texture_load(ModelHandle *mh, ISearchPath *pPath,
    // Now, check whether this is an animated texture, and load up the
    // frames if so:
    IRes_GetCanonPath(pRes, &pCanonPath);
-   ectsAnimTxtCheckLoad(pRes, using_portal_models, pCanonPath, NULL);
+   ectsAnimTxtCheckLoad(pRes, using_portal_models, pCanonPath, 0);
    if (pCanonPath)
       Free(pCanonPath);
 }
@@ -473,7 +473,7 @@ static sFXHandle g_aFXHandle[MAX_FX_TYPES]
 // This is case-insensitive.
 static bool has_prefix(char *candidate, char *prefix)
 {
-   int prefix_length = strlen(prefix);
+   int prefix_length = (int)strlen(prefix);
 
    if (!prefix_length)
       return FALSE;

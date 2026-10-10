@@ -13,7 +13,7 @@
 //
 
 #ifdef _WIN32
-#include <windows.h>
+#include <win32_platform.h>
 #endif
 
 #include <comtools.h>
@@ -490,7 +490,7 @@ bool cResARQFulfiller::QueueRequest(IRes* pRes, int priority,
             0,                                   // Queue
             priority,                            // Priority
             {
-                (DWORD) pResRequest,             // Custom data
+                (DWORD_PTR)pResRequest,           // Custom data
                 0, 0, 0
             },
             "Resource"                           // Trace name

@@ -104,7 +104,7 @@ struct sScrDeferredAction
       if (nClasses)
       {
          ppszClasses = new const char *[nClasses];
-         for (int i = 0; i < nClasses; i++)
+          for (unsigned i = 0; i < nClasses; i++)
             ppszClasses[i] = strdup(pp[i]);
       }
       else
@@ -115,7 +115,7 @@ struct sScrDeferredAction
    {
       if (nClasses)
       {
-         for (int i = 0; i < nClasses; i++)
+          for (unsigned i = 0; i < nClasses; i++)
             free((void *)ppszClasses[i]);
 
          delete [] ppszClasses;

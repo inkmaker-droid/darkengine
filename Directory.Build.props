@@ -14,15 +14,25 @@
     <DarkLibraryOutputDir>$(DarkPlatformOutputDir)</DarkLibraryOutputDir>
     <OutDir>$(DarkPlatformOutputDir)</OutDir>
     <IntDir>$(DarkIntermediateRoot)$(MSBuildProjectName)\</IntDir>
+    <IncludePath>$(MSBuildThisFileDirectory)winsrc;$(MSBuildThisFileDirectory)winsrc\appcore;$(MSBuildThisFileDirectory)winsrc\dispdev;$(MSBuildThisFileDirectory)winsrc\gameshel;$(MSBuildThisFileDirectory)winsrc\lg;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <!-- Dark's persisted structures and cross-library ABI use byte packing. -->
     <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)winsrc;$(MSBuildThisFileDirectory)winsrc\lg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StructMemberAlignment>1Byte</StructMemberAlignment>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <!-- The renderer uses C99 array designators for sparse dispatch tables.
            MSVC's legacy C mode accepts the syntax but initializes entries
            sequentially, producing corrupt function-pointer tables. -->
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <!-- Embed CodeView records in each object so parallel library builds do
+           not race while updating shared compiler PDBs. The linker still emits
+           the final executable PDB. -->
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <!-- MSVC emits C4073/C4074 solely because the legacy runtime deliberately
+           selects early static-initialization segments. Preserve that ordering. -->
+      <DisableSpecificWarnings>4073;4074;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
   </ItemDefinitionGroup>
 </Project>

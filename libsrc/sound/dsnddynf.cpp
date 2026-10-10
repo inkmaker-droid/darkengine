@@ -7,7 +7,7 @@
 //Revision 1.1  1996/07/30  11:27:12  PATMAC
 //Initial revision
 //
-#include <windows.h>
+#include <win32_platform.h>
 #include <dsound.h>
 
 #include "dsnddynf.h"

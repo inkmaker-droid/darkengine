@@ -1,4 +1,4 @@
-#include <windows.h>
+#include <win32_platform.h>
 #include <evr.h>
 #include <mfapi.h>
 #include <mferror.h>

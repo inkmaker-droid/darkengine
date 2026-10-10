@@ -79,7 +79,7 @@ Command *CommandFind(const char *s, int n)
 
 Command *CommandFindString(const char *s)
 {
-   return CommandFind(s, strlen(s));
+   return CommandFind(s, (int)strlen(s));
 }
 
 void CommandForEach(CommandIterateCallback callback, void *data)
@@ -111,7 +111,7 @@ bool CommandParse(const char *inp, Command **res_1, const char **res_2)
    s = inp;
    while (*s && !isspace(*s)) ++s;
 
-   n = s - inp;
+   n = (int)(s - inp);
 
    cmd = CommandFind(inp, n);
 
@@ -128,7 +128,7 @@ static char context_fail_return[] = "Command is not available in this mode";
 char *CommandExecute(const char *inp)
 {
    // parse out to the first blank
-   char *s;
+   const char *s;
    Command *cmd;
 
    if ((inp==NULL)||(inp[0]=='\0')||(inp[0]==';'))
@@ -146,7 +146,7 @@ char *CommandExecute(const char *inp)
    }
 }
 
-bool CommandExecuteParam(const char *inp, char *parm)
+bool CommandExecuteParam(const char *inp, const char *parm)
 {
    Command *cmd = CommandFindString(inp);
    if (cmd) {
@@ -162,11 +162,16 @@ bool CommandExecuteParam(const char *inp, char *parm)
    }
 }
 
-bool atobool(char *s)
+bool atobool(const char *s)
 {
    if (!stricmp(s, "false")) return FALSE;
    if (!stricmp(s, "true" )) return TRUE;
    return atoi(s);
+}
+
+static float atofloat(const char *s)
+{
+   return strtof(s, NULL);
 }
 
 //////////////////
@@ -218,7 +223,9 @@ void CommandExecuteParsed(Command *cmd, const char *s)
       {
          void (*func)(float);
          func = (void (*)(float)) cmd->val;
-         get_val_and_exec(func,s,atof,prompt_double,0.0);
+         if (do_prompt) func((float)prompt_double(s));
+         else if ((s)&&(*s)) func(atofloat(s));
+         else func(0.0f);
          break;
       }
       case FUNC_DOUBLE:
@@ -242,7 +249,7 @@ void CommandExecuteParsed(Command *cmd, const char *s)
             Free(tmp);
          }
          else //  if ((s)&&(*s)) - since for strings both elses are the same, ie call with s
-            func(s);
+            func((char *)s);
          break;
       }
       case VAR_BOOL:
@@ -284,7 +291,7 @@ void CommandExecuteParsed(Command *cmd, const char *s)
       {
          float *var = (float *) cmd->val;
          if (*s)
-            *var = atof(s);
+            *var = strtof(s,NULL);
          else
             mprintf("%s=%g\n", cmd->name, (float) *var);
          break;
@@ -344,7 +351,7 @@ static bool help_text_contains(const char *text, const char *query,
 
    if (!text || !query || query_len <= 0)
       return FALSE;
-   text_len = strlen(text);
+      text_len = (int)strlen(text);
    if (query_len > text_len)
       return FALSE;
 
@@ -471,7 +478,7 @@ const char *command_find(const char *prefix, BOOL restart)
    BOOL found_us=FALSE;
 
    if (restart) which_list=which_cmd=0;
-   if (prefix)  match_len=strlen(prefix);
+      if (prefix)  match_len=(int)strlen(prefix);
 
    for (; which_list < command_list_size; which_list++, which_cmd=0)
    {

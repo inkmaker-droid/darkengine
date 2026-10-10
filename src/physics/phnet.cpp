@@ -714,7 +714,7 @@ public:
           ObjHasRefs(obj))
       {
          // Okay, give it to him
-         g_pObjNet->ObjGiveTo(obj, fromPlayer, GetParam(1));
+         g_pObjNet->ObjGiveTo(obj, fromPlayer, (ObjID)GetParam(1));
          g_pPermitTakeOverMsg->Send(fromPlayer, obj, (uchar) TRUE);
       } else {
          // Nope, don't let him have it

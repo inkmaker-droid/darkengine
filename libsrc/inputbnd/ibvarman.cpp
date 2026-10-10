@@ -702,7 +702,7 @@ void cIBVariableManager::LoadBndContexted(
 			}
 		}
 
-		int i = 0;
+		unsigned int i = 0;
 		while (i < iNumContexts && stricmp(pszPrefix, pContexts[i].aszStr))
 			++i;
 

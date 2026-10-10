@@ -106,7 +106,7 @@ uchar kb_get_country(void)
 char kb_get_us_equivalent(char key)
 {
    uchar cntry;
-   ushort retval;
+   char retval;
    int i,j;
 
    cntry=kb_get_country();

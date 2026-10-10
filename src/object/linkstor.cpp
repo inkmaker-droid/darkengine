@@ -88,7 +88,7 @@ static BOOL IsLinkSavePartition(LinkID id, ObjID src, ObjID dest, int partition)
    destpart &= ~kObjectConcrete; 
    if (destpart == 0) return FALSE; 
 
-   return destpart < partition; 
+   return (int)destpart < (int)partition;
 }
 
 //------------------------------------------------------------

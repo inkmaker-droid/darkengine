@@ -69,7 +69,7 @@ void *ResLockSetFlags(Id id, ulong flags)
     });
 
     prd = RESDESC(id);
-    prd->flags = flags;
+    prd->flags = (ushort)flags;
 
     return DoResLock(id);
 }

@@ -281,7 +281,7 @@ STDMETHODIMP cAITurret::SuggestActions(cAIGoal * pGoal, const cAIActions & previ
    jointAng = DEGREES(jointPos[pDeviceParams->m_jointRotate]);
    facingAng = m_pAIState->GetFacingAng()+jointAng;
    targetAng = m_pAIState->AngleTo(targetLoc);
-   deltaAng = fabs(Delta(facingAng, targetAng).value);
+   deltaAng = fabsf(Delta(facingAng, targetAng).value);
 
    // if not fully alert, then don't fire
    if (m_pAIState->GetAlertness()<kAIAL_High)

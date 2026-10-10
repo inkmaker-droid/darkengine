@@ -247,7 +247,7 @@ int cPropSnd::GenerateSoundHandle(int handle, ObjID objID, ObjID schemaID, const
 
             parms->distance = -1;
             parms->end_callback = EndSampleCallback;
-            parms->user_data = (void *)handle;
+      parms->user_data = (void *)(intptr_t)handle;
 
             // TODO : Fill with real values?
             parms->pri = 128;
@@ -433,7 +433,7 @@ int cPropSnd::GenerateSoundHandle(int handle, mxs_vector &vec, ObjID src_obj, Ob
 
             parms->distance = -1;
             parms->end_callback = EndSampleCallback;
-            parms->user_data = (void *)handle;
+      parms->user_data = (void *)(intptr_t)handle;
 
             // TODO : Fill with real values?
             parms->pri = 128;
@@ -548,7 +548,7 @@ int cPropSnd::GenerateSound(const char *sampleName, sfx_parm *parms)
 
    parms->distance = -1;
    parms->end_callback = EndSampleCallback;
-   parms->user_data = (void *)handle;
+      parms->user_data = (void *)(intptr_t)handle;
 
    pSoundInfo->Object = PlayerObject();
    pSoundInfo->Handle = handle;
@@ -1171,7 +1171,7 @@ int cPropSnd::EffectivePriority(const cPlayerSoundList* pPlayerList)
       else
       {
          fMinPri = ((float)priority - (float) SCH_PRIORITY_NORMAL) / (float) SCH_PRIORITY_NORMAL;
-         fPriRange = 1.0 - fMinPri;
+         fPriRange = 1.0f - fMinPri;
       }
 
       fNormalizedEP = ((float) (volume + 10000)) * (1.0F / 10000.0F) *            // Normalize to [0..1]

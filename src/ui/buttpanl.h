@@ -95,7 +95,7 @@ public:
 
 protected:
    IPanelMode* mpPanelMode;
-   ulong mFactoryHandle; 
+   tLoopClientCookie mFactoryHandle;
 
    //
    // LOOP CLIENT, ACTUALLY OWNS THE BUTTON LIST

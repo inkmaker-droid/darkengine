@@ -8,9 +8,9 @@ DEFINE_GUID(LIBID_QuartzTypeLib,0x56A868B0L,0x0AD4,0x11CE,0xB0,0x3A,0x00,0x20,0x
 
 typedef double REFTIME;
 
-typedef long OAEVENT;
+typedef LONG_PTR OAEVENT;
 
-typedef long OAHWND;
+typedef LONG_PTR OAHWND;
 
 typedef long OAFilterState;
 

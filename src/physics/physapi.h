@@ -35,8 +35,8 @@ typedef int eMediaState;
 #define PHYSICS_HIGH_MODEL_PROP_NAME "PhysicsHighDetail"
 #define PHYSICS_LOW_MODEL_PROP_NAME  "PhysicsLowDetail"
 
-#define PLAYER_RADIUS (1.2)
-#define PLAYER_HEIGHT (6.0)
+#define PLAYER_RADIUS (1.2f)
+#define PLAYER_HEIGHT (6.0f)
 
 #define PLAYER_HEAD (0)
 #define PLAYER_FOOT (1)
@@ -47,11 +47,11 @@ typedef int eMediaState;
 #define PLAYER_HEAD_POS  ((PLAYER_HEIGHT / 2) - PLAYER_RADIUS)
 #define PLAYER_FOOT_POS  (-(PLAYER_HEIGHT / 2))
 #define PLAYER_BODY_POS  ((PLAYER_HEIGHT / 2) - (PLAYER_RADIUS * 3))
-#define PLAYER_KNEE_POS  (-(PLAYER_HEIGHT * (13.0 / 30.0)))
-#define PLAYER_SHIN_POS  (-(PLAYER_HEIGHT * (11.0 / 30.0)))
+#define PLAYER_KNEE_POS  (-(PLAYER_HEIGHT * (13.0f / 30.0f)))
+#define PLAYER_SHIN_POS  (-(PLAYER_HEIGHT * (11.0f / 30.0f)))
 
-#define DEFAULT_SPRING_TENSION (0.6)
-#define DEFAULT_SPRING_DAMPING (0.02)
+#define DEFAULT_SPRING_TENSION (0.6f)
+#define DEFAULT_SPRING_DAMPING (0.02f)
 
 #ifdef SHIP
 #define ResetObjectWarnings()

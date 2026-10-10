@@ -445,7 +445,7 @@ STDMETHODIMP_(BOOL) cInputBinder::SetContext(unsigned long iContext, BOOL bPoll)
 	if (m_IB_input_mappers[m_cur_context_idx]->m_context == iContext)
 		return TRUE;
 
-	if (!iContext || (iContext & -iContext) != iContext)
+	if (!iContext || (iContext & (iContext - 1)) != 0)
 		return FALSE;
 
 	int bit = 0;

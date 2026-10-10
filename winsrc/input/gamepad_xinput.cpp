@@ -1,4 +1,4 @@
-#include <windows.h>
+#include <win32_platform.h>
 #include <xinput.h>
 #include <string.h>
 

@@ -156,7 +156,7 @@ static void AddRefsForCellID(cDynArray_<ObjID, 128> *pObjList)
 // This is for when we're only casting against a given set of objects.
 inline BOOL ObjInList(ObjID *pObjList, uint nObjCount)
 {
-   for (int i = 0; i < nObjCount; ++i) {
+   for (uint i = 0; i < nObjCount; ++i) {
       if (*pObjList == g_ObjCastObjID)
          return TRUE;
       ++pObjList;

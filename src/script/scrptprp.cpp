@@ -264,7 +264,7 @@ STDMETHODIMP cScriptProp::Delete(ObjID obj)
 
 STDMETHODIMP_(void) cScriptProp::Notify(ePropertyNotifyMsg msg, PropNotifyData data)
 {
-   ObjID obj = (ObjID)data;
+   ObjID obj = (ObjID)(intptr_t)data;
 
    switch (NOTIFY_MSG(msg))
    {
@@ -323,7 +323,7 @@ static sFileMenuFilter scr_file_filters[] =
 // filename (also clobbers trailing whitespace)
 static void prune_path(char *str)
 {
-   int length = strlen(str);
+   int length = (int)strlen(str);
    for (char* s = str + length - 1; s >= str && isspace(*s); s--)
       *s = '\0';
 

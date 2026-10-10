@@ -10,7 +10,6 @@
 /* AIL to timer function mappings */
 // TODO: undefined AIL_* symbols
 
-#pragma off (unreferenced)
 
 typedef void  (__cdecl * tAILTimerCallback)();
 
@@ -23,7 +22,6 @@ static int tm_add_process_AIL (void (*prot_func)(), int real_func, long denom)
    return r;
 }
 
-#pragma on (unreferenced)
 
 /* these are necessary because AIL functions are cdecl'ed and we need to
    hide this _in the timer library_

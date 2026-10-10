@@ -16,6 +16,7 @@
 
 typedef struct sLoopClientDesc sLoopClientDesc;
 DECLARE_HANDLE(tLoopClientData);
+typedef uintptr_t tLoopClientCookie;
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -257,6 +258,10 @@ typedef ILoopClient * (LGAPI * tLoopClientFactoryFunc)(const sLoopClientDesc *, 
 // Detailed information about a loop client
 //
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable:4200) // Persisted trailing-array ABI; no storage here.
+#endif
 struct sLoopClientDesc
 {
    // Client info
@@ -279,8 +284,11 @@ struct sLoopClientDesc
    DWORD           clientData[4];
 
    // Client constraints
-   sLoopConstraint dispatchConstraints[];        // Null-terminated contraints array
+   sLoopConstraint dispatchConstraints[];        // Null-terminated constraints array
 };
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 typedef struct sLoopClientDesc sLoopClientDesc;
 

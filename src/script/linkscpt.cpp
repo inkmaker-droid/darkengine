@@ -68,7 +68,7 @@ linkkind::linkkind(const char* name)
 
 linkkind::operator string () const 
 {
-   cAutoIPtr<IRelation> rel ( LinkMan()->GetRelation(id) );
+   cAutoIPtr<IRelation> rel (LinkMan()->GetRelation((RelationID)id));
    return rel->Describe()->name; 
 }
 
@@ -386,7 +386,7 @@ DECLARE_SCRIPT_SERVICE_IMPL(cLinkToolsSrv, LinkTools)
 
    STDMETHOD_(string, LinkKindName)(long id)
    {
-      cAutoIPtr<IRelation> rel (LinkMan()->GetRelation(id) ); 
+      cAutoIPtr<IRelation> rel (LinkMan()->GetRelation((RelationID)id) );
       AssertMsg1(rel != 0,"A script referenced non-existent link kind %d",id); 
       return rel->Describe()->name; 
    }

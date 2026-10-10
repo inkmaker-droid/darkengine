@@ -12,7 +12,7 @@
 // @Note (toml 08-03-97): This is a temporary solution that will have to be
 // rethought when dynamic menus are supported. No sub-menus right now
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <lg.h>
 #include <algorithm>
 #include <cctype>
@@ -75,7 +75,7 @@ inline unsigned cMenuCommands::NewCommand(const char * pszCommand)
 inline const char * cMenuCommands::Lookup(unsigned id)
 {
    unsigned index = id - kMenuCommandBase;
-   if (index < m_CommandTexts.Size())
+   if (index < (unsigned)m_CommandTexts.Size())
       return m_CommandTexts[index];
    else
       return NULL;
@@ -149,7 +149,7 @@ inline void cMenuSet::BeginMenu(const char * pszSubMenuName)
    m_iCurrentMenu = (int)m_Menus.Size() - 1;
 
    if (m_iCurrentMenu != 0)
-      m_Menus[oldMenu]->AppendMenu(MF_POPUP, (uint)(HMENU)(*pMenu), pszSubMenuName);
+      m_Menus[oldMenu]->AppendMenu(MF_POPUP, (uintptr_t)(HMENU)(*pMenu), pszSubMenuName);
 
 }
 

@@ -400,7 +400,7 @@ int mp_add_res_motion(Id motion_id)
 
 		m.info.type = MT_CAPTURE;
 		m.info.sig = mot.info.signature;
-		m.info.num_frames = mot.info.num_frames;
+		m.info.num_frames = (float)mot.info.num_frames;
 		m.info.freq = mot.info.frequency;
 
 		m.num_components = mot.num_components;
@@ -441,7 +441,7 @@ int mp_add_virtual_motion(mp_vm_func virtual_motion, int num_frames, int frequen
 	mps_motion m;
 
 	m.info.type = MT_VIRTUAL;
-	m.info.num_frames = num_frames;
+	m.info.num_frames = (float)num_frames;
 	m.info.freq = frequency;
 	m.virtual_update = virtual_motion;
 
@@ -468,8 +468,8 @@ void mp_build_tables(void)
 	r = mp_ramp_table;
 	for (i = 0; i < 256; i++, r++)
 	{
-		d = MX_REAL_PI * i / 255;
-		*r = (1.0 - cos(d)) / 2.0;
+		d = (float)MX_REAL_PI * i / 255.0f;
+		*r = (1.0f - cosf(d)) / 2.0f;
 	}
 
 // Build signature lookup table. Coun bits in each signature from 0 to 31.
@@ -477,7 +477,7 @@ void mp_build_tables(void)
 	count = mp_num_joints_by_sig + 1;
 	for (i = 1; i < MAX_JOINTS; i++, count++)
 	{
-		bits = 1 + log(i) / log(2);
+		bits = 1 + (int)(log((double)i) / log(2.0));
 		for (j = 0; j < bits; j++)
 		{
 			if (i & (1 << j))

@@ -20,7 +20,7 @@
 #include <mousevel.h>
 #include <joystick.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 
 //-----------------------------------------------------------------------------
 // Jacobson, 1-30-96
@@ -365,7 +365,6 @@ bool region_check_opacity(Region* reg, ulong evmask)
    return (evmask & uiGetRegionOpacity(reg)) != 0;
 }
 
-#pragma disable_message(202)
 bool event_dispatch_callback(Region* reg, Rect* r, void* v)
 {
    uiEvent* ev = (uiEvent*)v;
@@ -396,7 +395,6 @@ bool event_dispatch_callback(Region* reg, Rect* r, void* v)
    Spew(DSRC_UI_Dispatch,("Event Rejected\n"));
    return FALSE;
 }
-#pragma enable_message(202)
 
 // ui_traverse_point return values:
 #define TRAVERSE_HIT       0
@@ -578,7 +576,7 @@ void ui_flush_mouse_events(ulong timestamp, Point pos)
       if (uiDoubleClicksOn[i] &&
          last_down_events[i].type != UI_EVENT_NULL)
       {
-         int crit = uiDoubleClickDelay;
+         ulong crit = uiDoubleClickDelay;
          ulong timediff = timestamp - last_down_events[i].tstamp;
          Point downpos = last_down_events[i].pos;
          bool out = (abs(pos.x - downpos.x) > uiDoubleClickTolerance ||
@@ -858,8 +856,8 @@ errtype uiPoll(void)
       {
          ushort cooked;
          kbs_event kbe;
-         kbe.code = ((uiRawKeyEvent*)ev)->scancode;
-         kbe.state = ((uiRawKeyEvent*)ev)->action;
+         kbe.code = (uchar)((uiRawKeyEvent*)ev)->scancode;
+         kbe.state = (uchar)((uiRawKeyEvent*)ev)->action;
          err = kb_cook(kbe,&cooked,&result);
          if (err != OK) goto out;
          if (result)
@@ -1040,7 +1038,7 @@ errtype uiInit(uiSlab* slab)
    int i;
    errtype err;
    extern errtype ui_init_cursors(void);
-#ifdef WIN32
+#ifdef _WIN32
    // Jacobson, 2-12-96
    // Get a pointer to the current display interface so we can correctly
    // lock the frame during cursor draws, among other things.
@@ -1083,7 +1081,7 @@ void uiShutdown(void)
    mouse_shutdown();
    kb_shutdown();
 #endif 
-#ifdef WIN32
+#ifdef _WIN32
    SafeRelease(g_pUiDisplayDevice);
 #endif    
 

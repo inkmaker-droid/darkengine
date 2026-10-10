@@ -163,7 +163,8 @@ doubleSamples( void     *pSrc,
                int      bytesPerSample,
                int      oldValue ) 
 {
-   int i, value;
+   uint32 i;
+   int value;
    short *pSrcW, *pDstW;
    unsigned char  *pSrcB, *pDstB;
 

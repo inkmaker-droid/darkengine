@@ -98,7 +98,6 @@ typedef struct _cursor_callback_state
 } cstate;
 
 
-#pragma disable_message(202)
 bool cursor_get_callback(Region* reg, Rect* rect, cstate* s)
 {
    cursor_stack* cs = (cursor_stack*)(reg->cursors);
@@ -115,7 +114,6 @@ bool cursor_get_callback(Region* reg, Rect* rect, cstate* s)
    }
    return *(s->out) != NULL;
 }
-#pragma enable_message(202)
 
 #define cstack_init uiMakeCursorStack
 

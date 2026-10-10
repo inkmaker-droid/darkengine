@@ -296,10 +296,10 @@ static void SetLockVisuals(sPickState *pPSt, sPickCfg *pPCfg, ObjID lock, BOOL s
 
    if (!_IsAdvancedLock(lock))
      {
-       per_tumbler=1.0/(float)_PickGetTumblerCount(pPCfg);
+       per_tumbler=1.0f/(float)_PickGetTumblerCount(pPCfg);
        pin_cnt=(float)pPCfg->tumbler[pPSt->cur_tumbler].pins;
        pin_pos=(float)pPSt->pin/pin_cnt;
-       use_pos=(pPSt->cur_tumbler+(pin_pos*0.77))*per_tumbler;
+       use_pos=(pPSt->cur_tumbler+(pin_pos*0.77f))*per_tumbler;
      }
    else
      {
@@ -310,7 +310,7 @@ static void SetLockVisuals(sPickState *pPSt, sPickCfg *pPCfg, ObjID lock, BOOL s
      }	 
    // want to make this a bit bigger - hmmmm
    if (!stage)
-      use_pos+=((Rand()&0x7f)*(1.0/(1.7*pin_cnt*128.0)))*per_tumbler;
+      use_pos+=((Rand()&0x7f)*(1.0f/(1.7f*pin_cnt*128.0f)))*per_tumbler;
    LockAnimSetTarget(lock,use_pos);
  }
 
@@ -342,7 +342,7 @@ BOOL _AdvLockUpdateProgress(sPickState *pPS, sPickCfg *pPCfg, ObjID lock, ObjID 
   ConfigSpew("PickTiming",("Lock %d has stage time %d and state time %d\n",lock,pPS->tm_stage,state_time));
 
   //if we've just crossed 1/3rd of the way.  
-  if ((pPS->tm_stage>(state_time/3)) && ((pPS->tm_stage-dt)<(state_time/3)))
+  if ((pPS->tm_stage > (state_time / 3)) && ((pPS->tm_stage - (int)dt) < (state_time / 3)))
     _AdvSoundProgress(lock,pick,picker,pPS);
 
   if (pPS->tm_stage>state_time) // hey, state change!
@@ -392,8 +392,8 @@ BOOL _AdvLockUpdateProgress(sPickState *pPS, sPickCfg *pPCfg, ObjID lock, ObjID 
 
 BOOL _LockUpdateProgress(sPickState *pPSt, sPickCfg *pPCfg, ObjID snd_loc)
 {  // default time will be 2s
-   int stage_pct=100.0+pPCfg->tumbler[pPSt->cur_tumbler].time_pct;
-   int stage_time=2*(stage_pct*(100.0+pPSt->tm_rand))/10.0;
+   int stage_pct = (int)(100.0f + pPCfg->tumbler[pPSt->cur_tumbler].time_pct);
+   int stage_time = (int)(2 * (stage_pct * (100.0f + pPSt->tm_rand)) / 10.0f);
    if (pPSt->tm_stage>stage_time)  // past the threshold
    {
       ConfigSpew("PickTiming",("Turn over at %d (%d) [stage time %d r %d]\n",pPSt->tm_stage,pPSt->tm_total,stage_time,pPSt->tm_rand));

@@ -75,10 +75,10 @@ struct BufTagTableEntry
 {
    TagFileTag key;
    Offset   offset; 
-   long    size;
+   ulong   size;
 
-   BufTagTableEntry(const TagFileTag& k, Offset off,long sz = 0) :key(k),offset(off),size(sz) {} ;
-   BufTagTableEntry() :offset(BAD_OFFSET),size(-1) { key.label[0] = '\0';}; 
+   BufTagTableEntry(const TagFileTag& k, Offset off, ulong sz = 0) :key(k),offset(off),size(sz) {} ;
+   BufTagTableEntry() :offset(BAD_OFFSET),size(0) { key.label[0] = '\0';};
 
    Offset Start() { return offset + sizeof(struct BufTagFileBlockHeader); } ; 
    Offset End() { return Start() + size; } ; 

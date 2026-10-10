@@ -572,7 +572,7 @@ public:
          // decrement the count 
          if (!(flags & kStackRemoveNoDecrement))
          {
-            if (how_many >= count) 
+            if (how_many >= (ulong)count)
             {
                if (flags & kStackRemoveLeaveEmpty)
                   // Don't allow them to take more than are there
@@ -587,7 +587,7 @@ public:
          }
          else
          {
-            if (how_many >= count)
+            if (how_many >= (ulong)count)
                how_many = count; 
          }
 
@@ -723,7 +723,7 @@ public:
       if (!pIter->finished)
       {
          painful->Next();
-         if (painful->Done() || ((pIter->max != IGNORE_TYPES) && ((eContainType)painful->Data()>pIter->max)))
+      if (painful->Done() || ((pIter->max != IGNORE_TYPES) && ((eContainType)(intptr_t)painful->Data()>pIter->max)))
             pIter->finished=TRUE;   // we are done
          else
          {

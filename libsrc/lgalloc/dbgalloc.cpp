@@ -8,6 +8,8 @@
 #ifdef _WIN32
 #ifndef SHIP
 
+#include <win32_platform.h>
+
 #include <lg.h>
 #include <dbgalloc.h>
 #include <memcore.h>
@@ -20,7 +22,6 @@
 
 #pragma code_seg("lgalloc")
 
-EXTERN __declspec(dllimport) BOOL __stdcall IsBadReadPtr(const void *, UINT_PTR ucb);
 EXTERN __declspec(dllimport) unsigned long __stdcall timeGetTime   (void);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -65,7 +66,7 @@ static cHeapDebugLeakReporter g_HeapDebugLeakReporter;
 
 struct sHDHeader
 {
-    int         clientSize;
+    size_t      clientSize;
     sHDSentinel headSentinel;
 };
 
@@ -246,7 +247,7 @@ STDMETHODIMP_(void *) cHeapDebug::AllocEx(SIZE_T size, const char * pszFile,
         SetDebug(p, size);
         memset(p, kMallocFill, size);
         TraceMalloc(p, size, pszFile, line);
-        AssertMsg((ulong)p % 2 == 0, "Odd allocation!");
+        AssertMsg((uintptr_t)p % 2 == 0, "Odd allocation!");
     }
     
     return p;
@@ -268,7 +269,7 @@ STDMETHODIMP_(void *) cHeapDebug::ReallocEx(void * pOld, SIZE_T newClientSize, c
 
     // We always return a different block to help trap stray
     // references to the old block
-    const int oldClientSize = GetSize(pOld);
+    const SIZE_T oldClientSize = GetSize(pOld);
     void * pNew;
 
     pNew = AllocEx(newClientSize, pszFile, line);
@@ -326,7 +327,8 @@ STDMETHODIMP cHeapDebug::VerifyAlloc(void * p)
         sHDSentinel * pHeadSentinel   = GetHeadSentinel(p);
         sHDSentinel * pTailSentinel   = GetTailSentinel(p);
 
-        if ((BYTE *)pTailSentinel - (BYTE *)p > m_pNext->GetSize(ClientToDebug(p)) ||
+        if (static_cast<size_t>((BYTE *)pTailSentinel - (BYTE *)p) >
+            m_pNext->GetSize(ClientToDebug(p)) ||
             memcmp(pHeadSentinel, &m_Sentinel, sizeof(sHDSentinel)) != 0)
         {
             pszFailureMessage = "\nPossible: \na) buffer underrun (most likely)\nb) wild pointer\nc) write after free, or\nd) double free (least likely)\n";
@@ -557,7 +559,7 @@ void cHeapDebug::TraceMalloc(void * p, size_t clientSize, const char * pszFile, 
        // Update per-module info
        //
        sHDModuleInfo * pModuleInfo = ModuleInfoGet(pszFile);
-       int             realSize    = m_pNext->GetSize(ClientToDebug(p)) - kSizeofMemDebug;
+       size_t          realSize    = m_pNext->GetSize(ClientToDebug(p)) - kSizeofMemDebug;
        
        pModuleInfo->currentSize += clientSize;
        pModuleInfo->realSize += realSize;
@@ -600,7 +602,7 @@ void cHeapDebug::TraceFree(void * p, const char *, int)
 
    if (pInfo)
    {
-      int realSize = m_pNext->GetSize(ClientToDebug(p)) - kSizeofMemDebug;
+      size_t realSize = m_pNext->GetSize(ClientToDebug(p)) - kSizeofMemDebug;
       
       //
       // Update module info

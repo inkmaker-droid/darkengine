@@ -249,7 +249,7 @@ void CoronaRender()
             * fDistFrac * fDistFrac * pCorona->m_fStrength;
 
          // fade w/distance
-         lgd3d_set_alpha(pCorona->m_fAlpha * (1.0 - sqrt(fDistFrac))
+         lgd3d_set_alpha(pCorona->m_fAlpha * (1.0f - sqrtf(fDistFrac))
                        * pCorona->m_fStrength);
 
          mxs_vector u, v;  // worldspace

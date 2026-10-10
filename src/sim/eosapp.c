@@ -42,13 +42,11 @@ void CellRefInit (void)
       WR_CELL(i)->refs = 0;
 }
 
-#pragma off(unreferenced)
 ObjRefID *CellRefListFunc (void *bin, BOOL create)
 {
    int n = * (int *) bin;
    return (ObjRefID *) &WR_CELL(n)->refs;
 }
-#pragma on(unreferenced)
 
 void CellRefListClearFunc (void *bin)
 {

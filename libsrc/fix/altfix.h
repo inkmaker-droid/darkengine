@@ -93,7 +93,7 @@ __inline fix fix_div_16_3_32_safe(fix a, fix b)
    return altfix_div_shift_safe(a, b, 13);
 }
 
-#ifdef WIN32
+#ifdef _WIN32
 #define fix_div_16_16_3 fix_div_16_16_3_safe
 #define fix_div_16_3_32 fix_div_16_3_32_safe
 #define fix_div_16_8_16 fix_div_16_8_16_safe

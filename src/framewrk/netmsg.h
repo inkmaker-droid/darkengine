@@ -194,6 +194,10 @@ typedef void *tMsgHandlerFunc;
 //
 // The full descriptor of what this message looks like
 //
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable:4200) // Variable-size parameter list follows header.
+#endif
 struct sNetMsgDesc {
    // The general behaviour of this message (mask from eNetMsgFlags)
    ulong behaviour;
@@ -212,6 +216,9 @@ struct sNetMsgDesc {
    // An array of parameters, ending with kNMPT_End
    sNetMsgParam params[];
 };
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 //////////
 //

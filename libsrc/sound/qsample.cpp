@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <lg.h>
 #include <assert.h>
 
@@ -118,7 +118,7 @@ cQSndSample::~cQSndSample( void )
    MIXER_MUTEX;
 
    if ( mChannel >= 0 ) {
-      mpMixer->DoTrace( (void *) mBufferLen, kSndBufferFree );
+      mpMixer->DoTrace( (void *)(uintptr_t)mBufferLen, kSndBufferFree );
       QSWaveMixCloseChannel( mpMixDevice, mChannel, 0 );
       // tell the mixer we're gone & a channel is free
       mpMixer->FreeChannel();
@@ -263,7 +263,7 @@ cQSndSample::MakeAudible()
    }
 
    if ( mpWave != NULL ) {
-      mpMixer->DoTrace( (void *) mBufferLen, kSndBufferAllocate );
+      mpMixer->DoTrace( (void *)(uintptr_t)mBufferLen, kSndBufferAllocate );
       MoveToList( mpMixer->AudibleHead() );
       SetFlags( kSndFlagAudible );
 
@@ -343,7 +343,7 @@ cQSndSample::LLInit( void )
 static void CALLBACK
 QSEndCB( int,
          LPMIXWAVE,
-         DWORD       userData )
+         DWORD_PTR   userData )
 {
    cQSndSample    *pSample;
 
@@ -369,7 +369,7 @@ cQSndSample::LLStart( void )
    playParams.lpImage = NULL;
    playParams.hwndNotify = 0;
    playParams.callback = QSEndCB;
-   playParams.dwUser = (DWORD) this;
+   playParams.dwUser = (DWORD_PTR)this;
    playParams.lStart = 0;
    playParams.lEnd = 0;
    playParams.lStartLoop = 0;
@@ -500,9 +500,9 @@ InternalSetPan( HQMIXER pMixer,
    } else if ( pan < (-PAN_LIMIT) ) {
       pan = (-PAN_LIMIT);
    }
-   polarPos.azimuth = 90.0 * ( (float) pan / (float) PAN_LIMIT );
-   polarPos.range = 1.0;            // 1 meter
-   polarPos.elevation = 0.0;
+   polarPos.azimuth = 90.0f * ( (float) pan / (float) PAN_LIMIT );
+   polarPos.range = 1.0f;            // 1 meter
+   polarPos.elevation = 0.0f;
    res = QSWaveMixSetPolarPosition( pMixer, channel, 0, &polarPos );
 
    return res;
@@ -576,7 +576,7 @@ STDMETHODIMP_(void) cQSndSample::SetFrequency(uint32 freq)
          // muted & running - just recalculate current
          //  position before changing frequency
          now = timeGetTime();
-         mBasePos = ESTIMATED_POSITION( now );
+         mBasePos = (uint32)ESTIMATED_POSITION( now );
          mBaseTime = now;
          TLOG2( "Smp::SetFrequency - reset baseTime %ld basePos %ld", mBaseTime, mBasePos );
       }
@@ -751,7 +751,7 @@ cQSndSample::CheckStream()
       // handle muted stream - look for end-of-data condition
       if ( IS_RUNNING ) {
          TLOG2( "Smp::CheckStream %s MUTED, readPos %d", SAMPLE_NAME, readPos );
-         readPos = ESTIMATED_POSITION_NOW;
+         readPos = (uint32)ESTIMATED_POSITION_NOW;
          if ( readPos >= mNumSamples ) {
             // stream sample has reached its virtual end-of-data
             DeferredStop();
@@ -877,7 +877,7 @@ cQSndSample::Set3DConeAngles( uint32   inside,
       cone.z = m3DConeOrientation.z;
 
       res = QSWaveMixSetSourceCone( mpMixDevice, mChannel, 0, &cone,
-                                    m3DConeInnerAngle, mAmbientVolumeDB );
+                                    (float)m3DConeInnerAngle, mAmbientVolumeDB );
       QSOUND_ERROR_CHECK( res, "Set3DConeAngles" );
    }
 }
@@ -903,7 +903,7 @@ cQSndSample::Set3DConeOrientation( sSndVector *pOrientation )
       cone.z = m3DConeOrientation.z;
 
       res = QSWaveMixSetSourceCone( mpMixDevice, mChannel, 0, &cone,
-                                    m3DConeInnerAngle, mAmbientVolumeDB );
+                                    (float)m3DConeInnerAngle, mAmbientVolumeDB );
       QSOUND_ERROR_CHECK( res, "Set3DConeOrientation" );
    }
 }
@@ -978,7 +978,7 @@ cQSndSample::SetAmbientVolume( int32 vol )
    QSVECTOR cone;
 
    mAmbientVolume = vol;
-   mAmbientVolumeDB = vol / 100.0;
+   mAmbientVolumeDB = vol / 100.0f;
    if ( mChannel >= 0 ) {
       //TBD: should ambientDBs be negated??
       cone.x = m3DConeOrientation.x;
@@ -986,7 +986,7 @@ cQSndSample::SetAmbientVolume( int32 vol )
       cone.z = m3DConeOrientation.z;
 
       res = QSWaveMixSetSourceCone( mpMixDevice, mChannel, 0, &cone,
-                                    m3DConeInnerAngle, mAmbientVolumeDB );
+                                    (float)m3DConeInnerAngle, mAmbientVolumeDB );
       QSOUND_ERROR_CHECK( res, "SetAmbientVolume" );
    }
 }

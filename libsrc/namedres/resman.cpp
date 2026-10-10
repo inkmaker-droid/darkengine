@@ -1247,7 +1247,7 @@ void cResMan::DoDumpSnapshot(FILE* fp)
 				padded_name[29] = '\0';
 
 				int i;
-				for (i = strlen(padded_name); i < 30; ++i)
+				for (i = static_cast<int>(strlen(padded_name)); i < 30; ++i)
 					padded_name[i] = ' ';
 				padded_name[i] = '\0';
 

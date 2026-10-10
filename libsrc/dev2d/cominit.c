@@ -6,7 +6,7 @@
  *
  */
 
-#ifdef WIN32
+#ifdef _WIN32
 
 #include <grc.h>
 #include <grd.h>

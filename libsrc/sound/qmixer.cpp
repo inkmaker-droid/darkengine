@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-#include <windows.h>
+#include <win32_platform.h>
 
 #include <assert.h>
 
@@ -128,7 +128,6 @@ cQSndMixer::~cQSndMixer()
 // the DirectSound interface.
 
 #ifdef __WATCOMC__
-#pragma off(unreferenced)
 #endif
 
 
@@ -230,7 +229,6 @@ cQSndMixer::Init( sSndSetup    *setup,
 }
 
 #ifdef __WATCOMC__
-#pragma on(unreferenced)
 #endif
 
 ////////////////////////////////////
@@ -362,7 +360,7 @@ STDMETHODIMP_(void) cQSndMixer::Update()
       //
       // do a fake mixer timer callback, which updates faders
       //
-      TimerCallback( 0, 0, (DWORD) this, 0, 0 );
+      TimerCallback( 0, 0, (DWORD_PTR)this, 0, 0 );
       // TimerCallback will set timer state to working
       mTimerState = eSndTimerBroken;
    }
@@ -453,7 +451,7 @@ cQSndMixer::Set3DEnvironment( sSndEnvironment *pEnv )
    m3DEnvironment = *pEnv;
    // TBD: should doppler factor be a multiplier, or divisor, for SOS ?
    res = QSWaveMixSetSpeedOfSound( mpMixDevice,
-                                   SPEED_OF_SOUND * pEnv->dopplerFactor, 0 );
+                                   static_cast<float>(SPEED_OF_SOUND) * pEnv->dopplerFactor, 0 );
    QSOUND_ERROR_CHECK( res, "SetSpeedOfSound" );
 
    mDistanceFactor = pEnv->distanceFactor;

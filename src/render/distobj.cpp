@@ -52,12 +52,12 @@ static int nPalIx1 = 0;
 static int nPalIx2 = 0;
 
 
-#define PI 3.14159265359
-#define fDeg90 (0.50000*PI)
+#define PI 3.14159265359f
+#define fDeg90 (0.50000f*PI)
 #define fDeg180 (PI)
-#define fDeg360 (2*PI)
+#define fDeg360 (2.0f*PI)
 
-#define DEG (PI/180)
+#define DEG (PI/180.0f)
 
 // This describes the sky rendering of the mission.
 struct sMissionDistantObj

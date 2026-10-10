@@ -51,7 +51,6 @@ Release
 *.stackdump
 screen*.pcx
 ReleaseGame/
-src/win32/
 .codex-build/
 build/
 

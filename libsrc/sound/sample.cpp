@@ -14,7 +14,7 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <lg.h>
 #include <assert.h>
 
@@ -195,7 +195,7 @@ cSndSample::MakeInaudible()
 
    if ( IS_AUDIBLE ) {
       LLStop();
-      mpMixer->DoTrace( (void *) mBufferLen, kSndBufferFree );
+      mpMixer->DoTrace( (void *)(uintptr_t)mBufferLen, kSndBufferFree );
       LLRelease();
       MoveToList( mpMixer->InaudibleHead() );
       ClearFlags( kSndFlagAudible );
@@ -355,7 +355,7 @@ STDMETHODIMP_(void) cSndSample::Stop()
 
    if ( (mStateFlags & (kSndFlagMuted | kSndFlagPaused)) ==  kSndFlagMuted ) {
       // muted & unpaused - estimate stop position
-      mBasePos = ESTIMATED_POSITION_NOW;
+      mBasePos = (uint32)ESTIMATED_POSITION_NOW;
    }
 
    if ( IsPlaying() ) {
@@ -421,7 +421,7 @@ STDMETHODIMP_(void) cSndSample::Pause()
 
    if ( IS_MUTED ) {
       // calculate stop position from current time
-      mBasePos = ESTIMATED_POSITION_NOW;
+      mBasePos = (uint32)ESTIMATED_POSITION_NOW;
       if ( IS_LOOP ) {
          mBasePos = mBasePos % mNumSamples;
       }
@@ -543,7 +543,7 @@ cSndSample::UnMute()
 
    } else {
 
-      mBasePos = ESTIMATED_POSITION_NOW;
+      mBasePos = (uint32)ESTIMATED_POSITION_NOW;
       Start();
    }
    ClearFlags( kSndFlagResyncNeeded );
@@ -702,9 +702,9 @@ STDMETHODIMP_(void) cSndSample::SetPosition(uint32 pos)
 // SetData - Set the app data field
 //
 
-STDMETHODIMP_(void) cSndSample::SetData(int32 data)
+STDMETHODIMP_(void) cSndSample::SetData(intptr_t data)
 {
-   TLOG2( "Smp::SetData %s %d", SAMPLE_NAME, data );
+   TLOG2( "Smp::SetData %s %p", SAMPLE_NAME, (void *)data );
    mAppData = data;
 }
 
@@ -789,7 +789,7 @@ STDMETHODIMP_(uint32) cSndSample::GetFrequency()
 // GetData - return the app data field
 //
 
-STDMETHODIMP_(int32) cSndSample::GetData()
+STDMETHODIMP_(intptr_t) cSndSample::GetData()
 {
    return mAppData;
 }
@@ -853,7 +853,7 @@ cSndSample::GetPosition()
 
       } else {
 
-         playPos = ESTIMATED_POSITION_NOW;
+         playPos = (uint32)ESTIMATED_POSITION_NOW;
          if ( IS_LOOP ) {
 
             playPos = playPos % mNumSamples;
@@ -982,7 +982,7 @@ cSndSample::SamplesToTime( uint32      samples )
 
    t = ((float) samples) / ((float) mAttribs.sampleRate);
    t *= 1000.0;
-   milliSeconds = t;
+   milliSeconds = (uint32)t;
 
    return milliSeconds;
 }
@@ -999,16 +999,15 @@ cSndSample::TimeToSamples( uint32      milliSeconds )
    float t;
    uint32 nSamples;
 
-   t = ((float) milliSeconds) / 1000.0;
+   t = ((float) milliSeconds) / 1000.0f;
    t *= ((float) mAttribs.sampleRate);
-   nSamples = t;
+   nSamples = (uint32)t;
 
    return nSamples;
 }
 
 
 #ifdef __WATCOMC__
-#pragma off(unreferenced)
 #endif
 
 
@@ -1074,7 +1073,6 @@ STDMETHODIMP_(void) cSndSample::Fade(eSndFaders whichFader, int32 destVal, int32
 
 
 #ifdef __WATCOMC__
-#pragma on(unreferenced)
 #endif
 
 
@@ -1243,9 +1241,9 @@ cSndSample::PlayTimeRemaining()
             if ( curPos >= mNumSamples ) {
                milliSecs = 0;
             } else {
-               sampsLeft = mNumSamples - curPos;
+               sampsLeft = (float)(mNumSamples - curPos);
                if ( mFrequency > 0 ) {
-                  milliSecs = (1000.0 * sampsLeft) / (float) mFrequency;
+                  milliSecs = (uint32)((1000.0f * sampsLeft) / (float)mFrequency);
                } else {
                   milliSecs = ~0;
                }

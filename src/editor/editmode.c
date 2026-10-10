@@ -60,7 +60,7 @@
 #include <palette.h>
 #include <rendprop.h>
 #include <pgrpprop.h>
-#include <d3d11legacy.h>
+#include <render_backend.h>
 
 // stuff for camera synch
 #include <dbasemsg.h>
@@ -94,7 +94,14 @@ extern void UpdateMenuCheckmarks(void);
 // Most clients are implemented in fooloop.c
 //
 
-static bool (*inpbnd_handler)(uiEvent *, Region *, void *);
+static tBindHandler inpbnd_handler;
+
+static BOOL input_binder_ui_handler(uiEvent *event, Region *region, void *state)
+{
+   (void)region;
+   (void)state;
+   return inpbnd_handler(event);
+}
 
 #define GAMESPEC_RESERVED_CLIENT 0
 
@@ -275,7 +282,7 @@ static void configure_render_test_view(void)
    {
       position = player_start->loc.vec;
       facing = player_start->fac;
-      heading = (float)facing.tz * (360.0 / 65536.0);
+      heading = (float)facing.tz * (360.0f / 65536.0f);
    }
    SafeRelease(object_system);
 
@@ -297,7 +304,7 @@ static void configure_render_test_view(void)
    vm_set_location(0,&position);
    vm_set_facing(0,&facing);
    vm_redraw();
-   D3D11LegacyTrace(
+   RenderBackendTrace(
       "render-test-view pos=%.3f,%.3f,%.3f angles=%.3f,%.3f,%.3f",
       position.x,position.y,position.z,pitch,heading,roll);
 }
@@ -348,8 +355,10 @@ static void db_message(DispatchData* msg)
 Processes keys sent from input binder
 ----------------------------------------
 */
-static char *ProcessEditKey (char *cmd, char *val, BOOL already_down)
+static char *ProcessEditKey (const char *cmd, const char *val, BOOL already_down)
 {
+   (void)val;
+   (void)already_down;
    return CommandExecute (cmd);
 }//end ProcessEditKey ()
 
@@ -360,7 +369,6 @@ static char *ProcessEditKey (char *cmd, char *val, BOOL already_down)
 // Here's where we do the dirty work.
 //
 
-#pragma off(unreferenced)
 static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMessageData hdata)
 {
    int cookie;
@@ -385,8 +393,8 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
       case kMsgEnterMode:
          // Editor view panes use incremental CPU-canvas redraws.  Game mode
          // restores aspect-fit scaling when DromEd switches into play preview.
-         D3D11LegacySetScaleToWindow(FALSE);
-         D3D11LegacySetPreserveCanvas(TRUE);
+         RenderBackendSetScaleToWindow(FALSE);
+         RenderBackendSetPreserveCanvas(TRUE);
          show_native_editor_cursor(TRUE);
          pal_update();  // set the palette 
          EditorCreateGUI();
@@ -396,7 +404,7 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
 
          //input binding stuff
          IInputBinder_GetHandler (g_pInputBinder, &inpbnd_handler);
-         uiInstallRegionHandler (root, UI_EVENT_KBD_COOKED, inpbnd_handler, NULL, &cookie);
+         uiInstallRegionHandler (root, UI_EVENT_KBD_COOKED, input_binder_ui_handler, NULL, &cookie);
          IInputBinder_SetMasterProcessCallback (g_pInputBinder, ProcessEditKey);
          IInputBinder_SetContext (g_pInputBinder, HK_BRUSH_EDIT, TRUE);
          HotkeyContext = HK_BRUSH_EDIT;
@@ -477,7 +485,7 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
 
       case kMsgNormalFrame:
          if (config_is_defined("render_test") &&
-             D3D11LegacyCaptureComplete())
+             RenderBackendCaptureComplete())
          {
             quit_game();
             break;
@@ -509,9 +517,9 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
          StatusField(SF_TIME,asctime(&time_of_day));
          StatusUpdate();
          GFHUpdate(GFH_FRAME);
-          cmdterm_redraw();
+         cmdterm_redraw();
          if(g_InMotionEditor)
-            MotEditUpdate(info.frame->dTicks); 
+            MotEditUpdate((float)info.frame->dTicks);
 
          if (state->first_frame)
          {
@@ -578,7 +586,6 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
 // Loop client factory function. 
 //
 
-#pragma off(unreferenced)
 static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData data)
 {
    StateRecord* state;
@@ -589,7 +596,6 @@ static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData
    
    return CreateSimpleLoopClient(_LoopFunc,state,&EditorLoopClientDesc);
 }
-#pragma on(unreferenced)
 
 //
 // The loop client descriptor
@@ -600,7 +606,7 @@ sLoopClientDesc EditorLoopClientDesc =
    &LOOPID_Editor,                        // client's guid
    "Editor client",                       // string name
    kPriorityNormal,                       // priority
-   kMsgEnd | kMsgsMode | kMsgsFrame | kMsgVisual | kMsgDatabase | kMsgsAppOuter,   // messages we want
+   (ulong)kMsgEnd | kMsgsMode | kMsgsFrame | kMsgVisual | kMsgDatabase | kMsgsAppOuter,   // messages we want
 
    kLCF_Callback,
    _CreateClient,

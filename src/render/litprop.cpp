@@ -543,8 +543,9 @@ EXTERN BOOL FindVhotLocation(mxs_vector *loc, ObjID obj, int vhot)
             }
             vh++;
          }
-         if (i<0)
+         if (i<0) {
             loud_light_mprint(("Never found VHOT %d for %d (has %d)\n",vhot,obj,model->vhots));
+         }
       }
       else
          loud_light_mprint(("Light %d isn't an MD model\n",obj));
@@ -665,9 +666,9 @@ static bool ShineOneLight(sLightPropCore *light, ObjID obj,
    float hue, saturation;
    ObjColorGet(obj, &hue, &saturation);
    portal_convert_hsb_to_rgb(&r, &g, &b, hue, saturation);
-   temp.x = r*brightness/255.0;
-   temp.y = g*brightness/255.0;
-   temp.z = b*brightness/255.0;
+   temp.x = r*brightness/255.0f;
+   temp.y = g*brightness/255.0f;
+   temp.z = b*brightness/255.0f;
    portal_set_normalized_color(r,g,b);
 #endif
 
@@ -741,8 +742,8 @@ static bool ShineOneLight(sLightPropCore *light, ObjID obj,
             mx_mat_muleq_vec(&trans, &dir);
          }
 
-         inner = cos(3.141592*spot->x/180);
-         outer = cos(3.141592*spot->y/180);
+         inner = cosf(3.141592f*spot->x/180);
+         outer = cosf(3.141592f*spot->y/180);
          // we should just have a function call to pass these in or something
          portal_spotlight = TRUE;
          portal_spotlight_loc = light_point;

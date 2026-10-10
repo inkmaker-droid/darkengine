@@ -262,8 +262,8 @@ static int   _rpt_buff_size=0;
 
 static void _buffer_setup(void)
 {
-   if (((int)_rpt_buffer)|_rpt_buff_size)
-      Warning(("Report buffer already exists in setup %x %d\n",_rpt_buffer,_rpt_buff_size));
+   if (_rpt_buffer || _rpt_buff_size)
+      Warning(("Report buffer already exists in setup %p %d\n", (void *)_rpt_buffer, _rpt_buff_size));
    _rpt_buffer=NULL; _rpt_buff_size=0;
 }
 
@@ -278,7 +278,7 @@ static void _buffer_clear(void)
 
 static void _buffer_add_to(const char *new_txt)
 {
-   int added_len=strlen(new_txt);
+   int added_len=(int)strlen(new_txt);
    if (added_len==0) return;
    if (_rpt_buff_size==0)
       _rpt_buffer=(char *)malloc(added_len+1);

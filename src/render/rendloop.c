@@ -171,7 +171,7 @@ static void superimpose_stats (int dt, int overhead, int blit_overhead)
    dtsum+=dt+overhead;
    dtlist_ptr=(dtlist_ptr+1)%FRAMEHISTORY_COUNT;
 
-   rate = 1000.0 / dt;
+   rate = 1000.0f / dt;
 
    guiStyleSetupFont(NULL,StyleFontNormal);
    gr_set_fcolor(guiStyleGetColor(NULL,StyleColorFG)); // StyleColorWhite?
@@ -328,9 +328,9 @@ static void composite(float *alpha, uchar *rgb, float under_alpha, const uchar *
    new_alpha = 1-(1-*alpha)*(1-under_alpha);
    scale = *alpha / new_alpha;
 
-   rgb[0] = under_rgb[0] + ((int) rgb[0] - (int) under_rgb[0]) * scale;
-   rgb[1] = under_rgb[1] + ((int) rgb[1] - (int) under_rgb[1]) * scale;
-   rgb[2] = under_rgb[2] + ((int) rgb[2] - (int) under_rgb[2]) * scale;
+         rgb[0] = (uchar)(under_rgb[0] + ((int) rgb[0] - (int) under_rgb[0]) * scale);
+         rgb[1] = (uchar)(under_rgb[1] + ((int) rgb[1] - (int) under_rgb[1]) * scale);
+         rgb[2] = (uchar)(under_rgb[2] + ((int) rgb[2] - (int) under_rgb[2]) * scale);
    *alpha = new_alpha;
 }
 
@@ -352,7 +352,7 @@ static BOOL RenderNewSky(void)
 }
 
 
-void cam_render_scene(Position *pos, double zoom)
+void cam_render_scene(Position *pos, float zoom)
 {
    float alpha;
    uchar rgb[3];
@@ -445,7 +445,7 @@ static void pre_draw_callback(void)
 
 static int nOldMode = -1;
 
-static const float fRemoteZoom = 0.4;
+   static const float fRemoteZoom = 0.4f;
 static void do_frame(sLoopFrameInfo* info)
 {
    Position campos;              // position of camera for renderer
@@ -474,7 +474,7 @@ static void do_frame(sLoopFrameInfo* info)
 #ifdef RGB_LIGHTING
       portal_set_normalized_color(255,255,255);
 #endif
-      add_dynamic_light(&pos->loc, player_light, 0.0);
+      add_dynamic_light(&pos->loc, (float)player_light, 0.0f);
    }
 
    // clear the array which tells us which cells were visible in the
@@ -601,7 +601,6 @@ static void db_message(DispatchData* msg)
 // Here's where we do the dirty work.
 //
 
-#pragma off(unreferenced)
 static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMessageData hdata)
 {
    // useful stuff for most clients
@@ -700,7 +699,6 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
 // Loop client factory function.
 //
 
-#pragma off(unreferenced)
 static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData data)
 {
    StateRecord* state;
@@ -710,7 +708,6 @@ static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData
 
    return CreateSimpleLoopClient(_LoopFunc,state,pDesc);
 }
-#pragma on(unreferenced)
 
 ///////////////
 // DESCRIPTOR
@@ -721,7 +718,7 @@ sLoopClientDesc RenderLoopClientDesc =
    &MY_GUID,                           // GUID
    "Render Client",                    // NAME
    kPriorityNormal,                    // PRIORITY
-   kMsgEnd | kMsgsMode | kMsgsFrame | kMsgsAppOuter,   // INTERESTS
+   (ulong)kMsgEnd | kMsgsMode | kMsgsFrame | kMsgsAppOuter,   // INTERESTS
 
    kLCF_Callback,
    _CreateClient,
@@ -740,7 +737,6 @@ sLoopClientDesc RenderLoopClientDesc =
 // RENDERER BASE MODE CLIENT
 //
 
-#pragma off(unreferenced)
 static eLoopMessageResult LGAPI BaseMode(void* data, eLoopMessage msg, tLoopMessageData hdata)
 {
    // useful stuff for most clients
@@ -803,7 +799,6 @@ static eLoopMessageResult LGAPI BaseMode(void* data, eLoopMessage msg, tLoopMess
 // Loop client factory function.
 //
 
-#pragma off(unreferenced)
 static ILoopClient* LGAPI CreateBaseClient(sLoopClientDesc * pDesc, tLoopClientData data)
 {
    StateRecord* state;
@@ -813,7 +808,6 @@ static ILoopClient* LGAPI CreateBaseClient(sLoopClientDesc * pDesc, tLoopClientD
 
    return CreateSimpleLoopClient(BaseMode,state,pDesc);
 }
-#pragma on(unreferenced)
 
 ///////////////
 // DESCRIPTOR
@@ -824,7 +818,7 @@ sLoopClientDesc RenderBaseLoopClientDesc =
    &LOOPID_RenderBase,                 // GUID
    "Render Base Mode Client",                    // NAME
    kPriorityNormal,                    // PRIORITY
-   kMsgEnd | kMsgsAppOuter | kMsgVisual | kMsgDatabase,   // INTERESTS
+   (ulong)kMsgEnd | kMsgsAppOuter | kMsgVisual | kMsgDatabase,   // INTERESTS
 
    kLCF_Callback,
    CreateBaseClient,
@@ -832,7 +826,7 @@ sLoopClientDesc RenderBaseLoopClientDesc =
    NO_LC_DATA,
 
    {
-      { kConstrainAfter, &LOOPID_ObjSys, kMsgDatabase|kMsgAppInit },  // for texture archetypes, so we can register our objpos listener
+      { kConstrainAfter, &LOOPID_ObjSys, (ulong)kMsgDatabase|kMsgAppInit },  // for texture archetypes, so we can register our objpos listener
       {kConstrainAfter, &LOOPID_Wr, kMsgDatabase},
       {kNullConstraint} // terminator
    }

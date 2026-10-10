@@ -382,7 +382,7 @@ STDMETHODIMP_(void) cAINewRangedSubcombat::OnDamage(const sDamageMsg *pMsg, ObjI
 
    // Event
    if (InControl())
-      InformOfEvent(kAIRC_EventWounded, TRUE, (void*)(pMsg->data.damage->amount));
+      InformOfEvent(kAIRC_EventWounded, TRUE, (void *)(intptr_t)pMsg->data.damage->amount);
 }
 
 ///////////////////////////////////////
@@ -668,7 +668,7 @@ void cAINewRangedSubcombat::RefreshProjectilesTime(int dt)
       LinkID id = query->ID();
 
       sAIProjectileRel *pProjData = (sAIProjectileRel *)pLinkMan->GetData(id);
-      pProjData->time_since_selected += ((float)dt) / 1000.0;
+      pProjData->time_since_selected += ((float)dt) / 1000.0f;
       pLinkMan->SetData(id, (void *)pProjData);
    }
    SafeRelease(query);
@@ -817,7 +817,7 @@ int cAINewRangedSubcombat::ProjectileHittable(int targetMethod, ObjID projectile
       {
          // we actually need to back up a tiny bit because the hit location
          // is sometimes actually considered "out of world" due to epsilons
-         mx_interpolate_vec(&launchLoc.vec, &startLoc.vec, &hitLoc.vec, 0.95);
+         mx_interpolate_vec(&launchLoc.vec, &startLoc.vec, &hitLoc.vec, 0.95f);
       }
       return ProjectileHittable(targetMethod, projectileID, launchLoc, targetID, pTargetVec);
    }
@@ -934,7 +934,7 @@ BOOL cAINewRangedSubcombat::ProjectileHittable(int targetMethod, ObjID projectil
 
          fXVel = offset.x*pInitVel->x;
          fYVel = offset.y*pInitVel->x;
-         f2dVel = sqrt((fXVel * fXVel) + (fYVel * fYVel));
+         f2dVel = sqrtf((fXVel * fXVel) + (fYVel * fYVel));
 
          // Calculate max height
 
@@ -944,7 +944,7 @@ BOOL cAINewRangedSubcombat::ProjectileHittable(int targetMethod, ObjID projectil
 
          tMax = fMag / f2dVel;
 
-         zMax = sourceLoc.vec.z + zVel0*tMax - 0.5*gravity*tMax*tMax;
+         zMax = sourceLoc.vec.z + zVel0*tMax - 0.5f*gravity*tMax*tMax;
 
          mx_sub_vec(&midpt, &targetVec, &sourceLoc.vec);
          mx_scaleeq_vec(&midpt, 0.5);

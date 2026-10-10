@@ -65,7 +65,7 @@ extern int   MemStatsFlags;
 
 // possible flag defines for the heapwalkers build
 // do we have ability to check for heap corruption/watchpointing
-#ifndef WIN32
+#ifndef _WIN32
 #define TARGET_BADNESS 
 #endif
 // verbalize mputs the status of heap to screen in a readable way

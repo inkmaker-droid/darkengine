@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include <objbase.h>
-#include <windows.h>
+#include <win32_platform.h>
 #include <aggmemb.h>
 #include <appagg.h>
 #include <loopapi.h>
@@ -152,7 +152,6 @@ static int my_priority = kPriorityNormal;
 // INIT FUNC
 //
 
-#pragma off(unreferenced)
 static STDMETHODIMP _InitFunc(IUnknown* goof)
 {
    CommandInit();
@@ -166,13 +165,11 @@ static STDMETHODIMP _InitFunc(IUnknown* goof)
    GameInitGUI(); 
    return kNoError;
 }
-#pragma on(unreferenced)
 
 //////////////////////////////////////////////////////////////
 // SHUTDOWN FUNC
 //
 
-#pragma off(unreferenced)
 static STDMETHODIMP _ShutdownFunc(IUnknown* goof)
 {
    TermBackup(); 
@@ -181,7 +178,6 @@ static STDMETHODIMP _ShutdownFunc(IUnknown* goof)
 
    return kNoError;
 }
-#pragma on(unreferenced)
 
 ////////////////////////////////////////////////////////////
 // CONSTRAINTS
@@ -198,18 +194,14 @@ static sRelativeConstraint _Constraints[] =
 // Nothing needs to change, unless you want to add postconnect stuff
 ////////////////////////////////////////////////////////////
 
-#pragma off(unreferenced)
 static STDMETHODIMP NullFunc(IUnknown* goof)
 {
    return kNoError;
 }
-#pragma on(unreferenced)
 
-#pragma off(unreferenced)
 static void STDMETHODCALLTYPE FinalReleaseFunc(IUnknown* goof)
 {
 }
-#pragma on(unreferenced)
 
 //////////////////////////////////////////////////////////////
 // SysCreate()

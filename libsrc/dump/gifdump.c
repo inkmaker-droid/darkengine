@@ -122,7 +122,7 @@ static void write_code(int fp,int code)
 	gif_bits_left = gif_bit_offset & 7;
 
 	if(gif_byte_offset >= 254) {
-		flush(fp,gif_byte_offset);
+		flush(fp,(unsigned char)gif_byte_offset);
 		gif_code_buffer[0] = gif_code_buffer[gif_byte_offset];
 		gif_bit_offset = gif_bits_left;
 		gif_byte_offset = 0;
@@ -130,9 +130,9 @@ static void write_code(int fp,int code)
 
 	if(gif_bits_left > 0) {
 		temp = ((long) code << gif_bits_left) | gif_code_buffer[gif_byte_offset];
-		gif_code_buffer[gif_byte_offset]=temp;
-		gif_code_buffer[gif_byte_offset+1]=(temp >> 8);
-		gif_code_buffer[gif_byte_offset+2]=(temp >> 16);
+		gif_code_buffer[gif_byte_offset]=(uchar)temp;
+		gif_code_buffer[gif_byte_offset+1]=(uchar)(temp >> 8);
+		gif_code_buffer[gif_byte_offset+2]=(uchar)(temp >> 16);
 	}
 	else {
 		gif_code_buffer[gif_byte_offset] = code;

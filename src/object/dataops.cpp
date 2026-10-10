@@ -69,9 +69,9 @@ cDataOpsMemFile::~cDataOpsMemFile(void)
 
 STDMETHODIMP_(long)cDataOpsMemFile::Read(void* buf, int len) 
 { 
-   long length = min(len, mUsedSize - mCursor);
+   long length = (long)((len > 0) ? min((ulong)len, mUsedSize - mCursor) : 0);
    memcpy(buf, mBuffer + mCursor, length);
-   mCursor += len;
+   mCursor += length;
    return length;
 }
 

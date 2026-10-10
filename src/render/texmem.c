@@ -885,7 +885,6 @@ int texmemFreeSingle(int handle)
 }
 
 // use a texture name to free a given texture
-#pragma off(unreferenced)
 int texmemFreeSinglebyName(char *dirname, char *fname)
 {
    IResMan *pResMan = AppGetObj(IResMan);
@@ -917,7 +916,6 @@ int texmemGetSinglebyName(char *dirname, char *fname)
    }
    return TEXMEM_NO_HND;
 }
-#pragma on(unreferenced)
 
 // frees the single texture pointed at by this rn_hnd
 // this is spooky, since we first need to decide if we are the "final reference"
@@ -980,7 +978,7 @@ void texmemGetHandlesFromRes(IRes **res_list, int *hnd_list, int cnt)
       if (res_list[i]) {
          hnd_list[i] = (int)GetResTexIdx(res_list[i]);
       } else {
-         hnd_list[i] = NULL;
+         hnd_list[i] = 0;
       }
    }
 }

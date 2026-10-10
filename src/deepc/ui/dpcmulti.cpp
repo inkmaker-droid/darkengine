@@ -5,7 +5,7 @@
 
 #include <limits.h>
 #include <stdio.h>
-#include <windows.h>
+#include <win32_platform.h>
 #include <direct.h>
 #include <config.h>
 #include <mprintf.h>

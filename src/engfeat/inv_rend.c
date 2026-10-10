@@ -244,7 +244,7 @@ static void render_single_obj(invRendState *us, BOOL bClearZBuffer)
             parms=getRendParms(us->obj_id,m);
          md_mat_colors_set(m);
          mld_multi_hilight = 0;
-         mld_multi_ambient = 0.1;
+   mld_multi_ambient = 0.1f;
          mld_multi_ambient_only = FALSE;
          mld_multi_unlit = FALSE;
          ml_multi_set_lights_for_object(NUM_LIGHTS,tmplights,&obj_loc,2.0);
@@ -284,7 +284,7 @@ static void _invInitCamera(invRendState *us)
       us->off_ang.el[1]=0xf000;
       us->cam_dist=3.0;  // hopefully this gets fixed below
       if ((m=(mds_model *)objmodelGetModel(us->model_idx))!=NULL)
-         us->cam_dist=m->radius+0.7;
+         us->cam_dist=m->radius+0.7f;
    }  // set scale factor here, i guess
 }
 

@@ -24,7 +24,7 @@
 //  (we use it for the grid scale too, just for fun)
 
 // wacky support for zany pow2 integer to float scale stuff
-#define scale_pow2int_to_float(pow2i) (((float)(1<<pow2i))*(4.0/(float)(1<<16)))
+#define scale_pow2int_to_float(pow2i) (((float)(1<<pow2i))*(4.0f/(float)(1<<16)))
 
 #define TEXINFO_HACK_ALIGN 1  // for now, how you specify rotate to brush
 

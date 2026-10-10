@@ -512,7 +512,7 @@ inline BOOL cAIPathDB::CanPathfindBetweenZones(eAIPathZoneType ZoneType, tAIPath
 
 inline tAIPathZone cAIPathDB::GetCellZone(eAIPathZoneType ZoneType, tAIPathCellID cell)
 {
-   if (cell < m_ZoneDatabases[ZoneType].m_CellZones.Size())
+   if (cell < (tAIPathCellID)m_ZoneDatabases[ZoneType].m_CellZones.Size())
       return m_ZoneDatabases[ZoneType].m_CellZones[cell];
    else
       return 0;

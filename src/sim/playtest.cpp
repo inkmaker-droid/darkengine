@@ -530,7 +530,7 @@ static int ComputeCheatCode(void)
 #else
    char *username=getenv("USER");
    if (username)
-      utotal=strlen(username);
+      utotal=(int)strlen(username);
    else
       utotal=0;
 #endif

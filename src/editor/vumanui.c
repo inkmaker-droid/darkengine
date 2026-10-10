@@ -15,12 +15,7 @@
 #include <gcompose.h>
 #include <config.h>
 #include <cfgdbg.h>
-#include <comtools.h>
-#include <wappapi.h>
-#include <appagg.h>
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <platform_services.h>
 
 #include <command.h>
 #include <vumanui.h>
@@ -51,7 +46,7 @@ static LGadRoot* view_roots[MAX_CAMERAS_REAL];
 bool brush_edit_mouse(uiMouseEvent *, int camera, int x, int y);
 
 void vm_popup_menu(uiMouseEvent *, int c);
-bool vm_mouse_handler(uiEvent* _ev, Region* reg, void* _data)
+BOOL vm_mouse_handler(uiEvent* _ev, Region* reg, void* _data)
 {
    static int lastview = -1;
    extern bool vm_xmouse;
@@ -102,40 +97,18 @@ void vm_popup_menu(uiMouseEvent *ev, int c)
    extern void vm_get_popup_menu(int c, char ***, char ***, int *, int, int);
    char **names, **commands;
    Region *reg=vmGetRegion(camera_to_region_mapping[c]);  // this is stupid
-   IWinApp *app;
-   HWND window;
-   HMENU menu;
-   POINT screen_pos;
-   UINT selection;
-   int count, i;
+   int selection;
+   int count;
 
    vm_menu_click_x=ev->pos.x-reg->abs_x;
    vm_menu_click_y=ev->pos.y-reg->abs_y;
 
    vm_get_popup_menu(c, &names, &commands, &count, ev->pos.x, ev->pos.y);
-   app=AppGetObj(IWinApp);
-   window=IWinApp_GetMainWnd(app);
-   SafeRelease(app);
-   menu=CreatePopupMenu();
-   if (window==NULL || menu==NULL)
-   {
-      if (menu!=NULL)
-         DestroyMenu(menu);
-      return;
-   }
-
-   for (i=0; i<count; ++i)
-      AppendMenuA(menu,MF_STRING,(UINT_PTR)(i+1),names[i]);
-
-   screen_pos.x=ev->pos.x;
-   screen_pos.y=ev->pos.y;
-   ClientToScreen(window,&screen_pos);
    vm_display_enable=FALSE;
-   selection=TrackPopupMenu(menu,TPM_RETURNCMD|TPM_NONOTIFY|TPM_RIGHTBUTTON,
-                            screen_pos.x,screen_pos.y,0,window,NULL);
-   DestroyMenu(menu);
+   selection=PlatformPopupMenu((const char *const *)names,count,
+                               ev->pos.x,ev->pos.y);
 
-   if (selection>0 && selection<=(UINT)count)
+   if (selection>0 && selection<=count)
    {
       int old_camera=vm_current_camera();
       vm_set_cur_camera(c);

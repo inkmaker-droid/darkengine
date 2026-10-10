@@ -360,7 +360,7 @@ void cPlayerCerebellum::Update(ulong dt)
    {
       // XXX this should look at return value of frame
       // callback and do something with it.
-      (*g_fFrameCallback)(dt,(void *)g_CurrentPlayerMode);
+      (*g_fFrameCallback)(dt,(void *)(intptr_t)g_CurrentPlayerMode);
    }
    if(m_pMCoord->GetStatus()==kMCoord_Idle)
    {

@@ -7,9 +7,9 @@
 
 #include <fix.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 
-  #include <windows.h>
+#include <win32_platform.h>
 
   fix fixtime(void)
   {

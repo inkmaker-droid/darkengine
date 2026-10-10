@@ -190,7 +190,7 @@ void ImageHackRemap16Bit(grs_bitmap* pBm, uint8 mip)
 			while (--pBits >= (uint16*)pStart)
 			{
 				*pBits = *pBits;
-				*pBits = ((uint8)HIBYTE(*pBits) >> 3 << 10) | *pBits & 0x83FF;
+				*pBits = ((uint8)(*pBits >> 8) >> 3 << 10) | *pBits & 0x83FF;
 				*pBits = (32 * ((((*pBits >> 5) & 0x3F) >> 1) & 0x1F)) | *pBits & 0xFC1F;
 			}
 		}

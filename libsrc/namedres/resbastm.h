@@ -51,8 +51,6 @@
 #include <resbase.h>
 #include <dbmem.h>
 
-#include <thrdtool.h>
-
 #undef INTERFACE
 
 #define RES_BASE_TEMPLATE  template <class INTERFACE, const GUID * pIID_INTERFACE>
@@ -597,7 +595,7 @@ STDMETHODIMP_(const char *) RES_BASE::GetName()
 RES_BASE_TEMPLATE
 STDMETHODIMP_(void) RES_BASE::GetStreamName(BOOL bFullpath, char **ppPathname)
 {
-   int nLen;
+   size_t nLen;
 
    AUTO_RES_THREAD_LOCK();
 
@@ -688,7 +686,7 @@ STDMETHODIMP_(void) RES_BASE::GetCanonPathName(char **ppPathname)
       return;
    }
 
-   int nLen;
+   size_t nLen;
    char *pCanonPath;
    if (m_pCanonStore) {
       m_pCanonStore->GetCanonPath(&pCanonPath);

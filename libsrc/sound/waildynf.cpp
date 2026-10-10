@@ -17,7 +17,7 @@
 //Initial revision
 //
 //
-#include <windows.h>
+#include <win32_platform.h>
 #include <lg.h>
 #include <dsound.h>
 

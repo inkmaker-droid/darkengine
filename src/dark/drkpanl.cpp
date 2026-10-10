@@ -64,7 +64,7 @@ static void make_font_table(void)
 {
    for (int shadIndex = 0; shadIndex < FONT_ROWS; shadIndex++)
    {
-      float shadLevel = 1.0 - (float)shadIndex/((float)(FONT_ROWS-1));
+      float shadLevel = 1.0f - (float)shadIndex/((float)(FONT_ROWS-1));
 
       ushort* Ptr = pFontTable[shadIndex]; 
 

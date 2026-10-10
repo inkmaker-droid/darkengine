@@ -205,7 +205,8 @@ inline BOOL cRecorder::WriteBlock(tRecBlockType type, uint8 dataInfo, const void
 {
     write(m_RecFile, &type, sizeof(type));
     write(m_RecFile, &dataInfo, sizeof(dataInfo));
-    return write(m_RecFile, pData, dataSize) == dataSize;
+    const unsigned count = static_cast<unsigned>(dataSize);
+    return write(m_RecFile, pData, count) == static_cast<int>(count);
 }
 
 ///////////////////////////////////////
@@ -219,7 +220,8 @@ inline BOOL cRecorder::ReadBlockHeader(sRecBlockHeader * pHeader)
 
 inline BOOL cRecorder::ReadBlockData(void * pReadTo, size_t size)
 {
-    return read(m_RecFile, pReadTo, size) == size;
+    const unsigned count = static_cast<unsigned>(size);
+    return read(m_RecFile, pReadTo, count) == static_cast<int>(count);
 }
 
 ///////////////////////////////////////

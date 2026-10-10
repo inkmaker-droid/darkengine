@@ -109,15 +109,15 @@ static _sfx          fxlist[SFX_MAX_COUNT];
 static ISndMixer*    pSndMixer                  = NULL;
 static sfx_parm      def_parms                  = {0,0,0,0,0,-1,0,0,0,-1,NULL,NULL};
 static float         attenuation_factor         = 55;
-static float         pan_factor                 = 0.4;
+static float         pan_factor                 = 0.4f;
 static eSnd3DMethod  sfx3DMethod                = kSnd3DMethodSoftware;
 static int           max_simul_hardware_3d_snds = 0;  // @TODO: pick which ones we use less idiotically
 static BOOL          in_kill;
 static BOOL          sfxCheckChannels           = TRUE;
 static int           sgLastVolumeSetting        = 0; // So we can restore volume between close and init.
 static int           sgLastRoomType;
-static float         sgSourceReverbMix          = 0.6;
-static float         sgGainScale                = 1.0;
+static float         sgSourceReverbMix          = 0.6f;
+static float         sgGainScale                = 1.0f;
 static int           sgMixerTimeout             = -1;
 static BOOL          rev_stereo                 = FALSE;
 static char          dummy_sound[64]            = {'\0',};
@@ -505,7 +505,7 @@ BOOL SFXInit(void)
             snd3DEnv.dopplerFactor = 1.0;
 
             // The sound library does meters, dark does feet
-            snd3DEnv.distanceFactor = 0.3048;
+            snd3DEnv.distanceFactor = 0.3048f;
 
             // We do our own attenuation for consistency between hw and sw.
             snd3DEnv.rolloffFactor = 0.0;
@@ -900,7 +900,7 @@ static bool _sfx_start_play(_sfx *fx, BOOL after_delay)
          _sfx_update(fx,TRUE,tm_get_millisec_unrecorded());
          fx->flags |= SFXFLG_HAPPY;
          // give sample back ptr to us so it can clear happy if play fails
-         fx->pSnd->SetData((long) fx );
+         fx->pSnd->SetData((intptr_t)fx);
          fx->pSnd->SetGroup((uint32) fx->parm.group);
          fx->pSnd->Play();
 
@@ -952,7 +952,7 @@ static bool _sfx_start_play(_sfx *fx, BOOL after_delay)
 
 int SFX_Attenuate(int master_gain, int dist)
 {
-   return master_gain - (dist * attenuation_factor);
+   return (int)(master_gain - (dist * attenuation_factor));
 }
 
 int SFX_MaxDist(int gain)
@@ -1058,7 +1058,7 @@ static BOOL _sfx_update(_sfx *fx, BOOL init, ulong cur_time)
       if (fx->flags&SFXFLG_POS)
       {
          // Calculate gain.  Now same for both hardware and software.
-         float dist = fx->distance;
+         float dist = (float)fx->distance;
          int gain;
 
          if (dist < 0) {
@@ -1090,7 +1090,7 @@ static BOOL _sfx_update(_sfx *fx, BOOL init, ulong cur_time)
 
                // determine how directly facing the sound we are
                headon = mx_dot_vec(&delta, &locframe.vec[1]);
-               headon_abs = fabs(headon) * pan_factor;
+               headon_abs = fabsf(headon) * pan_factor;
                pan = ((int)(10000 - 10000 * cos(1.570796 * headon_abs)));
 
                // reverse if on other side
@@ -1161,21 +1161,20 @@ static BOOL _sfx_update(_sfx *fx, BOOL init, ulong cur_time)
          // set the occlusion here
          long occlusionLevel;
          float modBF;   // modified blocking factor
-         static float bfBreakOut = 0.6;
+         const float bfBreakIn = 0.9f;
+         const float bfBreakOut = 0.5f;
 
          // do a simple two-piece linear mapping
          //  I do this because sounds become silent well before attenuation reaches kSndMinVolume
          //  0 ... BF_BREAK_IN ... 1    ->   0 ... bfBreakOut ... 1
-#define BF_BREAK_IN  0.9
-#define bfBreakOut  0.5
          modBF = fx->parm.blocking_factor;
-         if ( modBF < BF_BREAK_IN ) {
-            modBF *= (bfBreakOut / BF_BREAK_IN);
+         if ( modBF < bfBreakIn ) {
+            modBF *= (bfBreakOut / bfBreakIn);
          } else {
-            modBF = bfBreakOut + ( ((modBF - BF_BREAK_IN) / (1.0 - BF_BREAK_IN))
-                                       *  (1.0 - bfBreakOut) );
+            modBF = bfBreakOut + (((modBF - bfBreakIn) / (1.0f - bfBreakIn))
+                                  * (1.0f - bfBreakOut));
          }
-         occlusionLevel = modBF * (kSndMinVolume - net_gain);
+         occlusionLevel = (long)(modBF * (kSndMinVolume - net_gain));
          fx->pSnd->Set3DOcclusion( occlusionLevel );
       }
       return TRUE;
@@ -1694,7 +1693,7 @@ _sfx_priority_callback( ISndMixer    *pMixer,
 {
    _sfx  *pSFX;
 
-   pSFX = (_sfx *) pSample->GetData();
+   pSFX = (_sfx *)pSample->GetData();
    // signal that this sample couldn't be played
    pSFX->flags &= ~SFXFLG_HAPPY;
 

@@ -5,7 +5,7 @@
 
 // $Header: r:/t2repos/thief2/src/editor/objedit.cpp,v 1.31 2000/02/24 23:40:12 mahk Exp $
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -213,7 +213,7 @@ static void getOurBrushes(editBrush *us)
 static void vbrui_build_link(char* arg)
 {
    // Remove trailing whitespace;
-   int len = strlen(arg);
+   int len = (int)strlen(arg);
    for (char* s = arg + len - 1; s > arg && isspace(*s); s--)
       *s = '\0';
 

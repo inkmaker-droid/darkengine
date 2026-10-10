@@ -261,12 +261,13 @@ int DatapathFDOpen(Datapath *pdp, const char *fname, int access, ... )
 int DatapathFind(Datapath *pdp, const char *fname, char *buff, int len)
 {
 	int i;
+	size_t bufferLen = len > 0 ? (size_t)len : 0;
 #if defined(__WATCOMC__) || defined(__SC__)
 	struct find_t find;
 	int err;
 #else
 	struct _finddata_t find;		// phs, 7/1/96
-	long handle;
+	intptr_t handle;
 #endif
 
 	for (i = -1; i < pdp->numDatapaths; i++)
@@ -277,8 +278,8 @@ int DatapathFind(Datapath *pdp, const char *fname, char *buff, int len)
 				continue;	// ... but not if noCurrent
 			else
 				{
-               if (strlen(fname) >= len) {
-                  Error(1,"buff len of %d exceeded by %d:\n%s",len,strlen(fname),fname);
+               if (strlen(fname) >= bufferLen) {
+                  Error(1,"buff len of %d exceeded by %zu:\n%s",len,strlen(fname),fname);
                } else {
       				strcpy(buff, fname);
                }
@@ -286,8 +287,8 @@ int DatapathFind(Datapath *pdp, const char *fname, char *buff, int len)
 			}
 		else
 			{
-            if (strlen(fname)+strlen(pdp->datapath[i]) >= len) {
-               Error(1,"buff len of %d exceeded by %d:\n%s\n%s",len,strlen(fname)+strlen(pdp->datapath[i]),fname,pdp->datapath[i]);
+            if (strlen(fname)+strlen(pdp->datapath[i]) >= bufferLen) {
+               Error(1,"buff len of %d exceeded by %zu:\n%s\n%s",len,strlen(fname)+strlen(pdp->datapath[i]),fname,pdp->datapath[i]);
             } else {
       			strcpy(buff, pdp->datapath[i]);
 	      		strcat(buff, fname);
@@ -374,7 +375,8 @@ bool DatapathAdd(Datapath *pdp, const char *path)
 
 bool DatapathAddDir(Datapath *pdp, const char *pdir)
 {
-	int len,addSlash,c;
+	size_t len;
+	int addSlash,c;
 	char *p;
 
 //	If path ptr list full, can't add
@@ -432,7 +434,7 @@ static const char *emptyString = "";
 void DatapathCopy(Datapath *dst,const Datapath *src)
 {
    int i;
-   int len;
+   size_t len;
     
    // Copy all flags and stuff
    *dst = *src;

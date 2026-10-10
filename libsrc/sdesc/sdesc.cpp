@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cctype>
 #include <cstdio>
 
 #include <sdesc.h>
@@ -103,11 +104,11 @@ void parse_bits(const sFieldDesc* desc, void* val, const char* in)
 			auto tmp = *p;
 			*const_cast<char*>(p) = '\0';
 
-			for (int i = 0; i < desc->datasize; ++i)
+			for (ulong i = 0; i < desc->datasize; ++i)
 			{
 				if (!strcmp(s, strings[i]))
 				{
-					ival |= 1 << (LOBYTE(desc->min) + i);
+					ival |= 1 << (((unsigned)desc->min & 0xff) + i);
 					break;
 				}
 			}
@@ -139,9 +140,9 @@ void unparse_bits(const sFieldDesc* desc, const void* val, char* out)
 		auto s = out;
 		auto strings = (char**)desc->data;
 		*out = 0;
-		for (int i = 0; i < desc->datasize; ++i)
+		for (ulong i = 0; i < desc->datasize; ++i)
 		{
-			if (((1 << (LOBYTE(desc->min) + i)) & ival) != 0)
+			if (((1 << (((unsigned)desc->min & 0xff) + i)) & ival) != 0)
 			{
 				if (comma)
 				{
@@ -170,7 +171,7 @@ void parse_enum(const sFieldDesc* desc, void* val, const char* in)
 	auto vec = (char**)desc->data;
 	auto found = false;
 	int i;
-	for (i = 0; i < desc->datasize; ++i)
+	for (i = 0; i < static_cast<int>(desc->datasize); ++i)
 	{
 		if (!_strcmpi(in, vec[i]))
 		{
@@ -203,7 +204,7 @@ void unparse_enum(const sFieldDesc* desc, const void* val, char* out)
 	else if (i > desc->max)
 		i = desc->max;
 
-	if (i - desc->min <= desc->datasize)
+	if (static_cast<ulong>(i - desc->min) <= desc->datasize)
 		strcpy(out, *((const char**)desc->data + i - desc->min));
 	else
 		unparse_int(desc, val, out);
@@ -232,7 +233,7 @@ void unparse_stringptr(const sFieldDesc* desc, const void* val, char* out)
 
 void parse_voidptr(const sFieldDesc* desc, void* val, const char* in)
 {
-	sscanf(in, "%p", val);
+	sscanf(in, "%p", static_cast<void**>(val));
 }
 
 void unparse_voidptr(const sFieldDesc* desc, const void* val, char* out)
@@ -362,10 +363,10 @@ void parse_ang_vec(const sFieldDesc* desc, void* rawVal, const char* in)
 	auto* val = reinterpret_cast<mxs_angvec*>(rawVal);
 
 	float vec[3]{};
-	sscanf(in, "%lf, %lf %lf", &vec[0], &vec[1], &vec[2]);
-	val->tz = floor(vec[0] * 32768.0 / 180.0 + 0.5);
-	val->ty = floor(vec[1] * 32768.0 / 180.0 + 0.5);
-	val->tx = floor(vec[2] * 32768.0 / 180.0 + 0.5);
+	sscanf(in, "%f, %f %f", &vec[0], &vec[1], &vec[2]);
+	val->tz = (mxs_ang)floorf(vec[0] * 32768.0f / 180.0f + 0.5f);
+	val->ty = (mxs_ang)floorf(vec[1] * 32768.0f / 180.0f + 0.5f);
+	val->tx = (mxs_ang)floorf(vec[2] * 32768.0f / 180.0f + 0.5f);
 }
 
 void unparse_ang_vec(const sFieldDesc* desc, const void* rawVal, char* out)
@@ -542,7 +543,7 @@ BOOL StructToFullString(const char* struc, const sStructDesc* desc, char* out, i
 
 	if (desc->nfields)
 	{
-		auto bufsiz = 256;
+		ulong bufsiz = 256;
 		auto* buf = static_cast<char*>(Malloc(0x100));
 		auto* p = out;
 		if (desc->nfields > 1)

@@ -316,7 +316,7 @@ void MemCheckOff()
 //
 //	Returns: far ptr to block in low memory, or NULL
 
-#ifndef WIN32
+#ifndef _WIN32
 void far *MallocConvMemBlock(ushort size, ConvMemBlock *pcmb)
 {
 	union REGS regs;
@@ -348,7 +348,7 @@ void far *MallocConvMemBlock(ushort size, ConvMemBlock *pcmb)
 //		newsize = new size in bytes
 //
 //	Returns: far ptr to realloc'ed block
-#ifndef WIN32
+#ifndef _WIN32
 void far *ReallocConvMemBlock(ConvMemBlock *pcmb, ushort newsize)
 {
 	union REGS regs;
@@ -380,7 +380,7 @@ void far *ReallocConvMemBlock(ConvMemBlock *pcmb, ushort newsize)
 //
 //	Returns: 0 if successful, -1 if free failed
 
-#ifndef WIN32
+#ifndef _WIN32
 int FreeConvMemBlock(ConvMemBlock *pcmb)
 {
 	union REGS regs;

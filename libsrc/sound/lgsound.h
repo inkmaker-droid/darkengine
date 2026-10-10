@@ -469,7 +469,7 @@ extern "C" {
 		STDMETHOD_(void, SetVolume)(THIS_ int32 vol) PURE;
 		STDMETHOD_(void, SetPan)(THIS_ int32 pan) PURE;
 		STDMETHOD_(void, SetFrequency)(THIS_ uint32 freq) PURE;
-		STDMETHOD_(void, SetData)(THIS_ int32 data) PURE;
+		STDMETHOD_(void, SetData)(THIS_ intptr_t data) PURE;
 		STDMETHOD_(void, SetPriority)(THIS_ int32 pri) PURE;
 		STDMETHOD_(void, SetSuperInfo)(THIS_ void* pInfo) PURE;
 		STDMETHOD_(void, SetPosition)(THIS_ uint32 pos) PURE;
@@ -478,7 +478,7 @@ extern "C" {
 		STDMETHOD_(int32, GetVolume)(THIS) PURE;
 		STDMETHOD_(int32, GetPan)(THIS) PURE;
 		STDMETHOD_(uint32, GetFrequency)(THIS) PURE;
-		STDMETHOD_(int32, GetData)(THIS) PURE;
+		STDMETHOD_(intptr_t, GetData)(THIS) PURE;
 		STDMETHOD_(int32, GetPriority)(THIS) PURE;
 		STDMETHOD_(void*, GetSuperInfo)(THIS) PURE;
 		STDMETHOD_(uint32, GetPosition)(THIS) PURE;

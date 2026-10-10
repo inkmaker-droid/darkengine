@@ -142,9 +142,12 @@ void StatusDrawStringAll(void)
 
 int str_wid(const char* s)
 {
+   int width;
+
    guiStyleSetupFont(NULL,StyleFontNormal); 
-   gr_font_string_width(gr_get_font(),s); 
+   width = gr_font_string_width(gr_get_font(),s);
    guiStyleCleanupFont(NULL,StyleFontNormal); 
+   return width;
 }
 
 void StatusField(int x, const char *s)

@@ -19,7 +19,8 @@ float RNG::GetFloat()
 
 float RNG::GetNorm()
 {
-    return std::cos(GetFloat() * 2.0 * M_PI) * std::sqrt(std::log(GetFloat() * -2.0));
+    return static_cast<float>(std::cos(GetFloat() * 2.0 * M_PI)
+        * std::sqrt(std::log(GetFloat() * -2.0)));
 }
 
 long RNG::GetRange(long max)

@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <lg.h>
 #include <assert.h>
 
@@ -84,7 +84,7 @@ cDSndSample::~cDSndSample()
    MIXER_MUTEX;
 
    if ( mpSampleImp != NULL ) {
-      mpMixer->DoTrace( (void *) mBufferLen, kSndBufferFree );
+      mpMixer->DoTrace( (void *)(uintptr_t)mBufferLen, kSndBufferFree );
       mpSampleImp->Release();
       mpSampleImp = NULL;
       // tell the mixer we're gone & a channel is free
@@ -155,7 +155,7 @@ cDSndSample::MakeAudible()
    // create the DirectSoundBuffer
    res = pMixer->GetDevice()->CreateSoundBuffer( &db, &pDSB, NULL);
    if ( res == DS_OK ) {
-      mpMixer->DoTrace( (void *) mBufferLen, kSndBufferAllocate );
+      mpMixer->DoTrace( (void *)(uintptr_t)mBufferLen, kSndBufferAllocate );
       mpSampleImp = pDSB;
       MoveToList( mpMixer->AudibleHead() );
       SetFlags( kSndFlagAudible );
@@ -422,7 +422,7 @@ STDMETHODIMP_(void) cDSndSample::SetFrequency(uint32 freq)
          // muted & running - just recalculate current
          //  position before changing frequency
          now = timeGetTime();
-         mBasePos = ESTIMATED_POSITION( now );
+         mBasePos = (uint32)ESTIMATED_POSITION( now );
          mBaseTime = now;
          TLOG2( "Smp::SetFrequency - reset baseTime %ld basePos %ld", mBaseTime, mBasePos );
       }
@@ -710,7 +710,7 @@ cDSndSample::CheckStream()
       // handle muted stream - look for end-of-data condition
       if ( IS_RUNNING ) {
          TLOG2( "Smp::CheckStream %s MUTED, readPos %d", SAMPLE_NAME, readPos );
-         readPos = ESTIMATED_POSITION_NOW;
+         readPos = (uint32)ESTIMATED_POSITION_NOW;
          if ( readPos >= mNumSamples ) {
             // stream sample has reached its virtual end-of-data
             DeferredStop();

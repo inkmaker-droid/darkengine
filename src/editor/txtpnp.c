@@ -59,7 +59,7 @@ static Rect txtPnP_rects[NUM_BUTTONS];
 #define BTN_ABOVE 4
 #define BTN_BELOW 3
 #define VERT_DIV  4
-#define HORIZ_DIV (0.45)
+#define HORIZ_DIV (0.45f)
 
 void txtPnP_buildRects(Rect *whole)
 {
@@ -216,7 +216,7 @@ static void txtPnP_OneShots(int lid)
 // the idea here is that this just makes sure the globals are right
 // then calls setvars, which deals with making the brush consistent with the globals
 // or, if say a face changes, the globals consistent with the brush
-static void txtPnP_IntFrob(PnP_SliderOp op,Rect *where, int val, int data)
+static void txtPnP_IntFrob(PnP_SliderOp op,Rect *where, int val, intptr_t data)
 {
    if (op != PnP_SliderUpdateOp)
       return;
@@ -233,7 +233,7 @@ static void txtPnP_IntFrob(PnP_SliderOp op,Rect *where, int val, int data)
 
 void texture_pal_cmd(void);
 
-static void txtPnP_TxtFrob(PnP_SliderOp op,Rect *where, int val, int data)
+static void txtPnP_TxtFrob(PnP_SliderOp op,Rect *where, int val, intptr_t data)
 {
    if (op == PnP_SliderUpdateOp)
    {
@@ -323,7 +323,6 @@ static void draw_string_hack(int color, char *str)
    stringToCanvasBottom(str,TRUE,TRUE);
 }
 
-#pragma off(unreferenced)
 // this really should probably just load from the brush
 // since we really hope it is consistent and right when we get here
 static void txtPnP_Picture(int data)
@@ -344,7 +343,6 @@ static void txtPnP_Picture(int data)
       drawTexturetoCanvas(mt,NULL,FALSE);
    }
 }
-#pragma on(unreferenced)
 
 BOOL txtPnP_allow_attach=FALSE;
 

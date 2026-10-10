@@ -8,7 +8,7 @@
 //
 
 #if defined(_WIN32)
-#include <windows.h>
+#include <win32_platform.h>
 #endif
 
 #include <lg.h>
@@ -568,7 +568,7 @@ BOOL cFilePath::FindFirst(cFilePath &fp, sFindContext& FC) const
 
     if (FC.DoFindFirst(sFindContext::kFindingPaths, WcString, StrFoundFile))
     {
-#if defined(WIN32)
+#if defined(_WIN32)
         if(StrFoundFile  == "." || StrFoundFile ==  "..")
         {
             return FindNext(fp,FC);
@@ -599,7 +599,7 @@ BOOL cFilePath::FindNext(cFilePath &fp, sFindContext& FC) const
 
     cStr StrFoundFile;
 
-#if defined(WIN32)
+#if defined(_WIN32)
     do
     {
         if (!FC.DoFindNext(StrFoundFile))
@@ -675,9 +675,9 @@ BOOL cFilePath::GetRootDir(const char *pPath, cStr &Str)
         const char * pEndDomain = strchr(pPath+2, '\\');
         unsigned nAppendLen;
         if (pEndDomain)
-            nAppendLen = pEndDomain - pPath;
+            nAppendLen = static_cast<unsigned>(pEndDomain - pPath);
         else
-            nAppendLen = strlen(pPath);
+            nAppendLen = static_cast<unsigned>(strlen(pPath));
         Str.Empty();
         Str.Append(nAppendLen, pPath);
     }

@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-#include <windows.h>
+#include <win32_platform.h>
 
 #include <assert.h>
 
@@ -162,7 +162,6 @@ cDSndMixer::~cDSndMixer()
 // the DirectSound interface.
 
 #ifdef __WATCOMC__
-#pragma off(unreferenced)
 #endif
 
 

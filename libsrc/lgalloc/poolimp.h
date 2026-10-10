@@ -62,7 +62,7 @@ public:
 
     static void DumpPools();
 
-    unsigned long GetElemSize() { return m_nElementSize; }
+    size_t GetElemSize() { return m_nElementSize; }
 
     #ifdef ALLOC_STATS
     // For debugging/optimization:

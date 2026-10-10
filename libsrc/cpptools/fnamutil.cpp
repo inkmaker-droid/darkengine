@@ -7,12 +7,7 @@
 // (c) Copyright 1995-1996 Tom Leonard. All Rights Reserved. Unlimited license granted to Looking Glass Technologies Inc.
 //
 
-#if defined(_WIN32)
-#include <windows.h>
-#else
-#define max(x, y) ( ((x) > (y)) ? (x) : (y) )
-#define min(x, y) ( ((x) < (y)) ? (x) : (y) )
-#endif
+#include <algorithm>
 
 #include <lg.h>
 #include <stdlib.h>
@@ -197,7 +192,7 @@ BOOL __stdcall GetFullPath(const char * pszPath, char ** ppszOut)
         else if (*pszPath == '\\')
             {
             DebugMsgEx(GETFULLPATH, "Path is off root of current drive");
-            const int nLenPath = strlen(pszPath);
+            const int nLenPath = static_cast<int>(strlen(pszPath));
             char * pszResult = ResultStr.GetBuffer(nLenPath + 2);
 
             *pszResult = char(_getdrive() + 'A' - 1);
@@ -232,16 +227,16 @@ BOOL __stdcall GetFullPath(const char * pszPath, char ** ppszOut)
                 }
 
             // Get cwd for target drive
-            const int nLenPath = strlen(pszPath);
-            const int nMinLenNewAlloc = min(_MAX_PATH + 1, nLenPath + 40); // 40 is arbitrary, but should make this fast for most cases
+            const int nLenPath = static_cast<int>(strlen(pszPath));
+            const int nMinLenNewAlloc = std::min(_MAX_PATH + 1, nLenPath + 40); // 40 is arbitrary, but should make this fast for most cases
 
             DebugMsgEx3(GETFULLPATH, "Getting cwd for drive %d (%d, %d)", iDrive, int(nLenPath), int(nMinLenNewAlloc));
             char * pszResult = _getdcwd(iDrive, NULL, nMinLenNewAlloc);
 
             if (pszResult)
                 {
-                const int nLenCWD = strlen(pszResult);
-                const int nLenNewAlloc = max(nLenCWD+1, nMinLenNewAlloc);
+                const int nLenCWD = static_cast<int>(strlen(pszResult));
+                const int nLenNewAlloc = std::max(nLenCWD+1, nMinLenNewAlloc);
                 DebugMsgEx3(GETFULLPATH, "_getdcwd() returned %s, Length is %d, new alloc length is %d", pszResult, nLenCWD, nLenNewAlloc);
 
                 ResultStr.Attach(pszResult, nLenCWD, nLenNewAlloc);
@@ -280,8 +275,8 @@ BOOL __stdcall AddFileSpec(const char * pszPath, const char * pszFileSpec, char 
         return ReduceDots(*ppszOut);
         }
 
-    const unsigned nLenPath = strlen(pszPath);
-    const unsigned nLenFileSpec = strlen(pszFileSpec);
+    const unsigned nLenPath = static_cast<unsigned>(strlen(pszPath));
+    const unsigned nLenFileSpec = static_cast<unsigned>(strlen(pszFileSpec));
     const unsigned nNewLen = nLenPath + nLenFileSpec;
 
     // If both strings empty...
@@ -563,7 +558,7 @@ BOOL __stdcall ComputeAnchoredPath(const char * pszAnchorPath, const char * pszT
 
     DebugMsg2("Determining relationship of %s to %s", TargetPathStr.BufIn(), AnchorPathStr.BufIn());
 
-    const int iLength = min(AnchorPathStr.GetLength(), TargetPathStr.GetLength());
+    const int iLength = std::min(AnchorPathStr.GetLength(), TargetPathStr.GetLength());
 
     int i = 0;
     int iNode = 0;
@@ -642,7 +637,7 @@ char *GetCondensePathStr(const char *pszOrigPath,
         while (*pEndFull)
             pEndFull++;
 
-        if (pEndFull - pszOrigPath <= nCondenseToLen)
+        if (static_cast<size_t>(pEndFull - pszOrigPath) <= nCondenseToLen)
             {
             strcpy(pszCondensedPath, pszOrigPath);
             }
@@ -665,9 +660,9 @@ char *GetCondensePathStr(const char *pszOrigPath,
                 strcpy(pszCondensedPath, pszOrigPath);
             else
                 {
-                int iPresentLen = (pFScan - pszOrigPath) +
+                unsigned iPresentLen = static_cast<unsigned>(pFScan - pszOrigPath) +
                                   4 /* strlen("\\...") */ +
-                                  (pEndFull - pRScan);
+                                  static_cast<unsigned>(pEndFull - pRScan);
                 pFScan += 4;
                 if (pFScan <= pRScan)
                     {

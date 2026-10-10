@@ -55,7 +55,7 @@ void cAIManager::handleTransferAI(ObjID id, int size,
                                   void *pTransferData,
                                   cAIManager *pAIManager)
 {
-   sAINetTransfer transfer = {size, pTransferData};
+   sAINetTransfer transfer = {(unsigned)size, pTransferData};
    pAIManager->MakeFullAI(id, &transfer);
 }
 

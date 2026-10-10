@@ -188,7 +188,7 @@ void GhostListEmptyAndFree(void)
       local_objs.Append(pGL->obj);
       pGL=gGhostLocals.GetNext(local_iter);
    }
-   for (unsigned i=0; i<local_objs.Size(); ++i)
+   for (int i=0; i<local_objs.Size(); ++i)
       GhostRemLocal(local_objs[i]);
 
    cDynArray<ObjID> remote_objs;
@@ -199,7 +199,7 @@ void GhostListEmptyAndFree(void)
       remote_objs.Append(pGR->obj);
       pGR=gGhostRemotes.GetNext(remote_iter);
    }
-   for (unsigned i=0; i<remote_objs.Size(); ++i)
+   for (int i=0; i<remote_objs.Size(); ++i)
       GhostRemRemote(remote_objs[i]);
 }
 

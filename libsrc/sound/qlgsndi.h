@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-#include <windows.h>
+#include <win32_platform.h>
 
 #ifndef _LG_SOUND_H
 #include <lgsound.h>

@@ -53,7 +53,7 @@ struct sAIDefendPoint
    BOOL InRange(const mxs_vector & testPos) const
    {
       if (object && iActive != kAINoDefend)
-         return AIInsideCylinder(testPos, location, sq(ranges[iActive].radius), ranges[iActive].height / 2);
+         return AIInsideCylinder(testPos, location, (float)sq(ranges[iActive].radius), ranges[iActive].height * 0.5f);
       return TRUE;
    }
 

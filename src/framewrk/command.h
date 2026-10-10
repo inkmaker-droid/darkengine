@@ -67,8 +67,8 @@ typedef BOOL (LGAPI *CommandIterateCallback)(const Command *command,
 EXTERN void CommandForEach(CommandIterateCallback callback, void *data);
 
 EXTERN bool CommandParse(const char *inp, Command **res_1, const char **res_2);
-EXTERN void CommandExecuteParsed(Command *, char *parms);
-EXTERN bool CommandExecuteParam(const char *cmd, char *param);
+EXTERN void CommandExecuteParsed(Command *, const char *parms);
+EXTERN bool CommandExecuteParam(const char *cmd, const char *param);
 
   // register an array of commands
 EXTERN void CommandRegister(Command *, int count, ulong contexts);
@@ -77,11 +77,11 @@ EXTERN void CommandRegister(Command *, int count, ulong contexts);
 #define COMMANDS(x,y)  CommandRegister(x, sizeof(x)/sizeof(x[0]), y)
 
   // lookup a command, with explicit length
-EXTERN Command *CommandFind(char *, int len);
-EXTERN Command *CommandFindString(char *s);
+EXTERN Command *CommandFind(const char *, int len);
+EXTERN Command *CommandFindString(const char *s);
 
 // Run a command script
-EXTERN void CommandRunScript(char* filename);
+EXTERN void CommandRunScript(const char* filename);
 
 // for command completion/tab in cmdterm
 EXTERN const char *command_find(const char *prefix, BOOL restart);

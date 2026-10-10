@@ -27,7 +27,10 @@
 
 
 #if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable:4073)
 #pragma init_seg(lib)
+#pragma warning(pop)
 #endif
 
 #ifndef SHIP

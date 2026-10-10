@@ -71,9 +71,9 @@ public:
 #endif
       int r, g, b;
       portal_convert_hsb_to_rgb(&r, &g, &b, sun_h, sun_s);
-      sun_rgb.x = r / 255.0;
-      sun_rgb.y = g / 255.0;
-      sun_rgb.z = b / 255.0;
+      sun_rgb.x = r / 255.0f;
+      sun_rgb.y = g / 255.0f;
+      sun_rgb.z = b / 255.0f;
       mx_scale_vec(&sun_scaled_rgb, &sun_rgb, sun_b);
 
       mx_norm_vec(&portal_sunlight_norm, &sunlight_vector);
@@ -87,7 +87,7 @@ public:
       pal_res[0] = '\0';
       mx_mk_vec(&ambient_light, .25, .25, .25);
       use_sun = FALSE;
-      mx_mk_vec(&sunlight_vector, .25, .1, -1);
+   mx_mk_vec(&sunlight_vector, .25f, .1f, -1.0f);
       sun_h = 0;
       sun_s = 1;
       sun_b = 100;

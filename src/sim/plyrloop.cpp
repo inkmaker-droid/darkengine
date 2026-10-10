@@ -167,7 +167,7 @@ static void create_player_cam(void)
       mxs_angvec ang;
 
       mx_mk_vec(&pos, 0.0, 0.0, 0.0); 
-      mx_mk_angvec(&ang, 0.0, 0.0, 0.0); 
+   mx_mk_angvec(&ang, 0, 0, 0);
       
       gPlayerCam = CameraInit(&pos,&ang,OBJ_NULL); 
    }
@@ -460,9 +460,9 @@ static void apply_quickstart_transform(void)
 
    location = pos->loc.vec;
    facing = pos->fac;
-   pitch = (float)facing.ty * (360.0 / 65536.0);
-   heading = (float)facing.tz * (360.0 / 65536.0);
-   roll = (float)facing.tx * (360.0 / 65536.0);
+   pitch = (float)facing.ty * (360.0f / 65536.0f);
+   heading = (float)facing.tz * (360.0f / 65536.0f);
+   roll = (float)facing.tx * (360.0f / 65536.0f);
 
    if (config_get_raw("quickstart_pos", value, sizeof(value)))
       sscanf(value, "%f,%f,%f", &location.x, &location.y, &location.z);
@@ -658,7 +658,6 @@ static void db_message(DispatchData* msg)
 // OBJECT MESSAGE HANDLER
 //
 
-#pragma off(unreferenced)
 static void obj_message(ObjID obj, eObjNotifyMsg msg, void* data)
 {
    switch(msg)
@@ -674,7 +673,6 @@ static void obj_message(ObjID obj, eObjNotifyMsg msg, void* data)
          break;
    }
 }
-#pragma on(unreferenced)
 
 static void init_obj_message(void)
 {
@@ -696,7 +694,6 @@ void register_player_commands(void);
 // Here's where we do the dirty work.
 //
 
-#pragma off(unreferenced)
 static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMessageData hdata)
 {  // useful stuff for most clients
    eLoopMessageResult result = kLoopDispatchContinue;
@@ -751,7 +748,6 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
 // Loop client factory function.
 //
 
-#pragma off(unreferenced)
 static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData data)
 {
    StateRecord* state;
@@ -761,7 +757,6 @@ static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData
 
    return CreateSimpleLoopClient(_LoopFunc,state,pDesc);
 }
-#pragma on(unreferenced)
 
 
 

@@ -780,7 +780,7 @@ static void drop_command(void)
       obj = pContainSys->RemoveFromStack(obj);
       pInventory->Remove(obj);
       // @TODO: get a real velocity constant
-      if (!throw_obj(PlayerObject(),obj,0.05))
+      if (!throw_obj(PlayerObject(),obj,0.05f))
          pInventory->Add(obj);
 
       if ( obj == gLastObjPickedUp ) {
@@ -1167,10 +1167,10 @@ static sRendState gRendState[kNumItemSels];
 static void interp_rect(Rect* out, const Rect* r1, long w1, const Rect* r2, long w2)
 {
    long sum = w1+w2;
-   out->ul.x = (r1->ul.x*w1 + r2->ul.x*w2)/sum;
-   out->ul.y = (r1->ul.y*w1 + r2->ul.y*w2)/sum;
-   out->lr.x = (r1->lr.x*w1 + r2->lr.x*w2)/sum;
-   out->lr.y = (r1->lr.y*w1 + r2->lr.y*w2)/sum;
+   out->ul.x = (short)((r1->ul.x*w1 + r2->ul.x*w2)/sum);
+   out->ul.y = (short)((r1->ul.y*w1 + r2->ul.y*w2)/sum);
+   out->lr.x = (short)((r1->lr.x*w1 + r2->lr.x*w2)/sum);
+   out->lr.y = (short)((r1->lr.y*w1 + r2->lr.y*w2)/sum);
 }
 
 
@@ -1315,10 +1315,10 @@ static void render_selection_display(ulong time)
          invRendGetView(state.render,&view);
          view.off_ang.ty=-0x4000;
          view.off_ang.tz=-0x4000;
-         view.cam_dist=0.65;
+         view.cam_dist=0.65f;
          invRendSetView(state.render,&view);
          float new_parms[6];
-         new_parms[0]=(-(cam->ang.tz+0x8000))*360.0/65536.0;
+         new_parms[0]=(-(cam->ang.tz+0x8000))*360.0f/65536.0f;
 	 new_parms[0]-=GetCompassOffset();
          ObjSetJointPos(state.obj,new_parms);
          gSelExpired[i] = NO_EXPIRATION;
@@ -1344,7 +1344,7 @@ static void render_selection_display(ulong time)
          view.off_ang.tz = (cam->ang.tz+0x4000);
 	 view.off_ang.tz += degrees_to_fixang(GetCompassOffset());
          view.off_ang.ty = -0x1200 - pitch_factor;
-         view.cam_dist = 0.74;
+         view.cam_dist = 0.74f;
          invRendSetView(state.render,&view);
          gSelExpired[i] = NO_EXPIRATION;
       }
@@ -1419,7 +1419,7 @@ static void setup_selection_display(ulong time, short bottom_margin)
    if (pInventory->WieldingJunk())
    {
       // slide weapon off the left edge
-      Rect weapr = { -2*w, bottom_margin - h, -w, bottom_margin };
+   Rect weapr = { (short)(-2*w), (short)(bottom_margin - h), (short)-w, (short)bottom_margin };
       gRendState[kCurrentWeapon].set_target(&weapr,time + gTransitTime);
 
       // Put the rect in the bottom middle of the screen
@@ -1437,13 +1437,13 @@ static void setup_selection_display(ulong time, short bottom_margin)
       // Weapon goes on the left.
       if (gRendState[kCurrentWeapon].obj != OBJ_NULL)
       {
-         Rect r = { 0, bottom_margin - h, w, bottom_margin };
+   Rect r = { 0, (short)(bottom_margin - h), (short)w, (short)bottom_margin };
          gRendState[kCurrentWeapon].set_target(&r,time + gTransitTime);
       }
       else
       {
          // teleport it off
-         Rect r = { -2*w, bottom_margin - h, -w, bottom_margin };
+   Rect r = { (short)(-2*w), (short)(bottom_margin - h), (short)-w, (short)bottom_margin };
          gRendState[kCurrentWeapon].set_target(&r,time - 1);
       }
 
@@ -1464,16 +1464,16 @@ static void setup_selection_display(ulong time, short bottom_margin)
 
          if (center)
          {
-            Rect r = { (grd_canvas->bm.w - w)/2, (grd_canvas->bm.h - h)/2 };
+            Rect r = { (short)((grd_canvas->bm.w - w)/2), (short)((grd_canvas->bm.h - h)/2) };
 
-            r.lr.x = r.ul.x + w;
-            r.lr.y = r.ul.y + h;
+            r.lr.x = (short)(r.ul.x + w);
+            r.lr.y = (short)(r.ul.y + h);
             gRendState[kCurrentItem].set_target(&r,time + gTransitTime);
          }
          else
          {
-            Rect r = { grd_canvas->bm.w - w, bottom_margin - h,
-                       grd_canvas->bm.w, bottom_margin };
+            Rect r = { (short)(grd_canvas->bm.w - w), (short)(bottom_margin - h),
+                       (short)grd_canvas->bm.w, (short)bottom_margin };
             gRendState[kCurrentItem].set_target(&r,time + gTransitTime);
 
             if (!tool_frob && frobWorldSelectObj)
@@ -1483,8 +1483,8 @@ static void setup_selection_display(ulong time, short bottom_margin)
 
       if (slide_off)
       {
-         Rect r = { grd_canvas->bm.w + w, bottom_margin - h,
-                    grd_canvas->bm.w + 2*w, bottom_margin };
+         Rect r = { (short)(grd_canvas->bm.w + w), (short)(bottom_margin - h),
+                    (short)(grd_canvas->bm.w + 2*w), (short)bottom_margin };
          gRendState[kCurrentItem].set_target(&r,time - 1);
       }
    }
@@ -1543,8 +1543,8 @@ public:
 
       sInvRendView view;
       invRendGetView(rend,&view);
-      view.off_ang.tz += ang*FIXANG_PI*0.005555555555556; // aka "/180";
-      view.cam_dist *= 1.0*zoom*0.010000;  // aka "/100"
+      view.off_ang.tz += (mxs_ang)(ang*FIXANG_PI*0.005555555555556f); // aka "/180";
+      view.cam_dist *= 1.0f*zoom*0.010000f;  // aka "/100"
 
       invRendSetView(rend,&view);
 
@@ -1638,7 +1638,7 @@ protected:
          UseMe.ul.x = mScreenRect.ul.x+rw*i/n;
          UseMe.lr.x = UseMe.ul.x+w;
 
-         view.lighting = 0.50 + 0.50*(i+1)/val;
+         view.lighting = 0.50f + 0.50f*(i+1)/val;
          invRendSetView(rends[i],&view);
          invRendSetRect(rends[i],&UseMe);
          invRendUpdateState(rends[i], 0, OBJ_NULL, NULL, NULL);
@@ -1769,7 +1769,7 @@ static void render_stat_bars(ulong time, int top_margin, int bot_margin)
    int w = grd_canvas->bm.w;
    int h = grd_canvas->bm.h;
 
-   Rect r= { hp_x[0]*w/kExtentX, top_margin, hp_x[1]*w/kExtentX, bot_margin };
+   Rect r= { (short)(hp_x[0]*w/kExtentX), (short)top_margin, (short)(hp_x[1]*w/kExtentX), (short)bot_margin };
 
    hpbar.SetScreenRect(r);
    hpbar.Update(time);
@@ -1829,8 +1829,8 @@ static sPropertyDesc tool_reach_desc =
 
 BOOL enable_inv = TRUE;
 
-static float gStatusH = 0.06; // %of screen
-static float gStatusMargin = 1.0/480; // %of screen
+static float gStatusH = 0.06f; // %of screen
+static float gStatusMargin = 1.0f/480; // %of screen
 
 
 
@@ -1980,7 +1980,7 @@ void InvUIRender(ulong msec)
       render_stat_bars(msec,top,bot);
 
       // compute rect for vis meter
-      Rect vis_r = { 0, top, 0, bot};
+   Rect vis_r = { 0, (short)top, 0, (short)bot};
       vis_r.ul.x = hp_x[1]*grd_canvas->bm.w/kExtentX;
       vis_r.lr.x = air_x[0]*grd_canvas->bm.w/kExtentX;
       VisMeterUpdate(msec,&vis_r);

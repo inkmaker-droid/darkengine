@@ -81,7 +81,7 @@ mds_model *md_shear_model(mds_model *dst,mds_model *src,int ax_src,int ax_targ,m
    dst->radius = radius_from_bbox(&dst->bmin,&dst->bmax);
 
    // Recompute max pgon radius, by assuming worst case
-   dst->max_pgon_radius *= sqrt(1+s*s);
+   dst->max_pgon_radius *= sqrtf(1.0f+s*s);
 
    // Scale the vhot lists
    v = md_vhot_list(dst);

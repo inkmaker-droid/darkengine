@@ -568,6 +568,7 @@ case INCr13: {	/* define_complex :  DEFINE IDENT not_int opt_other */
 	if (incdebug)
 		INC_TRACE(incShowGoto)
 #endif
+	if (0) goto incerrlabel;
 	goto incStack;
 
 incerrlabel:	;		/* come here from INCERROR	*/

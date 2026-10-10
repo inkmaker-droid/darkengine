@@ -73,7 +73,7 @@ struct sARQRequest
     int                     priority;
 
     // Optional, client defined data values
-    DWORD                   dwData[6];
+    DWORD_PTR               dwData[6];
 
     // Optional tracing name for debug routines
     const char *            pszTrace;

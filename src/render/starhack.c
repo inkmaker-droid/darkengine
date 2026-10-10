@@ -94,10 +94,10 @@ static void iterate_buffered_points(int (*point_is_visible)(int x, int y))
    }
 }
 
-void starfield_set_z(double z)
+void starfield_set_z(float z)
 {
    star_z = z;
-   star_w = 1.0/z;
+   star_w = 1.0f/z;
 }
 
 

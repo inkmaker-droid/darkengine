@@ -66,7 +66,7 @@ static ulong buttonKeys[kJoyButtonsMax];
 #define BUTTON_KEY_REPEAT 0x10000
 static float buttonRepeatTime[kJoyButtonsMax];
 
-#define DEFAULT_BUTTON_REPEAT_INTERVAL 0.1
+#define DEFAULT_BUTTON_REPEAT_INTERVAL 0.1f
 static float buttonRepeatInterval;
 #define DEFAULT_BUTTON_REPEAT_DELAY 0.25
 static float buttonRepeatDelay;
@@ -208,7 +208,7 @@ void UiJoyInit ()
 
    // set rudder amidships, so if user has a throttle but no rudder, the throttle
    //  triggered joy event will have a reasonable value for the rudder
-   joyBPos.x = joyMidRudder;
+   joyBPos.x = (short)joyMidRudder;
 
    g_pInputBinder->RegisterJoyProcObj(&g_dark_joy_control);
 }
@@ -445,8 +445,8 @@ void uiJoystickPoller(void)
    if ( (joyState.x != joyAPos.x) || (joyState.y != joyAPos.y) )
    {
       DispatchJoystickMoveEvent( 0, joyState.x, joyState.y );
-      joyAPos.x = joyState.x;
-      joyAPos.y = joyState.y;
+         joyAPos.x = (short)joyState.x;
+         joyAPos.y = (short)joyState.y;
    }
 
    // clamp these to fit in 16-bits
@@ -473,8 +473,8 @@ void uiJoystickPoller(void)
    if ( (joyState.rz != joyBPos.x) || (joyState.z != joyBPos.y) )
    {
       DispatchJoystickMoveEvent( 1, joyState.rz, joyState.z );
-      joyBPos.x = joyState.rz;
-      joyBPos.y = joyState.z;
+         joyBPos.x = (short)joyState.rz;
+         joyBPos.y = (short)joyState.z;
 
    }
 
@@ -561,7 +561,7 @@ void uiJoystickPoller(void)
    hatHist2 = hatHist1;
    hatHist1 = hat;
 
-   now = (double)(tm_get_millisec()/1000.0);
+   now = tm_get_millisec()/1000.0f;
    for(i=0;i<MAX_BUTTONS;i++)
    {
 

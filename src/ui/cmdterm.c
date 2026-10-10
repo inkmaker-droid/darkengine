@@ -10,7 +10,7 @@
 #include <ctype.h>
 
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <win32_platform.h>
 
 #include <kb.h>
 #include <kbcook.h>
@@ -451,6 +451,8 @@ void cmdterm_capture_status(const char* text)
 
 void cmdterm_redraw(void)
 {
+   grs_canvas canvas;
+
    if (!(CmdTerm.statebits & kStateInUse))
       return;
 
@@ -470,7 +472,11 @@ void cmdterm_redraw(void)
    cmdterm_rebuild_output();
    LGadUpdateTextBox(&CmdTerm.outputbox);
    LGadUpdateTextBox(&CmdTerm.textbox);
-   LGadDrawBox(VB(&CmdTerm.root),NULL);
+   gr_init_sub_canvas(ScrnGetDrawCanvas(), &canvas,
+                      CmdTerm.bounds.ul.x, CmdTerm.bounds.ul.y,
+                      RectWidth(&CmdTerm.bounds), RectHeight(&CmdTerm.bounds));
+   LGadDrawBoxCanvas(VB(&CmdTerm.root), NULL, &canvas, CmdTerm.bounds.ul);
+   gr_close_sub_canvas(&canvas);
 }
 
 static void cmdterm_draw(void)
@@ -1110,7 +1116,7 @@ static int move_cursor_into_command(char *cmd, int max_len)
    if (cmd)
    {
       char *space=strchr(cmd,' ');
-      int len=strlen(cmd);
+   int len=(int)strlen(cmd);
       if (len==0)
          return 0;
       else if ((space==NULL)&&(len<max_len))
@@ -1119,7 +1125,7 @@ static int move_cursor_into_command(char *cmd, int max_len)
          space=cmd+len;
       }
       while (*space==' ') space++;
-      return space-cmd;
+   return (int)(space-cmd);
    }
    return 0;
 }
@@ -1151,7 +1157,6 @@ static short speckeys[] =
 
 static char last_prefix[sizeof(CmdTerm.cmdbuf)]=" ";
 
-#pragma off(unreferenced)
 bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, void* data)
 {
    char  help_buf[256], *help_ptr=NULL;
@@ -1402,7 +1407,6 @@ bool cmdterm_textbox_cb(LGadTextBox* box, LGadTextBoxEvent event, int evdata, vo
    }
    return update;
 }
-#pragma on(unreferenced)
 
 void CreateCommandTerminal(LGadRoot* root, Rect* bounds, ulong flags)
 {

@@ -10,7 +10,7 @@
  */
 
 #ifdef _WIN32
-#include <windows.h>
+#include <win32_platform.h>
 #endif
 
 #include <io.h>
@@ -19,10 +19,10 @@
 #include <lg.h>
 
 void PrintExitMsg(void);
-char *pExitMsg;			// message to print on exit
+const char *pExitMsg;		// message to print on exit
 bool exitMsgInstalled;	// has exit message been installed
 
-void SetExitMsg_(char *msg);
+void SetExitMsg_(const char *msg);
 
 //	-------------------------------------------------------------
 //		EXIT ROUTINES
@@ -33,7 +33,7 @@ void SetExitMsg_(char *msg);
 //		errcode = error code to return.
 //		msg     = message to display on console, or NULL
 
-void Exit(int errcode, char *msg)
+void Exit(int errcode, const char *msg)
 {
 	SetExitMsg_(msg);
 	exit(errcode);
@@ -50,7 +50,7 @@ void Exit(int errcode, char *msg)
 //
 //		msg = ptr to message
 
-void SetExitMsg_(char *msg)
+void SetExitMsg_(const char *msg)
 {
 	SetExitMsg(msg);
 	if (!exitMsgInstalled)

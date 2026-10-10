@@ -5,9 +5,6 @@
 // $Revision: 1.5 $
 //
 
-#if 0
-#include <windows.h>
-#endif
 #include <lg.h>
 #include <pdynarr.h>
 

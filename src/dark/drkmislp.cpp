@@ -117,7 +117,7 @@ static ILoopClient* LGAPI client_factory(sLoopClientDesc * pDesc, tLoopClientDat
    return new cMissionLoopClient; 
 }
 
-static ulong factory_id = -1; 
+static tLoopClientCookie factory_id = (tLoopClientCookie)-1;
 
 static void create_client_factory()
 {

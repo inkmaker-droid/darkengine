@@ -170,7 +170,7 @@ cSndSource::SetPlaylist( SndPlaylist   pList )
                                         &pRawData, &rawDataLen,
                                         &(pRezSingle->nSamples), &attribs );
             assert( blewIt == FALSE );
-            pRezSingle->off = ((char *) pRawData) - tmpBuff;
+            pRezSingle->off = static_cast<uint32>(((char *) pRawData) - tmpBuff);
             setFormatWords( &(pRezSingle->format1), &attribs, &mAttribs );
             if ( prevWasDual ) {
                pRezDual = (SSPLRezDual *) pLastDataOp;
@@ -200,7 +200,7 @@ cSndSource::SetPlaylist( SndPlaylist   pList )
                                         &pRawData, &rawDataLen,
                                         &(pFileSingle->nSamples), &attribs );
             assert( blewIt == FALSE );
-            pFileSingle->off = ((char *) pRawData) - tmpBuff;
+            pFileSingle->off = static_cast<uint32>(((char *) pRawData) - tmpBuff);
             setFormatWords( &(pFileSingle->format1), &attribs, &mAttribs );
             if ( prevWasDual ) {
                pFileDual = (SSPLFileDual *) pLastDataOp;
@@ -223,7 +223,7 @@ cSndSource::SetPlaylist( SndPlaylist   pList )
                                         &pRawData, &rawDataLen,
                                         &(pMemSingle->nSamples), &attribs );
             assert( blewIt == FALSE );
-            pMemSingle->off = ((char *) pRawData) - ((char *) pMemSingle->pData);
+            pMemSingle->off = static_cast<uint32>(((char *) pRawData) - ((char *) pMemSingle->pData));
             setFormatWords( &(pMemSingle->format1), &attribs, &mAttribs );
             if ( prevWasDual ) {
                pMemDual = (SSPLMemDual *) pLastDataOp;
@@ -260,7 +260,7 @@ cSndSource::SetPlaylist( SndPlaylist   pList )
                                         &pRawData, &rawDataLen,
                                         &(pNRezSingle->nSamples), &attribs );
             assert( blewIt == FALSE );
-            pNRezSingle->off = ((char *) pRawData) - tmpBuff;
+            pNRezSingle->off = static_cast<uint32>(((char *) pRawData) - tmpBuff);
             setFormatWords( &(pNRezSingle->format1), &attribs, &mAttribs );
             if ( prevWasDual ) {
                pNRezDual = (SSPLNRezDual *) pLastDataOp;

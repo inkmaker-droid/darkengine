@@ -14,7 +14,7 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <lg.h>
 #include <mmsystem.h>
 #include <mmreg.h>

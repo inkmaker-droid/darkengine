@@ -24,7 +24,6 @@
 #include <lg.h>
 
 #if defined(__WATCOMC__)
-#pragma off (unreferenced)
 #pragma warning 549 9
 #endif
 
@@ -161,7 +160,7 @@ public:
    //
    // Get and set array size (the number of active elements)
    //
-   unsigned Size() const;
+   int      Size() const;
    BOOL     SetSize(unsigned);
 
    ///////////////////////////////////
@@ -488,9 +487,9 @@ unsigned DYNARRAY_BASE::GetBlockSize() const
 //
 
 DYNARRAY_BASE_TEMPLATE
-unsigned DYNARRAY_BASE::Size() const
+int DYNARRAY_BASE::Size() const
 {
-    return m_nItems;
+    return (int)m_nItems;
 }
 
 ///////////////////////////////////////
@@ -750,7 +749,7 @@ inline unsigned DYNARRAY_BASE::BSearch(const void * pKey, tSearchFunc pfnSearch)
    {
       T * pItem = (T *)bsearch(pKey, m_pItems, m_nItems, sizeof(T), (tVoidCompareFunc)pfnSearch);
       if (pItem)
-         return pItem - m_pItems;
+         return (unsigned)(pItem - m_pItems);
    }
    return BAD_INDEX;
 }
@@ -767,7 +766,7 @@ inline unsigned DYNARRAY_BASE::LSearch(const void * pKey, tSearchFunc pfnSearch)
 {
    if (m_pItems)
    {
-      for (int i = 0; i < m_nItems; i++)
+       for (unsigned i = 0; i < m_nItems; i++)
          if ((*pfnSearch)(pKey, &m_pItems[i]) == 0)
             return i;
    }
@@ -872,7 +871,6 @@ inline void DYNARRAY_BASE::AppendMemCpy(const T * p, unsigned nItems)
 
 #pragma pack()
 #if defined(__WATCOMC__)
-#pragma on (unreferenced)
 #endif
 
 #endif /* !__DYNARRAY_H */

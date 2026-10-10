@@ -603,7 +603,7 @@ static void frob_propagate(sFrobActivate* frob, BOOL reverse)
    }
 
    cContactPropagator* pGator = cContactPropagator::gpGator;
-   pGator->DoPropagationEvent(mask,src,dst,frob->ms_down*1.0);
+   pGator->DoPropagationEvent(mask,src,dst,frob->ms_down*1.0f);
 
 }
 

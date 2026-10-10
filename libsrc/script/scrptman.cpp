@@ -11,7 +11,6 @@
 // actually do.
 
 
-#include <windows.h>    // for DebugBreak
 #include <stdio.h>
 #include <filespec.h>
 #include <scrptman.h>
@@ -778,7 +777,7 @@ STDMETHODIMP_(void) cScriptMan::KillTimedMessage(tScrTimer timer)
    {
       if (!m_TimedMsgs[i])
          continue; 
-      if (m_TimedMsgs[i]->id == (ulong)timer)
+      if (m_TimedMsgs[i]->id == timer)
       {
          m_TimedMsgs[i]->pMsg->Release();
          m_TimedMsgs[i]->Release();

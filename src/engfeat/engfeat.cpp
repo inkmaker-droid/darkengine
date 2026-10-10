@@ -168,8 +168,8 @@ sFileVarDesc gBashVarDesc =
 
 static sBashVars def_vars =
 {
-   500.0,
-   .01,
+   500.0f,
+   .01f,
 };
 
 //
@@ -538,7 +538,7 @@ void EngineFeaturesPostRender(void)
 ////////////////
 // loop client horror, so we get db messages, so on
 
-static ulong our_factory_id;
+static tLoopClientCookie our_factory_id;
 
 static void db_message(DispatchData* msg)
 {

@@ -150,7 +150,7 @@ mps_motion_node * mp_alloc_motion(multiped * mp, mps_start_info * info)
 	m->time = 0;
 	m->handle = info->motion_num;
 	m->start_frame = info->start_frame;
-	m->frame = info->start_frame;
+	m->frame = (float)info->start_frame;
 	m->callback = info->callback;
         m->callback_num = info->callback_num;
 	if (m->callback || m->callback_num)
@@ -434,7 +434,7 @@ void mp_get_xlat_at_frame(mxs_vector * xlat, int motion, int frame)
 	mps_comp_motion * cm = m->components;
 	if (cm->type == CM_TRANS)
 	{
-      mp_capture_component_xlat_func(NULL,&m->info,cm,frame,xlat);
+      mp_capture_component_xlat_func(NULL,&m->info,cm,(float)frame,xlat);
 	}
 	else
 	{

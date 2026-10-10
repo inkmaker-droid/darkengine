@@ -14,18 +14,25 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-#include <windows.h>
+#include <win32_platform.h>
 #include <lg.h>
 #include <mmsystem.h>
 #include <wail.h>
 #include <midplayi.h>
 #include <waildynf.h>
+#include <unordered_map>
 
-// this is the WAIL sequence user data slot which is used
-//  to point to the corresponding cMidiSequence object
-typedef enum {
-   kSeqDataThis            // ptr to cMidiSequence object
-} eSeqUserDataEntries;
+static std::unordered_map<HSEQUENCE, cMidiSequence *> &MidiSequences()
+{
+   static std::unordered_map<HSEQUENCE, cMidiSequence *> sequences;
+   return sequences;
+}
+
+static cMidiSequence *MidiSequenceObject(HSEQUENCE sequence)
+{
+   auto found = MidiSequences().find(sequence);
+   return found == MidiSequences().end() ? NULL : found->second;
+}
 
 // TBDs:
 // ? support XMIDI branch controllers
@@ -104,7 +111,6 @@ cMidiSequencer::~cMidiSequencer()
 
 
 #ifdef __WATCOMC__
-#pragma off(unreferenced)
 #endif
 
 
@@ -150,7 +156,6 @@ cMidiSequencer::Init(sMidiSetup  *pSetup,
    return FALSE;
 }
 #ifdef __WATCOMC__
-#pragma on(unreferenced)
 #endif
 
 
@@ -321,8 +326,7 @@ cMidiSequence::cMidiSequence(cMidiSequencer  *owner,
                              HMDIDRIVER      midiDriverHandle )
 {
    mSequence = DAIL_allocate_sequence_handle( midiDriverHandle );
-   // save our self reference in a WAIL user data slot for callbacks
-   DAIL_set_sequence_user_data( mSequence, kSeqDataThis, (S32) this );
+   MidiSequences()[mSequence] = this;
 
    // no end-sequence callback
    mEndCallback = NULL;
@@ -340,6 +344,7 @@ cMidiSequence::cMidiSequence(cMidiSequencer  *owner,
 
 cMidiSequence::~cMidiSequence()
 {
+   MidiSequences().erase(mSequence);
    DAIL_release_sequence_handle( mSequence );
    // tell sequencer we are dead
    mpOwner->FreeSequence( this );
@@ -576,7 +581,6 @@ cMidiSequence::RegisterEndCallback( MidiEndCallback   func,
 // the WAIL callbacks below have several unused params
 
 #ifdef __WATCOMC__
-#pragma off(unreferenced)
 #endif
 
 //
@@ -590,8 +594,8 @@ cMidiSequence::BeatCallback( HMDIDRIVER   pDriver,
                              S32          beat,
                              S32          measure )
 {
-   cMidiSequence *pThis
-      = (cMidiSequence *) DAIL_sequence_user_data( pSeq, kSeqDataThis );
+   cMidiSequence *pThis = MidiSequenceObject(pSeq);
+   if (!pThis) return;
 
    if ( (pThis->mSwitchWhen == kMidiSwitchAtBeat)
         || ((pThis->mSwitchWhen == kMidiSwitchAtMeasure) && (beat == 0)) ) {
@@ -615,8 +619,8 @@ cMidiSequence::MarkerCallback( HSEQUENCE  pSeq,
                                S32        markerChannel,
                                S32        markerValue )
 {
-   cMidiSequence *pThis
-      = (cMidiSequence *) DAIL_sequence_user_data( pSeq, kSeqDataThis );
+   cMidiSequence *pThis = MidiSequenceObject(pSeq);
+   if (!pThis) return;
 
    if ( pThis->mSwitchWhen == kMidiSwitchAtMarker ) {
       pThis->Stop();
@@ -637,8 +641,8 @@ cMidiSequence::MarkerCallback( HSEQUENCE  pSeq,
 void AILEXPORT
 cMidiSequence::EndCallback( HSEQUENCE  pSeq )
 {
-   cMidiSequence *pThis
-      = (cMidiSequence *) DAIL_sequence_user_data( pSeq, kSeqDataThis );
+   cMidiSequence *pThis = MidiSequenceObject(pSeq);
+   if (!pThis) return;
 
    // switch to the next sequence if required
    if ( pThis->mSwitchWhen == kMidiSwitchAtEnd ) {
@@ -654,6 +658,5 @@ cMidiSequence::EndCallback( HSEQUENCE  pSeq )
 
 
 #ifdef __WATCOMC__
-#pragma on(unreferenced)
 #endif
 

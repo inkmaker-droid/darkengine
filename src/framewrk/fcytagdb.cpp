@@ -109,7 +109,7 @@ ulong cFancyTagDatabase::RegisterTag(const sTagInfo *pTagInfo)
 
 const sTagInfo *cFancyTagDatabase::GetTagInfo(ulong handle) const
 {
-   Assert_(handle>=0&&handle<m_TagSet.Size());
+   Assert_(handle<(ulong)m_TagSet.Size());
    return &m_TagSet[handle];
 }
 
@@ -127,7 +127,7 @@ BOOL cFancyTagDatabase::Load(ITagFile *pFile)
       Error(1, "Invalid motion tag declaration count %lu\n", size);
 
    m_TagSet.SetSize(size);
-   for(i=0;i<size;i++)
+   for(i=0;i<(int)size;i++)
    {
       ITagFile_Read(pFile,(char *)&info,sizeof(info));
       m_TagSet.SetItem(&info,i);
@@ -157,7 +157,7 @@ BOOL cFancyTagDatabase::Save(ITagFile *pFile)
    // save tag declarations
    ulong size=m_TagSet.Size();
    ITagFile_Write(pFile, (char *)&size, sizeof(size));
-   for(i=0;i<size;i++)
+   for(i=0;i<(int)size;i++)
    {
       ITagFile_Write(pFile,(char *)&m_TagSet[i],sizeof(m_TagSet[i]));
    }
@@ -179,7 +179,7 @@ static BOOL g_DumpDatabase=FALSE;
 
 void cFancyTagDatabase::Swizzle(void Func(cTagDBKey *))
 {
-   ulong size = m_nCategories;
+   int size = m_nCategories;
 
    for (int i = 0; i < size; ++i)
    {
@@ -211,8 +211,8 @@ void cFancyTagDatabase::SwizzleRequiredFlags(cTagRemapper *pRemapper)
       if (m_TagSet[i].isMandatory) {
          sTagRemap Remap(i, 0, 0, 0);
          pRemapper->LocalToGlobal(&Remap, TRUE);
-         if (Remap.m_GlobalType > iHighestGlobalToken)
-            iHighestGlobalToken = Remap.m_GlobalType;
+         if ((int)Remap.m_GlobalType > iHighestGlobalToken)
+            iHighestGlobalToken = (int)Remap.m_GlobalType;
       }
    }
 

@@ -76,7 +76,7 @@ char *attachPostfix(char *targ, const char *base, const char *post)
    char *flast=NULL, *tmp;
    
    if (targ==NULL)
-      targ=base;
+      targ=(char *)base;
    else
       strcpy(targ,base);
    tmp=targ;

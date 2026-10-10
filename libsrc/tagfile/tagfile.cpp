@@ -337,7 +337,7 @@ STDMETHODIMP_(HRESULT) TagFileWrite::OpenBlock(const TagFileTag* tag, TagVersion
 
 	SetCurBlock(tag);
 
-	int len = fwrite(&header, 1, sizeof(header), file);
+	size_t len = fwrite(&header, 1, sizeof(header), file);
 	if (len != sizeof(header))
 	{
 		Warning(("TagFileWrite::NewBlock(): wrote only %d out of %d bytes\n", len, sizeof(header)));
@@ -376,11 +376,11 @@ STDMETHODIMP_(long) TagFileWrite::Write(const char* buf, int buflen)
 		return -1;
 
 	auto len = fwrite(buf, 1, buflen, file);
-	blockptr += len;
+	blockptr += static_cast<ulong>(len);
 
 	block->size = std::max(static_cast<long>(blockptr), block->size);
 
-	return len;
+	return static_cast<long>(len);
 }
 
 STDMETHODIMP_(long) TagFileWrite::Move(char* buf, int buflen)
@@ -518,13 +518,15 @@ STDMETHODIMP_(long) TagFileRead::Read(char* buf, int buflen)
 	}
 
 	ulong bytesleft = block->size - blockptr; // TODO
-	if (buflen > bytesleft)
-		buflen = std::max(bytesleft, 0ul);
+	if (buflen < 0)
+		return -1;
+	if (static_cast<ulong>(buflen) > bytesleft)
+		buflen = static_cast<int>(bytesleft);
 
 	auto len = fread(buf, 1, buflen, file);
-	blockptr += len;
+	blockptr += static_cast<ulong>(len);
 
-	return len;
+	return static_cast<long>(len);
 }
 
 STDMETHODIMP_(long) TagFileRead::Write(const char* buf, int buflen)

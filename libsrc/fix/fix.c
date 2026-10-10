@@ -54,7 +54,6 @@ long long_fast_pyth_dist (long a, long b)
 // Development 27 (1983).  Good for them.
 //
 #ifdef __WATCOMC__
-#pragma off(unreferenced)
 #endif
 fix fix_safe_pyth_dist_info (fix a, fix b, const char *file, int line)
 {
@@ -94,12 +93,11 @@ fix fix_safe_pyth_dist_info (fix a, fix b, const char *file, int line)
    return a;
 }
 #ifdef __WATCOMC__
-#pragma on(unreferenced)
 #endif
 
 fix fix_sqrt(fix x)
 {
-   return fix_from_float(sqrtf(x)); // TODO
+   return fix_from_float(sqrtf(fix_float(x)));
 }
 
 //////////////////////////////
@@ -222,7 +220,7 @@ fixang fix_asin (fix x)
    // lookup with the high byte, interpolate with the low
    // We shift basex around to make it continuous; see trigtab.h
 
-   basex = ((x >> 2) >> 8) + 0x40;
+   basex = (uchar)(((x >> 2) >> 8) + 0x40);
    fracx = (x >> 2) & 0xff;
 
    lowy = asintab[basex];
@@ -247,7 +245,7 @@ fixang fix_acos (fix x)
 
    // acos(x) = PI/2 - asin(x)
 
-   basex = ((x >> 2) >> 8) + 0x40;
+   basex = (uchar)(((x >> 2) >> 8) + 0x40);
    fracx = (x >> 2) & 0xff;
 
    lowy = asintab[basex];
@@ -345,5 +343,5 @@ fix fix_mul_div_safe(fix m0, fix m1, fix d)
    int64_t result = (int64_t)(m0) * (int64_t)(m1);
    result /= d;
 
-   return result;
+   return (fix)result;
 }

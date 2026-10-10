@@ -15,7 +15,7 @@
 #include <slab.h>
 #include <string.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 
 //-----------------------------------------------------------------------------
 // Jacobson, 1-30-96
@@ -89,7 +89,6 @@ static void init_saveunder(uchar bm_type, grs_bitmap* bm)
 
 static grs_canvas* old_canvas = NULL;
 
-#pragma off(unreferenced)
 void _bitmap_cursor_drawfunc(int cmd, Region* r, Cursor* c, Point pos)
 {
    grs_bitmap* bm = (grs_bitmap*)(c->state);
@@ -133,13 +132,11 @@ void _bitmap_cursor_drawfunc(int cmd, Region* r, Cursor* c, Point pos)
    }
    gr_set_canvas(old_canvas);
 }
-#pragma on(unreferenced)
 
-#pragma off(unreferenced)
 void bitmap_cursor_drawfunc(int cmd, Region* r, Cursor* c, Point pos)
 {
    grs_bitmap* bm = (grs_bitmap*)(c->state);
-#ifdef WIN32
+#ifdef _WIN32
    IDisplayDevice_Lock(g_pUiDisplayDevice);
 #endif
    _bitmap_cursor_drawfunc(cmd,r,c,pos);
@@ -156,7 +153,7 @@ void bitmap_cursor_drawfunc(int cmd, Region* r, Cursor* c, Point pos)
       CursorCanvas = tmp_canvas;
       SaveUnder.bm.bits = saveunder;
    }
-#ifdef WIN32
+#ifdef _WIN32
    IDisplayDevice_Unlock(g_pUiDisplayDevice);
    // DromEd does not redraw continuously while an editor viewport is idle, so
    // the software cursor must present its dirty rectangle immediately.  The
@@ -166,4 +163,3 @@ void bitmap_cursor_drawfunc(int cmd, Region* r, Cursor* c, Point pos)
                             pos.x + bm->w, pos.y + bm->h);
 #endif
 }
-#pragma on(unreferenced)

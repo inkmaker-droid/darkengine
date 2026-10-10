@@ -154,7 +154,7 @@ typedef struct {
 	struct find_t find;
 #else
 	struct _finddata_t find;		// phs, 7/1/96
-   long findfp;
+   intptr_t findfp;
 #endif
    int flags;      
 } DatapathDir;

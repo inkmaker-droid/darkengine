@@ -13,7 +13,7 @@
 
 #include <scrnman.h>
 #include <scrnguid.h>
-#include <d3d11legacy.h>
+#include <render_backend.h>
 
 #include <2d.h>
 
@@ -225,7 +225,6 @@ static void constrain(sScrnMode* target, const sScrnMode* mmin, const sScrnMode*
 }
 
 
-EXTERN BOOL g_no_dx6;
 EXTERN BOOL g_lgd3d;
 EXTERN int g_lgd3d_device_index;
 
@@ -240,7 +239,7 @@ BOOL ScrnSetModeRaw(const sScrnMode* mode)
     AssertMsg((mode->valid_fields & kScrnModeAllValid) == kScrnModeAllValid,"ScrnSetModeRaw: Not all fields are valid");
 
     g_lgd3d = FALSE;
-    D3D11LegacyTrace(
+    RenderBackendTrace(
         "screen-mode requested=%dx%dx%d flags=0x%lx windowed=%d hardware=%d",
         mode->w, mode->h, mode->bitdepth, mode->flags,
         !!(mode->flags & kScrnModeWindowed),
@@ -277,7 +276,7 @@ BOOL ScrnSetModeRaw(const sScrnMode* mode)
         {
 
 
-            int num_devices = g_no_dx6 ? 0 : lgd3d_enumerate_devices();
+            int num_devices = lgd3d_enumerate_devices();
 
             if( (num_devices > 0) && (lgd3d_get_device_info(0)->flags & LGD3DF_CAN_DO_WINDOWED) )
             {
@@ -306,7 +305,7 @@ BOOL ScrnSetModeRaw(const sScrnMode* mode)
         {
 #endif
             // @TODO: modularize this out when it comes time for OpenGL or other 3d APIs
-            int num_devices = g_no_dx6 ? 0 : lgd3d_enumerate_devices();
+            int num_devices = lgd3d_enumerate_devices();
             if (num_devices > 0)
             {
                 int idx = num_devices - 1;
@@ -365,7 +364,7 @@ BOOL ScrnSetModeRaw(const sScrnMode* mode)
         }
 #endif
 
-        D3D11LegacyTrace("screen-display kind=%d display-flags=0x%x lgd3d=%d",
+        RenderBackendTrace("screen-display kind=%d display-flags=0x%x lgd3d=%d",
                          kind, flags, g_lgd3d);
         BOOL match = (ScrnSetDisplay(kind,flags,pDD) == 0);
 

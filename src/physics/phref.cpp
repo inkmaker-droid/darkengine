@@ -36,13 +36,11 @@ cDynArray<void *>PhysRefs;
 
 ////////////////////////////////////////
 
-#pragma off(unreferenced)
 ObjRefID *PhysRefListFunc(void *bin, BOOL create)
 {
    int n = *(int *)bin;
    return (ObjRefID *) &PhysRefs[n];
 }
-#pragma on(unreferenced)
 
 ////////////////////////////////////////
 
@@ -69,12 +67,10 @@ int PhysBinCompareFunc(void *bin1, void *bin2)
 #undef BIN
 #undef BINS_EQUAL
 
-#pragma off(unreferenced)
 void PhysBinUpdateFuncDummy(ObjID obj, int refsys, void *binmem, int num_bins)
 {
    // See the comment in PhysBinComputeFuncDummy
 }
-#pragma on(unreferenced)
 
 ////////////////////////////////////////
 
@@ -95,7 +91,6 @@ void PhysBinPrintFunc(void *bin, char *str, int maxstrlen)
 
 #define OUR_MAX_REFS 64
 
-#pragma off(unreferenced)
 int PhysBinComputeFuncDummy(ObjID obj, BoundingPrism *bound, void *bins)
 {
    // This is the function that the refsystem calls when it's doing an
@@ -105,7 +100,6 @@ int PhysBinComputeFuncDummy(ObjID obj, BoundingPrism *bound, void *bins)
 
    return 0;
 }
-#pragma on(unreferenced)
 
 ////////////////////////////////////////
 

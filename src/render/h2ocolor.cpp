@@ -63,7 +63,7 @@ struct sWaterRGBA : public sRGBA
    }
 };
 
-static sRGBA def_vals = {{50,80,100,}, 0.35 }; 
+static sRGBA def_vals = {{50,80,100,}, 0.35f };
 
 sWaterRGBA sWaterRGBA::gDefaults = def_vals; 
 

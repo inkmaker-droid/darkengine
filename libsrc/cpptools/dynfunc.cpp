@@ -8,23 +8,32 @@
 //
 
 #ifdef _WIN32
+#include <win32_platform.h>
+#else
+#include <dlfcn.h>
+#endif
 
-#include <windows.h>
-// #include "wsshared.h"
 #include "dynfunc.h"
 
 ///////////////////////////////////////
-
 BOOL cDynFunc::Load()
     {
     if (!fTriedToLoad)
         {
         fTriedToLoad = TRUE;
         // Assert(pszLibName && pszFuncSig);
-        hInstLib = LoadLibrary(pszLibName);
+#ifdef _WIN32
+        hInstLib = (void *)LoadLibraryA(pszLibName);
+#else
+        hInstLib = dlopen(pszLibName, RTLD_NOW | RTLD_LOCAL);
+#endif
         if (LoadedDLL(hInstLib))
             {
-            pfnFunc = (void *) GetProcAddress(hInstLib, pszFuncSig);
+#ifdef _WIN32
+            pfnFunc = (void *)GetProcAddress((HMODULE)hInstLib, pszFuncSig);
+#else
+            pfnFunc = dlsym(hInstLib, pszFuncSig);
+#endif
             //DebugMsgTrue3(pfnFunc && HIWORD(pszFuncSig), "Loaded function %s from %s (%p)", pszFuncSig, pszLibName, pfnFunc);
             //DebugMsgTrue3(pfnFunc && !HIWORD(pszFuncSig), "Loaded function %d from %s (%p)", int(LOWORD(pszFuncSig)), pszLibName, pfnFunc);
             }
@@ -40,17 +49,36 @@ BOOL cDynFunc::Load()
 
 ///////////////////////////////////////
 
+cDynFunc::~cDynFunc()
+    {
+    Unload();
+    }
+
+///////////////////////////////////////
+
+void cDynFunc::Unload()
+    {
+    pfnFunc = NULL;
+    fTriedToLoad = FALSE;
+    if (LoadedDLL(hInstLib))
+        {
+#ifdef _WIN32
+        FreeLibrary((HMODULE)hInstLib);
+#else
+        dlclose(hInstLib);
+#endif
+        }
+    hInstLib = 0;
+    }
+
+///////////////////////////////////////
+
 void * cDynFunc::FindFunc()
     {
     if (pfnFunc)
         return pfnFunc;
 
-    if (!Load())
-        ;// CriticalMsg("Dynamic function not found");
+    Load();
 
     return pfnFunc;
     }
-
-///////////////////////////////////////
-
-#endif

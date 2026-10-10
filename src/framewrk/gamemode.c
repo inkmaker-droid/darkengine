@@ -83,7 +83,7 @@
 #include <appapi.h>
 #include <crwpnlup.h>
 #include <missrend.h>
-#include <d3d11legacy.h>
+#include <render_backend.h>
 
 // yes, this is gross, when we structure the key bind handling better we can get rid of this
 ///#include <drkwswd.h>
@@ -550,9 +550,9 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
          // DromEd and the retail game share this loop client.  Once either
          // enters gameplay, its fixed logical canvas must be aspect-fitted to
          // the host window and its CPU canvas is only a HUD overlay.
-         D3D11LegacySetScaleToWindow(TRUE);
-         D3D11LegacySetFitToViewport(fit != 0);
-         D3D11LegacySetPreserveCanvas(FALSE);
+         RenderBackendSetScaleToWindow(TRUE);
+         RenderBackendSetFitToViewport(fit != 0);
+         RenderBackendSetPreserveCanvas(FALSE);
 #ifdef HISTO
          ILoop * pLoop = AppGetObj(ILoop);
          int profile = 0; 
@@ -589,9 +589,9 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
       {
          int fit = 0;
          config_get_int("game_screen_fit", &fit);
-         D3D11LegacySetScaleToWindow(TRUE);
-         D3D11LegacySetFitToViewport(fit != 0);
-         D3D11LegacySetPreserveCanvas(FALSE);
+         RenderBackendSetScaleToWindow(TRUE);
+         RenderBackendSetFitToViewport(fit != 0);
+         RenderBackendSetPreserveCanvas(FALSE);
 
 #ifdef EDITOR
          if (gExitGameModeToEditor)
@@ -706,7 +706,6 @@ static eLoopMessageResult LGAPI _LoopFunc(void* data, eLoopMessage msg, tLoopMes
 }
 
 
-#pragma off(unreferenced)
 static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData data)
 {
    StateRecord* state;
@@ -716,14 +715,13 @@ static ILoopClient* LGAPI _CreateClient(sLoopClientDesc * pDesc, tLoopClientData
 
    return CreateSimpleLoopClient(_LoopFunc,state,pDesc);
 }
-#pragma on(unreferenced)
 
 sLoopClientDesc GameLoopClientDesc =
 {
    &LOOPID_Game,
    "Generic Game Mode Client",
    kPriorityNormal,
-   kMsgsMode|kMsgsFrame|kMsgsAppOuter|kMsgEnd|kMsgVisual,
+   (ulong)kMsgsMode|kMsgsFrame|kMsgsAppOuter|kMsgEnd|kMsgVisual,
 
    kLCF_Callback,
    _CreateClient,

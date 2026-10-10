@@ -29,7 +29,7 @@
 
 // for the windows controls
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <win32_platform.h>
 #include <commdlg.h>
 #include <commctrl.h>
 
@@ -215,7 +215,6 @@ static IProperty* selected_property(PropertyListEditor* ed)
 
 }
 
-#pragma off(unreferenced)
 static void handle_propbox_command(PropertyListEditor* ed, WPARAM wParam, LPARAM lParam) 
 {
    switch (HIWORD(wParam))
@@ -253,7 +252,6 @@ static void handle_propbox_command(PropertyListEditor* ed, WPARAM wParam, LPARAM
       break;
    }
 }
-#pragma on(unrefereced)
 
 //------------------------------------------------------------
 // THE METAPROPERTY LIST BOX
@@ -348,7 +346,6 @@ void remove_selected_metaproperty(PropertyListEditor* ed)
    }
 }
 
-#pragma off(unreferenced)
 static void handle_metabox_command(PropertyListEditor* ed, WPARAM wParam, LPARAM lParam) 
 {
    switch (HIWORD(wParam))
@@ -386,7 +383,6 @@ static void handle_metabox_command(PropertyListEditor* ed, WPARAM wParam, LPARAM
       break;
    }
 }
-#pragma on(unreferenced)
 
 //------------------------------------------------------------
 // RANDOM UI TOOLS

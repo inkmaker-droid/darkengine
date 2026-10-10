@@ -31,7 +31,7 @@ sUiAnimElem::sUiAnimElem(IStringRes *pStr,const char *pName,const char *pResPath
    // Using the string resource, get the "x,y fps"
    const char *p = pStr->StringLock(pName);
    sscanf(p,"%d,%d %f %c",&mX,&mY,&mSpf,&mType);
-   mSpf = 1.0/mSpf;     // convert fps to second/frame
+   mSpf = 1.0f/mSpf;     // convert fps to second/frame
    pStr->StringUnlock(pName);
 
    // Collecting frames, quit when none left
@@ -73,7 +73,7 @@ void sUiAnimElem::mBlit()
    grs_bitmap *pBm = (grs_bitmap*)mFrames[frame]->Lock();
 
    // Hide and expose the cursor
-   Rect r = {mX,mY,mX+pBm->w,mY+pBm->h};
+   Rect r = {(short)mX, (short)mY, (short)(mX + pBm->w), (short)(mY + pBm->h)};
    uiHideMouse(&r);
 
    gr_bitmap(pBm,mX,mY);
@@ -169,7 +169,7 @@ void cUiAnim::OnLoopMsg(eLoopMessage msg, tLoopMessageData data)
    // Update all the anims with the new time
    float dt;
    int clock = tm_get_millisec();
-   dt = (float)(clock - mLastClock)/1000.0;
+   dt = (float)(clock - mLastClock)/1000.0f;
    mLastClock = clock;
 
    int i;

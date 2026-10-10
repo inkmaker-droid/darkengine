@@ -68,16 +68,17 @@ bool PathAndName(const char* pPathName, char* pPath, char* pName)
 	if (!pPathName || !pPath || !pName)
 		return false;
 
-	auto nSize = strlen(pPathName);
+	auto pathLength = strlen(pPathName);
 	*pPath = '\0';
 	*pName = '\0';
 
-	if (nSize > 544)
+	if (pathLength > 544)
 	{
 		Warning(("PathAndName: path looks incredibly bogus: %s\n", pPathName));
 		return false;
 	}
 
+	int nSize = static_cast<int>(pathLength);
 	int i;
 	for (i = nSize - 1; i >= 0 && pPathName[i] != '\\' && pPathName[i] != '/'; --i)
 		;

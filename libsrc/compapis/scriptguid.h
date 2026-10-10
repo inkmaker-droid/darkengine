@@ -10,7 +10,6 @@ GUID IID_IKeyScriptService = { 218104077u, 31629u, 4828u, { 131u, 72u, 0u, 170u,
 GUID IID_ILockedScriptService = { 4211081467u, 31611u, 4810u, { 131u, 72u, 0u, 170u, 0u, 168u, 43u, 81u } };
 GUID IID_IAnimTextureScriptService = { 1795162474u, 31722u, 4921u, { 131u, 72u, 0u, 170u, 0u, 168u, 43u, 81u } };
 GUID IID_IActReactScriptService = { 4093640948u, 31604u, 4803u, { 131u, 72u, 0u, 170u, 0u, 168u, 43u, 81u } };
-DEFINE_LG_GUID(IID_ICDScriptService,0x226);
 GUID IID_ICameraScriptService = { 1090519360u, 31680u, 4879u, { 131u, 72u, 0u, 170u, 0u, 168u, 43u, 81u } };
 GUID IID_IDataScriptService = { 2701132192u, 31776u, 4975u, { 131u, 72u, 0u, 170u, 0u, 168u, 43u, 81u } };
 GUID IID_IDamageScriptService = { 4261413118u, 31614u, 4813u, { 131u, 72u, 0u, 170u, 0u, 168u, 43u, 81u } };

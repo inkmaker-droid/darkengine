@@ -99,7 +99,7 @@ BOOL dark_object_blocks(ObjID o1, ObjID o2)
 
 // THIS IS HORRIFYING!!
 
-static const float fInvTime = 1.000/1000.000;
+static const float fInvTime = 1.000f/1000.000f;
 
 // the actual portal object callback for Dark
 static void dark_render_object(ObjID o, uchar *clut, ulong fragment)

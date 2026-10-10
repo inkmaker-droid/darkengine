@@ -10,6 +10,7 @@
 #ifndef __IMUTIL__
 #define __IMUTIL__
 
+#include <win32_platform.h>
 #include <strmif.h>
 #include <amvideo.h>
 #include "mtype.h"
